@@ -60,6 +60,20 @@
 
 ---
 
+## Comparison with DISPLAY FIT & Direction A (Owner-Approved)
+
+**Timestamp**: 2026-07-23
+
+**User Input**: 친구가 만든 유사 도구 DISPLAY FIT(ChatGPT 제작)를 공유하며 참고 요청. 이후 **방향 A 채택**(본 프로젝트 유지 + 좋은 아이디어 흡수)과 **feet 단위 미도입**(한국은 meter만 사용) 지시.
+
+**AI Response**: 두 프로젝트를 계산식·데이터·기능으로 비교(`docs/comparison-displayfit.md`) 후 A안을 코드에 반영. (1) S-Box 산출 규칙 확정 `ceil(전체픽셀/컨트롤러용량)`·이중화 ×2, (2) `dataStatus` 3단계 도입, (3) 평균전력 모델별 실측 typical 우선, (4) MP008F 검증 전력(122W/64W) 반영. 단위는 mm/meter만 유지. 계산 테스트 6→10종으로 확장, 전부 통과.
+
+**Verification**: S-Box 규칙을 삼성 실측과 대조 — MP012F 42캐비닛(4480×2160) ÷ SBB-CS4BPGS(3840×2160) = 2대로 삼성 도구 출력과 일치. `tests/engine.test.js` 10/10 green.
+
+**Open Items**: Q1(세로 충진 규칙)·Q2(범위: 일체형/Video Wall 포함 여부) 여전히 미확정. 스페어 캐비닛·S-Box 반올림 규칙 확인 필요.
+
+---
+
 ## Decision Log
 
 | ID | Timestamp | Decision | Rationale | Owner | Status |
@@ -67,6 +81,8 @@
 | DEC-001 | 2026-07-23 | vanilla JS 단일 HTML 채택, engine/data/UI 분리 | 배포 단순, 의존성 0, 사내 오프라인 실행 용이 | 김현규 | Approved |
 | DEC-002 | 2026-07-23 | 산출 항목·데이터 스키마를 삼성 실측 기준으로 정렬(Pitch, W×H×D, weight, max/typ power, resolution, brightness, OVD, BOM) | 사내 견적 정합성 확보 | 김현규 | Proposed |
 | DEC-003 | 2026-07-23 | 평균전력 계수 0.35 → 0.53 정정 | 삼성 MP012F 실측(3234/6132=0.527) 반영 | 김현규 | Proposed |
+| DEC-004 | 2026-07-23 | 방향 A 채택 — 본 프로젝트 유지 + DISPLAY FIT 우수 요소(S-Box 규칙·dataStatus 3단계·검증 전력) 흡수. feet 미도입 | 가벼운 배포 이점 유지하며 산출 정확도 보강 | 김현규 | Approved |
+| DEC-005 | 2026-07-23 | S-Box 수량 = `ceil(전체픽셀/컨트롤러용량)`, 이중화 ×2 | 삼성 검증(42캐비닛→2대) 일치 | 김현규 | Approved |
 
 ## Approval Log
 

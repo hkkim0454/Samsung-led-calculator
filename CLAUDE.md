@@ -15,7 +15,8 @@
 ## 현재 위치
 
 - Phase: **INCEPTION 후반** (프로토타입 v0.2 존재, SPEC 초안 작성됨)
-- 즉시 승인이 필요한 결정 3건은 `docs/SPEC.md` §4 (Q1 충진 규칙 / Q2 범위 / BOM 규칙). **이 결정 없이 Construction 본착수 금지.**
+- 방향 A 채택(2026-07-23, DEC-004): 본 프로젝트 유지 + DISPLAY FIT 우수 요소 흡수. S-Box 규칙 확정(DEC-005), dataStatus 3단계·모델별 typical·MP008F 검증전력 반영. 단위는 mm/meter만.
+- 남은 미확정: `docs/SPEC.md` §4 Q1(세로 충진 규칙) / Q2(범위: 일체형·Video Wall 포함 여부) / 스페어율·Jig 규칙.
 
 ## 저장소 구조
 
@@ -51,4 +52,4 @@ docs/           SPEC.md, aidlc-state.md, audit.md.
 
 ## 검증된 기준 데이터 (수정 시 재확인 필요)
 
-삼성 공식 configurator(2026-07-23): MP012F(P1.26, 806.4×453.6×49.4mm, 9.2kg, 최대 146W, 640×360, S-Box SBB-CS4BPGS, 부품 LH012MPFAAA) → 6×3.4m Fit-to-wall = 7×6=42캐비닛, 최대 6132W/평균 3234W(계수 0.527), 발열 20916 BTU.
+삼성 공식 configurator(2026-07-23): MP012F(P1.26, 806.4×453.6×49.4mm, 9.2kg, 최대 146W/평균 77W, 640×360, S-Box SBB-CS4BPGS 최대입력 3840×2160, 부품 LH012MPFAAA) → 6×3.4m Fit-to-wall = 7×6=42캐비닛, 최대 6132W/평균 3234W, 발열 20916 BTU, S-Box 2대. MP008F(P0.84, 960×540, 최대 122W/평균 64W)도 검증(verified).

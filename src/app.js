@@ -13,21 +13,30 @@ const fmt = (n, d = 0) => (isFinite(n) && n != null) ? n.toLocaleString('ko-KR',
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uid = () => 'm' + Math.random().toString(36).slice(2, 8);
 
+// Data-reliability badge (3 levels): verified / derived / needs-verification.
+function statusBadge(m) {
+  if (m.dataStatus === 'verified') return '<span class="chk">✓ 검증</span>';
+  if (m.dataStatus === 'needs-verification') return '<span class="todo">확인 필요</span>';
+  return '<span class="derived">파생</span>';
+}
+
+function sboxText(v) { return v == null ? '—' : (v === 0 ? '내장' : fmt(v)); }
+
 function opts() {
+  const redundancy = $('#redundancy')?.checked ?? false;
   return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value) }
-    : { mode: 'fill' };
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy }
+    : { mode: 'fill', redundancy };
 }
 
 function renderModelList() {
   const el = $('#modelList'); el.innerHTML = '';
   for (const m of models) {
-    const needs = (m.weight == null || m.maxPower == null);
     const row = document.createElement('div');
     row.className = 'modelRow' + (m.id === selectedId ? ' sel' : '');
     row.innerHTML = `
       <div>
-        <div class="mname">${esc(m.name)} ${m.validated ? '<span class="chk">✓검증</span>' : (needs ? '<span class="todo">데이터시트 필요</span>' : '')}</div>
+        <div class="mname">${esc(m.name)} ${statusBadge(m)}</div>
         <div class="mmeta">${esc(m.series || '')} · ${fmt(m.cabW)}×${fmt(m.cabH)}mm · P${fmt(m.pitch,2)}</div>
       </div>
       <div class="acts">
@@ -90,6 +99,7 @@ function renderReadout() {
     { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
+    { k: 'S-Box (컨트롤러)', v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
     { k: '화면비', v: fmt(aspect, 2), u: ': 1' },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
@@ -97,6 +107,7 @@ function renderReadout() {
   if (!r.fits) nt.innerHTML = `<div class="notice warn">⚠ 지정 조건으로 캐비닛이 배치되지 않습니다.</div>`;
   else if (r.deadW > 0.5 || r.deadH > 0.5) nt.innerHTML = `<div class="notice info">여백 — 가로 ${fmt(r.deadW)}mm · 세로 ${fmt(r.deadH)}mm (센터 정렬 시 각 ${fmt(r.marginW)}/${fmt(r.marginH)}mm).</div>`;
   if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
+  if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(S-Box) 입력 용량 정보가 없어 S-Box 수량을 산출할 수 없습니다.</div>`;
   const d = cabinetResolution(m);
   if (Math.abs(m.cabW / m.pitch - d.resW) > 1 || Math.abs(m.cabH / m.pitch - d.resH) > 1)
     nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
@@ -122,6 +133,7 @@ function renderCompare() {
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessPeak)}</td>
       <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
+      <td>${r.fits ? sboxText(r.sbox) : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
     body.appendChild(tr);
   }
@@ -131,6 +143,7 @@ function renderAll() { renderModelList(); renderPreview(); renderReadout(); rend
 
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+$('#redundancy').addEventListener('change', renderAll);
 $('#fitMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-mode]'); if (!b) return;
   mode = b.dataset.mode;
@@ -168,13 +181,14 @@ const dlg = $('#dlg');
 function openEdit(id) {
   editingId = id;
   const m = id ? models.find(x => x.id === id)
-    : { name: '신규 모델', series: '', pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: '', resH: '', weight: '', maxPower: '', brightnessPeak: 1000 };
+    : { name: '신규 모델', series: '', pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: '', resH: '', weight: '', maxPower: '', brightnessPeak: 1000, maxInputW: '', maxInputH: '' };
   $('#dlgTitle').textContent = id ? '모델 편집' : '모델 추가';
   const set = (f, v) => $('#' + f).value = (v == null ? '' : v);
   set('e_name', m.name); set('e_series', m.series); set('e_pitch', m.pitch);
   set('e_cabW', m.cabW); set('e_cabH', m.cabH); set('e_depth', m.depth);
   set('e_resW', m.resW); set('e_resH', m.resH); set('e_weight', m.weight);
   set('e_maxP', m.maxPower); set('e_nit', m.brightnessPeak);
+  set('e_inW', m.maxInputW); set('e_inH', m.maxInputH);
   dlg.showModal();
 }
 $('#dlgClose').addEventListener('click', () => dlg.close());
@@ -190,7 +204,8 @@ $('#dlgSave').addEventListener('click', () => {
     name: $('#e_name').value || '이름없음', series: $('#e_series').value,
     pitch, cabW, cabH, depth: orEmpty($('#e_depth').value),
     resW, resH, weight: orEmpty($('#e_weight').value), maxPower: orEmpty($('#e_maxP').value),
-    brightnessPeak: orEmpty($('#e_nit').value), validated: false,
+    maxInputW: orEmpty($('#e_inW').value), maxInputH: orEmpty($('#e_inH').value),
+    brightnessPeak: orEmpty($('#e_nit').value), dataStatus: 'needs-verification',
   };
   if (editingId) Object.assign(models.find(x => x.id === editingId), data);
   else { const nm = { id: uid(), ...data }; models.push(nm); selectedId = nm.id; }

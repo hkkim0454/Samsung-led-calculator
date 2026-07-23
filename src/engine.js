@@ -19,6 +19,20 @@ export function cabinetResolution(model) {
 }
 
 /**
+ * S-Box (controller) count = ceil(totalPixels / controller max-input pixels).
+ * Redundancy doubles it. Integrated-controller models need none (return 0).
+ * If the controller's max input capacity is unknown, return null (no fake numbers).
+ * Rule verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 units (SBB-CS4BPGS, 3840x2160).
+ */
+export function sboxCount(model, totalPixels, opts = {}) {
+  if (model.integratedController) return 0;
+  const capW = model.maxInputW, capH = model.maxInputH;
+  if (capW == null || capH == null || !(totalPixels > 0)) return null;
+  const base = Math.max(1, Math.ceil(totalPixels / (capW * capH)));
+  return opts.redundancy ? base * 2 : base;
+}
+
+/**
  * Decide how many cabinets fit.
  * mode 'fill'   -> floor((space - 2*clearance) / cabinet) on each axis (pure max-fill)
  * mode 'manual' -> caller-supplied cols/rows
@@ -56,9 +70,14 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const hasPower  = model.maxPower != null;
   const weightKg  = hasWeight ? total * model.weight : null;
   const maxW      = hasPower ? total * model.maxPower : null;
-  const typW      = hasPower ? maxW * pf : null;
+  // Prefer a per-model measured typical power; otherwise derive from the global power factor.
+  const typW      = model.typicalPower != null ? total * model.typicalPower
+                    : (hasPower ? maxW * pf : null);
   const heatMaxBTU = maxW != null ? maxW * WATT_TO_BTU : null;
   const heatTypBTU = typW != null ? typW * WATT_TO_BTU : null;
+
+  const redundancy = opts.redundancy ?? false;
+  const sbox = sboxCount(model, pixels, { redundancy });
 
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - actualH);
@@ -68,6 +87,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     actualW, actualH, areaM2, diagIn,
     resW, resH, pixels,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
+    sbox, redundancy,
     deadW, deadH,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
@@ -75,19 +95,21 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 }
 
 /**
- * Bill of materials. Cabinet + spare rules confirmed-pending (SPEC "BOM" question).
- * S-Box / Jig quantity rules are model-specific and NOT yet defined — returned as null.
+ * Bill of materials. Spare rule: ceil(total * spareRate). S-Box quantity uses the
+ * confirmed rule (see sboxCount) when total pixels are supplied via opts.pixels.
+ * Jig quantity rule is still model-specific and undefined — returned as null.
  */
 export function bom(model, total, opts = {}) {
   const spareRate = opts.spareRate ?? DEFAULTS.spareRate;
   const spares = total > 0 ? Math.ceil(total * spareRate) : 0;
+  const sboxQty = opts.pixels != null ? sboxCount(model, opts.pixels, opts) : null;
   return {
     cabinetPart: model.cabinetPart ?? null,
     cabinets: total,
     spares,
     totalCabinets: total + spares,
     sbox: model.sbox ?? null,
-    sboxQty: null,   // TODO(SPEC:BOM): define S-Box count rule (Samsung: 42 cab -> 2 units)
+    sboxQty,
     jitQty: null,    // TODO(SPEC:BOM): define Jig count rule
   };
 }

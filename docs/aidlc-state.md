@@ -147,7 +147,7 @@
 ## Current Verification Status
 
 - **Build**: N/A (빌드리스 단일 HTML)
-- **Automated Tests**: 미구축. 계산 로직은 Node로 수동 검증 완료(2026-07-23)
+- **Automated Tests**: `node:test` 10종 자동화, 전부 통과(2026-07-23). S-Box·평균전력·null 전파 포함.
 - **Integration Tests**: N/A
 - **Security Checks**: 외부 의존성 0, 개인정보 미수집 → 저위험. 정식 점검 미수행
 - **Acceptance Review**: 프로토타입 v0.1 오너 리뷰 대기
@@ -159,7 +159,7 @@
 | Q1 | Question | Fit-to-wall 세로 충진 규칙이 순수 floor와 다름(관측: 3.4m 벽에 6행=2.721m, 7행=3.175m도 물리적으로 가능). 삼성 클리어런스/여백 규칙 확인 필요 | 김현규 | 확인 필요 | Open | 세로 충진 규칙을 SPEC.md에 문서화 |
 | R1 | Risk | 스펙 데이터 정확도 — 임의값 사용 시 견적 오류 위험 | 김현규 | 확인 필요 | Open | 전 모델 데이터시트 실측값 확정 |
 | Q2 | Question | 대상 시리즈 범위(Flat 전용 vs Curved 포함) | 김현규 | 확인 필요 | Open | 범위 확정 |
-| D1 | Dependency | 삼성 공식 스펙 시트/부자재 규칙(스페어율, S-Box 대수 규칙) 확보 | 김현규 | 확인 필요 | Open | 데이터 확보 완료 |
+| D1 | Dependency | 삼성 공식 스펙 시트/부자재 규칙(스페어율, S-Box 대수 규칙) 확보 | 김현규 | 확인 필요 | Partly Resolved | S-Box 대수 규칙 확정(2026-07-23, 삼성 검증). 스페어율·Jig 규칙은 미확정 |
 
 ## Next Actions
 

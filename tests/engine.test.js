@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, fitCabinets, cabinetResolution, bom } from '../src/engine.js';
+import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -51,4 +51,29 @@ test('bom spare defaults to 10% rounded up', () => {
   const b = bom(MP012F, 42);
   assert.equal(b.spares, 5);        // ceil(4.2) = 5   (NOTE: Samsung showed 4 -> spare rule pending)
   assert.equal(b.totalCabinets, 47);
+});
+
+// S-Box rule verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 S-Box units.
+test('MP012F 42 cabinets need 2 S-Box (Samsung reference)', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(r.sbox, 2);
+  const pixels = 4480 * 2160;
+  assert.equal(sboxCount(MP012F, pixels), 2);
+});
+
+test('S-Box redundancy doubles the controller count', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, redundancy: true });
+  assert.equal(r.sbox, 4);
+});
+
+test('S-Box is null when controller capacity is unknown (no fake numbers)', () => {
+  const IF025R = MODELS.find(m => m.id === 'IF025R');
+  const r = computeConfig(IF025R, 6000, 3400, { mode: 'fill' });
+  assert.equal(r.sbox, null);
+});
+
+test('per-model typical power is preferred over the global factor', () => {
+  // MP012F stores typicalPower 77 -> 42 * 77 = 3234 exactly (matches Samsung reading).
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(r.typW, 42 * 77);
 });

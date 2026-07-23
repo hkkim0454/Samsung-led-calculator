@@ -20,8 +20,10 @@ Inception 산출물. 계산 공식·데이터 스키마·엣지케이스를 코�
 | ovd_m | m | ○ | Optimal Viewing Distance |
 | weight | kg/캐비닛 | ○ | **데이터시트 필요** (미입력 시 중량 산출 불가) |
 | maxPower | W/캐비닛 | ○ | **데이터시트 필요** (미입력 시 전력·발열 산출 불가) |
+| typicalPower | W/캐비닛 | ○ | 실측 평균전력. 있으면 평균전력 계산에 우선 사용, 없으면 `maxPower × 0.527` |
+| maxInputW, maxInputH | px | ○ | 컨트롤러(S-Box) 1대 최대 입력 픽셀. 미입력 시 S-Box 수량 산출 불가 |
 | sbox, cabinetPart | — | ○ | BOM용 부품 코드 |
-| validated | bool | ● | 삼성 도구와 대조 완료 여부 |
+| dataStatus | enum | ● | `verified`(전력까지 대조) / `derived`(치수 관측, 전력 파생·미상) / `needs-verification`(확인 필요) |
 
 ## 3. 계산 공식 (engine.js와 1:1 대응)
 
@@ -32,8 +34,9 @@ Inception 산출물. 계산 공식·데이터 스키마·엣지케이스를 코�
 - 대각(inch): `sqrt(actualW² + actualH²)/25.4`
 - 총 해상도(px): `cols·resW × rows·resH`, 화소수 = 곱
 - 총 중량(kg): `total·weight` (weight 없으면 null)
-- 최대전력(W): `total·maxPower`; 평균전력 = `max·0.527`
+- 최대전력(W): `total·maxPower`; 평균전력 = `total·typicalPower` (없으면 `max·0.527`)
 - 발열(BTU/hr): `W·3.412142`
+- S-Box(컨트롤러): `ceil(전체 픽셀 / (maxInputW·maxInputH))`, 이중화 시 ×2, 일체형(integratedController)은 0, 용량 미상은 null
 - 여백(mm): `deadW = W - actualW`, 센터 정렬 시 각 변 `deadW/2`
 
 **정합성 기준 (테스트로 고정됨):** MP012F, 6000×3400, 7×6 → 42캐비닛, 5644.8×2721.6mm, 15.362m², 246.7", 4480×2160, 386.4kg, 최대 6132W / 평균 3234W, 20916 BTU. → `tests/engine.test.js` 통과 필수.
@@ -50,9 +53,12 @@ Flat 캐비닛형만(1차) vs Curved 포함. 현재: **Flat 전용**.
 
 ### BOM 규칙
 - 스페어 캐비닛: 현재 `ceil(total·0.10)`. 단 삼성은 42캐비닛에 스페어 **4**(≈9.5%)를 표기 → 반올림/버림 규칙 확인 필요.
-- S-Box 대수: 삼성은 42캐비닛에 **2** + 스페어 1. 대당 캐비닛 상한 규칙 미확정(현재 산출 안 함, null).
+- ~~S-Box 대수~~ **[확정 2026-07-23]** `ceil(전체 픽셀 / 컨트롤러 최대입력)`, 이중화 시 ×2. 삼성 검증: MP012F 42캐비닛(4480×2160) ÷ SBB-CS4BPGS(3840×2160) = 2대와 일치. 컨트롤러 용량 미상 모델은 산출하지 않음(null). *스페어 S-Box 규칙은 별도 미확정.*
 - Jig 대수: 삼성 3 (규칙 미확정, null).
 - 회로 계산(110/208/230V, daisy chain): 미구현(후속).
+
+### [확정 2026-07-23] 방향 A 채택 — 오너 승인
+친구 DISPLAY FIT 비교(`docs/comparison-displayfit.md`) 후 오너가 **방향 A**(본 프로젝트 유지 + 좋은 아이디어 흡수)를 승인. 반영: (1) S-Box 산출 규칙 위와 같이 확정, (2) 데이터 신뢰도 `dataStatus` 3단계 도입, (3) 평균전력에 모델별 실측 typical 우선, (4) MP008F 검증 전력(122W/64W) 반영. **단위는 mm/meter만 사용(feet 미도입).** Q1(세로 충진)·Q2(범위)는 여전히 미확정.
 
 ## 5. 엣지케이스
 
