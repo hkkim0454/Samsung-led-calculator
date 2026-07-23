@@ -1,0 +1,219 @@
+// app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js';
+import { MODELS } from './models.js';
+
+let models = structuredClone(MODELS);
+let selectedId = models[0].id;
+let mode = 'fill';
+let editingId = null;
+
+const $ = s => document.querySelector(s);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const fmt = (n, d = 0) => (isFinite(n) && n != null) ? n.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const uid = () => 'm' + Math.random().toString(36).slice(2, 8);
+
+function opts() {
+  return mode === 'manual'
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value) }
+    : { mode: 'fill' };
+}
+
+function renderModelList() {
+  const el = $('#modelList'); el.innerHTML = '';
+  for (const m of models) {
+    const needs = (m.weight == null || m.maxPower == null);
+    const row = document.createElement('div');
+    row.className = 'modelRow' + (m.id === selectedId ? ' sel' : '');
+    row.innerHTML = `
+      <div>
+        <div class="mname">${esc(m.name)} ${m.validated ? '<span class="chk">✓검증</span>' : (needs ? '<span class="todo">데이터시트 필요</span>' : '')}</div>
+        <div class="mmeta">${esc(m.series || '')} · ${fmt(m.cabW)}×${fmt(m.cabH)}mm · P${fmt(m.pitch,2)}</div>
+      </div>
+      <div class="acts">
+        <button class="tiny ghost" data-act="select" data-id="${m.id}">보기</button>
+        <button class="tiny ghost" data-act="edit" data-id="${m.id}">편집</button>
+        <button class="tiny ghost danger" data-act="del" data-id="${m.id}">삭제</button>
+      </div>`;
+    el.appendChild(row);
+  }
+}
+
+function renderPreview() {
+  const m = models.find(x => x.id === selectedId);
+  const stage = $('#stage');
+  $('#pvModelName').textContent = m ? m.name : '—';
+  if (!m) { stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
+  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const r = computeConfig(m, sW, sH, opts());
+  if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
+
+  const stageW = stage.clientWidth - 52, stageH = 300 - 52;
+  const refW = Math.max(sW, r.actualW), refH = Math.max(sH, r.actualH);
+  const scale = Math.min(stageW / refW, stageH / refH);
+  const spW = sW * scale, spH = sH * scale, arW = r.actualW * scale, arH = r.actualH * scale;
+
+  stage.innerHTML = '';
+  const space = document.createElement('div');
+  space.className = 'space'; space.style.width = spW + 'px'; space.style.height = spH + 'px';
+  const array = document.createElement('div');
+  array.className = 'array' + (r.total > 400 ? ' compact' : '');
+  array.style.gridTemplateColumns = `repeat(${r.cols},1fr)`;
+  array.style.gridTemplateRows = `repeat(${r.rows},1fr)`;
+  array.style.width = arW + 'px'; array.style.height = arH + 'px';
+  const drawCells = Math.min(r.total, 2000);
+  for (let i = 0; i < drawCells; i++) { const c = document.createElement('div'); c.className = 'cab'; array.appendChild(c); }
+  space.appendChild(array);
+  if (r.deadW > 0.5) { const d = document.createElement('div'); d.className = 'dead'; d.style.cssText = `left:${arW}px;top:0;width:${spW - arW}px;height:${spH}px`; space.appendChild(d); }
+  if (r.deadH > 0.5) { const d = document.createElement('div'); d.className = 'dead'; d.style.cssText = `left:0;top:${arH}px;width:${arW}px;height:${spH - arH}px`; space.appendChild(d); }
+  const gc = document.createElement('div'); gc.className = 'dim active'; gc.style.cssText = 'left:4px;top:4px'; gc.textContent = `${r.cols} × ${r.rows} = ${r.total} 캐비닛`; space.appendChild(gc);
+  const dw = document.createElement('div'); dw.className = 'dim'; dw.style.cssText = `left:0;top:${spH + 4}px`; dw.textContent = `실제 ${fmt(r.actualW)} / 공간 ${fmt(sW)} mm`; space.appendChild(dw);
+  stage.appendChild(space);
+}
+
+function renderReadout() {
+  const m = models.find(x => x.id === selectedId);
+  const box = $('#readout'), nt = $('#notices'); nt.innerHTML = '';
+  if (!m) { box.innerHTML = ''; return; }
+  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const r = computeConfig(m, sW, sH, opts());
+  const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
+  const cells = [
+    { k: '실제 모듈 크기', v: `${fmt(r.actualW)} × ${fmt(r.actualH)}`, u: 'mm', hero: true },
+    { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total}` },
+    { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
+    { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
+    { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
+    { k: '대각', v: fmt(r.diagIn, 1), u: '"' },
+    { k: '총 중량', v: fmt(r.weightKg, 1), u: 'kg' },
+    { k: '밝기 peak', v: fmt(r.brightnessPeak), u: 'nit' },
+    { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
+    { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
+    { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
+    { k: '화면비', v: fmt(aspect, 2), u: ': 1' },
+  ];
+  box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
+
+  if (!r.fits) nt.innerHTML = `<div class="notice warn">⚠ 지정 조건으로 캐비닛이 배치되지 않습니다.</div>`;
+  else if (r.deadW > 0.5 || r.deadH > 0.5) nt.innerHTML = `<div class="notice info">여백 — 가로 ${fmt(r.deadW)}mm · 세로 ${fmt(r.deadH)}mm (센터 정렬 시 각 ${fmt(r.marginW)}/${fmt(r.marginH)}mm).</div>`;
+  if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
+  const d = cabinetResolution(m);
+  if (Math.abs(m.cabW / m.pitch - d.resW) > 1 || Math.abs(m.cabH / m.pitch - d.resH) > 1)
+    nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
+}
+
+function renderCompare() {
+  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const rows = models.map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill' }) }));
+  let bestPx = -1, bestId = null;
+  for (const { m, r } of rows) if (r.fits && r.pixels > bestPx) { bestPx = r.pixels; bestId = m.id; }
+  const body = $('#cmpBody'); body.innerHTML = '';
+  for (const { m, r } of rows) {
+    const tr = document.createElement('tr');
+    tr.className = 'rowbtn' + (m.id === selectedId ? ' pick' : '') + (!r.fits ? ' nofit' : '');
+    tr.dataset.id = m.id;
+    tr.innerHTML = `
+      <td class="name">${esc(m.name)}${m.id === bestId ? '<span class="badge">최다화소</span>' : ''}</td>
+      <td>${fmt(m.pitch, 2)}</td>
+      <td>${r.fits ? `${r.cols}×${r.rows}` : '—'}</td>
+      <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
+      <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
+      <td>${r.fits ? fmt(r.diagIn, 1) : '—'}</td>
+      <td>${fmt(r.weightKg, 1)}</td>
+      <td>${fmt(r.brightnessPeak)}</td>
+      <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
+      <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
+    body.appendChild(tr);
+  }
+}
+
+function renderAll() { renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
+
+/* events */
+['spaceW', 'spaceH', 'manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+$('#fitMode').addEventListener('click', e => {
+  const b = e.target.closest('button[data-mode]'); if (!b) return;
+  mode = b.dataset.mode;
+  $('#fitMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  $('#manualBox').hidden = mode !== 'manual';
+  if (mode === 'manual') {
+    const m = models.find(x => x.id === selectedId);
+    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill' });
+    $('#manCols').value = r.cols; $('#manRows').value = r.rows;
+  }
+  renderAll();
+});
+$('#modelList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const { id, act } = b.dataset;
+  if (act === 'select') { selectedId = id; renderAll(); }
+  if (act === 'edit') openEdit(id);
+  if (act === 'del') {
+    if (models.length <= 1) return alert('최소 1개 모델은 남겨야 합니다.');
+    models = models.filter(m => m.id !== id);
+    if (selectedId === id) selectedId = models[0].id;
+    renderAll();
+  }
+});
+$('#cmpBody').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+  selectedId = tr.dataset.id; renderAll();
+});
+$('#btnAddModel').addEventListener('click', () => openEdit(null));
+$('#btnResetModels').addEventListener('click', () => {
+  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = structuredClone(MODELS); selectedId = models[0].id; renderAll(); }
+});
+
+const dlg = $('#dlg');
+function openEdit(id) {
+  editingId = id;
+  const m = id ? models.find(x => x.id === id)
+    : { name: '신규 모델', series: '', pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: '', resH: '', weight: '', maxPower: '', brightnessPeak: 1000 };
+  $('#dlgTitle').textContent = id ? '모델 편집' : '모델 추가';
+  const set = (f, v) => $('#' + f).value = (v == null ? '' : v);
+  set('e_name', m.name); set('e_series', m.series); set('e_pitch', m.pitch);
+  set('e_cabW', m.cabW); set('e_cabH', m.cabH); set('e_depth', m.depth);
+  set('e_resW', m.resW); set('e_resH', m.resH); set('e_weight', m.weight);
+  set('e_maxP', m.maxPower); set('e_nit', m.brightnessPeak);
+  dlg.showModal();
+}
+$('#dlgClose').addEventListener('click', () => dlg.close());
+$('#dlgCancel').addEventListener('click', () => dlg.close());
+$('#dlgSave').addEventListener('click', () => {
+  const pitch = num($('#e_pitch').value), cabW = num($('#e_cabW').value), cabH = num($('#e_cabH').value);
+  if (cabW <= 0 || cabH <= 0) return alert('캐비닛 크기는 0보다 커야 합니다.');
+  const orEmpty = v => v === '' ? null : num(v);
+  let resW = orEmpty($('#e_resW').value), resH = orEmpty($('#e_resH').value);
+  if (resW == null && pitch > 0) resW = Math.round(cabW / pitch);
+  if (resH == null && pitch > 0) resH = Math.round(cabH / pitch);
+  const data = {
+    name: $('#e_name').value || '이름없음', series: $('#e_series').value,
+    pitch, cabW, cabH, depth: orEmpty($('#e_depth').value),
+    resW, resH, weight: orEmpty($('#e_weight').value), maxPower: orEmpty($('#e_maxP').value),
+    brightnessPeak: orEmpty($('#e_nit').value), validated: false,
+  };
+  if (editingId) Object.assign(models.find(x => x.id === editingId), data);
+  else { const nm = { id: uid(), ...data }; models.push(nm); selectedId = nm.id; }
+  dlg.close(); renderAll();
+});
+
+$('#btnExport').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ version: 1, models }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'led-models.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+$('#btnImport').addEventListener('click', () => $('#fileImport').click());
+$('#fileImport').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const j = JSON.parse(rd.result); const arr = Array.isArray(j) ? j : j.models;
+      if (!Array.isArray(arr)) throw 0;
+      models = arr.map(m => ({ id: m.id || uid(), ...m })); selectedId = models[0]?.id; renderAll();
+    } catch { alert('유효한 모델 JSON 파일이 아닙니다.'); }
+  };
+  rd.readAsText(f); e.target.value = '';
+});
+
+window.addEventListener('resize', renderPreview);
+renderAll();
