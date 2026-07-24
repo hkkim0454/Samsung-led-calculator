@@ -4,6 +4,15 @@
 
 export const WATT_TO_BTU = 3.412142;   // W -> BTU/hr
 export const MM_PER_INCH = 25.4;
+export const RATIO_169 = 16 / 9;
+
+/** Largest 16:9 resolution (in whole pixels) that fits inside w x h. */
+export function fit169(w, h) {
+  if (!(w > 0) || !(h > 0)) return { w: 0, h: 0 };
+  return (w / h >= RATIO_169)
+    ? { w: Math.round(h * RATIO_169), h }   // wider than 16:9 -> height-limited
+    : { w, h: Math.round(w / RATIO_169) };  // taller than 16:9 -> width-limited
+}
 
 export const DEFAULTS = Object.freeze({
   powerFactor: 0.527,  // typical = max * powerFactor (Samsung MP012F: 3234/6132 = 0.5274)
@@ -79,6 +88,12 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const redundancy = opts.redundancy ?? false;
   const sbox = sboxCount(model, pixels, { redundancy });
 
+  // Largest 16:9 resolution that fits inside the panel's output resolution.
+  // For a super-wide wall (wider than 16:9) the full height is used and the width is
+  // limited to height*16/9; for a taller-than-16:9 wall the width is the limit.
+  const { w: res169W, h: res169H } = fit169(resW, resH);
+  const is169 = resH > 0 && Math.abs(resW / resH - RATIO_169) < 0.001;
+
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - actualH);
 
@@ -86,6 +101,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     cols, rows, fits, total,
     actualW, actualH, areaM2, diagIn,
     resW, resH, pixels,
+    res169W, res169H, is169,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, redundancy,
     deadW, deadH,

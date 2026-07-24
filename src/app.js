@@ -115,6 +115,7 @@ function renderReadout() {
     { k: '실제 모듈 크기', v: `${fmt(r.actualW)} × ${fmt(r.actualH)}`, u: 'mm', hero: true },
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total}` },
     { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
+    { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: r.is169 ? 'px (16:9)' : 'px' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '대각', v: fmt(r.diagIn, 1), u: '"' },
@@ -130,6 +131,7 @@ function renderReadout() {
 
   if (!r.fits) nt.innerHTML = `<div class="notice warn">⚠ 지정 조건으로 캐비닛이 배치되지 않습니다.</div>`;
   else if (r.deadW > 0.5 || r.deadH > 0.5) nt.innerHTML = `<div class="notice info">여백 — 가로 ${fmt(r.deadW)}mm · 세로 ${fmt(r.deadH)}mm (센터 정렬 시 각 ${fmt(r.marginW)}/${fmt(r.marginH)}mm).</div>`;
+  if (r.fits && !r.is169 && r.res169W > 0) nt.innerHTML += `<div class="notice info">16:9가 아닌 구성(슈퍼와이드 등)입니다. 16:9 콘텐츠 최대 해상도는 ${fmt(r.res169W)} × ${fmt(r.res169H)} px입니다.</div>`;
   if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
   if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(S-Box) 입력 용량 정보가 없어 S-Box 수량을 산출할 수 없습니다.</div>`;
   const d = cabinetResolution(m);

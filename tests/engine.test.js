@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount } from '../src/engine.js';
+import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount, fit169 } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -76,4 +76,24 @@ test('per-model typical power is preferred over the global factor', () => {
   // MP012F stores typicalPower 77 -> 42 * 77 = 3234 exactly (matches Samsung reading).
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
   assert.equal(r.typW, 42 * 77);
+});
+
+test('16:9 max resolution: super-wide is height-limited', () => {
+  // 5760x1080 super-wide -> full height, width capped at 1080*16/9 = 1920.
+  assert.deepEqual(fit169(5760, 1080), { w: 1920, h: 1080 });
+  // taller than 16:9 -> width-limited: 1080x1920 -> h = 1080*9/16 = 607.5 -> 608
+  assert.deepEqual(fit169(1080, 1920), { w: 1080, h: 608 });
+});
+
+test('16:9 max for the MP012F reference wall (4480x2160 is wider than 16:9)', () => {
+  // 4480/2160 = 2.07 > 16/9 -> not 16:9; 16:9 content max = 2160*16/9 = 3840 x 2160.
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(r.is169, false);
+  assert.equal(r.res169W, 3840);
+  assert.equal(r.res169H, 2160);
+});
+
+test('16:9 max equals full resolution when the panel is exactly 16:9', () => {
+  // 3840x2160 (4K UHD) is exactly 16:9.
+  assert.deepEqual(fit169(3840, 2160), { w: 3840, h: 2160 });
 });
