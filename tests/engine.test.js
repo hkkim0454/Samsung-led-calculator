@@ -113,19 +113,28 @@ test('brightnessMax uses operating "최대" (reduced when present, else peak)', 
   assert.equal(computeConfig(MM015F, 6000, 3400, { mode: 'fill' }).brightnessMax, 600);
 });
 
-test('MMF P0.9375 and P1.25 models exist with Samsung sheet figures', () => {
+test('MMF P0.9375 / P1.25 verified against Samsung configurator export', () => {
   const MM009F = MODELS.find(m => m.id === 'MM009F');
   const MM012F = MODELS.find(m => m.id === 'MM012F');
-  // geometry / resolution derived from cabinet 600x337.5 and pitch (matches Samsung sheet).
+  // geometry / resolution (cabinet 600x337.5, pitch-derived) — matches Samsung export.
   assert.deepEqual({ p: MM009F.pitch, w: MM009F.resW, h: MM009F.resH }, { p: 0.9375, w: 640, h: 360 });
   assert.deepEqual({ p: MM012F.pitch, w: MM012F.resW, h: MM012F.resH }, { p: 1.25, w: 480, h: 270 });
-  // Max power per cabinet = (W/m^2 from sheet) x 0.2025 m^2.
-  assert.equal(MM009F.maxPower, 85.8);
-  assert.equal(MM012F.maxPower, 92.7);
-  // weight/typical not in the sales sheet -> stays null (no fabricated specs).
-  assert.equal(MM009F.weight, null);
-  assert.equal(MM012F.typicalPower, null);
-  const r = computeConfig(MM009F, 6000, 3400, { mode: 'fill' });
-  assert.equal(r.weightKg, null);          // null propagates
-  assert.equal(r.brightnessMax, 600);
+  // per-cabinet figures from the official export (weight 5.1kg 공통).
+  assert.deepEqual({ w: MM009F.weight, max: MM009F.maxPower, typ: MM009F.typicalPower }, { w: 5.1, max: 94.6, typ: 37 });
+  assert.deepEqual({ w: MM012F.weight, max: MM012F.maxPower, typ: MM012F.typicalPower }, { w: 5.1, max: 92.8, typ: 41.5 });
+
+  // MM009F 12x6 export: 367.2 kg, 6811.2 W max, 2664 W typ, 2 S-Box (7680x2160).
+  const a = computeConfig(MM009F, 7200, 2025, { mode: 'manual', cols: 12, rows: 6 });
+  assert.ok(Math.abs(a.weightKg - 367.2) < 0.1, `weight=${a.weightKg}`);
+  assert.ok(Math.abs(a.maxW - 6811.2) < 0.1, `max=${a.maxW}`);
+  assert.ok(Math.abs(a.typW - 2664) < 0.1, `typ=${a.typW}`);
+  assert.equal(a.sbox, 2);
+  assert.equal(a.brightnessMax, 600);
+
+  // MM012F 8x8 export: 326.4 kg, 5939.2 W max, 2656 W typ, 1 S-Box (3840x2160).
+  const b = computeConfig(MM012F, 4800, 2700, { mode: 'manual', cols: 8, rows: 8 });
+  assert.ok(Math.abs(b.weightKg - 326.4) < 0.1, `weight=${b.weightKg}`);
+  assert.ok(Math.abs(b.maxW - 5939.2) < 0.1, `max=${b.maxW}`);
+  assert.ok(Math.abs(b.typW - 2656) < 0.1, `typ=${b.typW}`);
+  assert.equal(b.sbox, 1);
 });
