@@ -102,35 +102,32 @@ function moveModel(id, dir) {
   renderAll();
 }
 
-// FHD/UHD 신호 버튼 활성/비활성: 벽 해상도가 해당 규격보다 작으면 못 누르게 한다.
-// (예: 2560x1440 벽은 UHD(3840x2160)를 담을 수 없으므로 UHD 비활성 — 실제보다 크게 그려지는 오해 방지.)
-function updateSigButtons(resW, resH) {
-  const canFHD = resW >= 1920 && resH >= 1080;
-  const canUHD = resW >= 3840 && resH >= 2160;
-  const fBtn = $('#signalMode button[data-sig="fhd"]'), uBtn = $('#signalMode button[data-sig="uhd"]');
-  if (fBtn) { fBtn.disabled = !canFHD; fBtn.title = canFHD ? '' : '해상도가 FHD(1920×1080)보다 작습니다'; }
-  if (uBtn) { uBtn.disabled = !canUHD; uBtn.title = canUHD ? '' : '해상도가 UHD(3840×2160)보다 작습니다'; }
-  // 현재 선택이 불가능해지면 '미선택'으로 되돌린다.
-  if ((signalMode === 'fhd' && !canFHD) || (signalMode === 'uhd' && !canUHD)) {
-    signalMode = 'off';
-    $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.sig === 'off'));
-  }
-}
-
 function renderPreview() {
   const m = models.find(x => x.id === selectedId);
   const stage = $('#stage');
   $('#pvModelName').textContent = m ? m.name : '—';
-  if (!m) { updateSigButtons(0, 0); stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
+  if (!m) { stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
-  updateSigButtons(r.resW, r.resH);
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
+
+  // 선택된 신호 규격의 '풀 영역' 발자국(mm). 벽 좌상단 기준으로 우/하 확장 — 벽보다 클 수 있다
+  // (예: 2560x1440 벽에서 UHD는 3840x2160 = IF015R 6x6 크기의 윤곽으로, 지금 벽이 UHD에 얼마나 모자란지 표시).
+  const sig = (signalMode !== 'off' && r.resW > 0 && r.resH > 0)
+    ? (signalMode === 'uhd' ? { bw: 3840, bh: 2160, label: 'UHD' } : { bw: 1920, bh: 1080, label: 'FHD' })
+    : null;
+  let sigFootW = 0, sigFootH = 0, sigC = 0, sigR = 0;
+  if (sig) {
+    sigC = Math.ceil(r.resW / sig.bw); sigR = Math.ceil(r.resH / sig.bh);
+    sigFootW = sigC * sig.bw / r.resW * r.actualW; // px→mm (벽 기준)
+    sigFootH = sigR * sig.bh / r.resH * r.actualH;
+  }
 
   const padX = 82, padY = 54;
   const stageW = Math.max(140, stage.clientWidth - padX * 2), stageH = Math.max(140, stage.clientHeight - padY * 2);
-  const refW = Math.max(sW, r.actualW), refH = Math.max(sH, r.actualH);
-  const scale = Math.min(stageW / refW, stageH / refH);
+  // 콘텐츠 박스 = 공간 ∪ 신호 발자국(벽 좌상단에서 시작). 이 박스를 스테이지에 맞춰 축소.
+  const contentW = Math.max(sW, r.marginW + sigFootW), contentH = Math.max(sH, r.marginH + sigFootH);
+  const scale = Math.min(stageW / contentW, stageH / contentH);
   const spW = sW * scale, spH = sH * scale, arW = r.actualW * scale, arH = r.actualH * scale;
   const offX = r.marginW * scale, offY = r.marginH * scale;
   const meters = mm => (mm / 1000).toLocaleString('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m';
@@ -144,9 +141,14 @@ function renderPreview() {
   fig.innerHTML = '<svg viewBox="0 0 40 100" preserveAspectRatio="xMidYMax meet"><circle cx="20" cy="13" r="11"/><rect x="5" y="27" width="30" height="73" rx="15"/></svg>';
   stage.appendChild(fig);
 
-  // installation space (white bezel/frame), LED wall centered inside
+  // installation space (white bezel/frame), LED wall centered inside.
+  // 콘텐츠 박스(공간 ∪ 신호 발자국)를 스테이지 중앙에 배치. 공간은 콘텐츠 박스 좌상단에 둔다.
+  const contentPxW = contentW * scale, contentPxH = contentH * scale;
   const scene = document.createElement('div');
   scene.className = 'pvScene'; scene.style.width = spW + 'px'; scene.style.height = spH + 'px';
+  scene.style.transform = 'none';
+  scene.style.left = ((stage.clientWidth - contentPxW) / 2) + 'px';
+  scene.style.top = ((stage.clientHeight - contentPxH) / 2) + 'px';
   const wall = document.createElement('div');
   wall.className = 'pvWall';
   wall.style.left = offX + 'px'; wall.style.top = offY + 'px';
@@ -165,20 +167,16 @@ function renderPreview() {
   }
   scene.appendChild(wall);
 
-  // FHD/UHD signal-region overlay (blue borders + tag), like the Samsung tool
-  if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
-    const [bw, bh, label] = signalMode === 'uhd' ? [3840, 2160, 'UHD'] : [1920, 1080, 'FHD'];
-    const nC = Math.ceil(r.resW / bw), nR = Math.ceil(r.resH / bh);
-    const cbw = arW * bw / r.resW, cbh = arH * bh / r.resH;
+  // FHD/UHD 신호 영역 오버레이 — '풀 영역' 크기로 그린다(벽보다 크면 밖으로 확장). FHD=파랑 / UHD=빨강.
+  if (sig) {
+    const cbw = arW * sig.bw / r.resW, cbh = arH * sig.bh / r.resH;
     const ov = document.createElement('div');
-    ov.className = 'pvSignal ' + signalMode; // fhd=파란색 / uhd=빨간색
-    ov.style.cssText = `left:${offX}px;top:${offY}px;width:${arW}px;height:${arH}px`;
-    for (let rr = 0; rr < nR; rr++) for (let cc = 0; cc < nC; cc++) {
-      const bx = cc * cbw, by = rr * cbh;
-      const w = Math.min(cbw, arW - bx), h = Math.min(cbh, arH - by);
+    ov.className = 'pvSignal ' + signalMode;
+    ov.style.cssText = `left:${offX}px;top:${offY}px`;
+    for (let rr = 0; rr < sigR; rr++) for (let cc = 0; cc < sigC; cc++) {
       const blk = document.createElement('div'); blk.className = 'pvSig';
-      blk.style.cssText = `left:${bx}px;top:${by}px;width:${w}px;height:${h}px`;
-      blk.innerHTML = `<span class="pvSigTag">${label}</span>`;
+      blk.style.cssText = `left:${cc * cbw}px;top:${rr * cbh}px;width:${cbw}px;height:${cbh}px`;
+      blk.innerHTML = `<span class="pvSigTag">${sig.label}</span>`;
       ov.appendChild(blk);
     }
     scene.appendChild(ov);
@@ -275,7 +273,7 @@ function renderAll() { ensureSelectionVisible(); renderFilters(); renderModelLis
 $('#redundancy').addEventListener('change', renderAll);
 $('#useCS4B').addEventListener('change', renderAll);
 $('#signalMode').addEventListener('click', e => {
-  const b = e.target.closest('button[data-sig]'); if (!b || b.disabled) return;
+  const b = e.target.closest('button[data-sig]'); if (!b) return;
   signalMode = b.dataset.sig;
   $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   renderPreview(); renderReadout();
