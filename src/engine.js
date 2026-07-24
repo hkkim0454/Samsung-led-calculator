@@ -119,6 +119,10 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   // limited to height*16/9; for a taller-than-16:9 wall the width is the limit.
   const { w: res169W, h: res169H } = fit169(resW, resH);
   const is169 = resH > 0 && Math.abs(resW / resH - RATIO_169) < 0.001;
+  // 16:9 최대 영역의 물리 대각(인치): 해당 픽셀 영역 × 픽셀피치 기준.
+  const diag169In = (res169W > 0 && res169H > 0)
+    ? Math.sqrt((res169W * model.pitch) ** 2 + (res169H * model.pitch) ** 2) / MM_PER_INCH
+    : 0;
 
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - actualH);
@@ -127,7 +131,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     cols, rows, fits, total,
     actualW, actualH, areaM2, diagIn,
     resW, resH, pixels,
-    res169W, res169H, is169,
+    res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, gbic, controller, redundancy,
     deadW, deadH,
