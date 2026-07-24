@@ -97,6 +97,8 @@ test('16:9 max for the MP012F reference wall (4480x2160 is wider than 16:9)', ()
   assert.equal(r.is169, false);
   assert.equal(r.res169W, 3840);
   assert.equal(r.res169H, 2160);
+  // 16:9 영역 물리 대각: 3840x2160 @ pitch 1.26 -> ~218.6"
+  assert.ok(Math.abs(r.diag169In - 218.6) < 0.1, `diag169=${r.diag169In}`);
 });
 
 test('16:9 max equals full resolution when the panel is exactly 16:9', () => {
