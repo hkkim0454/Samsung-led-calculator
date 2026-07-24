@@ -319,3 +319,14 @@ a:hover{color:var(--accent-2);text-decoration:underline}
 .lineChip input{width:15px;height:15px;accent-color:var(--accent);margin:0;flex:none}
 .lineChip .cnt{font-family:var(--mono);font-size:10px;color:var(--muted)}
 .lineChip.on .cnt{color:var(--accent)}
+
+/* ---- Model reorder controls (▲▼) ---- */
+.modelRow{grid-template-columns:auto 1fr auto}
+.mvcol{display:flex;flex-direction:column;gap:3px;justify-content:center}
+.mv{padding:2px 7px;font-size:10px;line-height:1.15;min-width:0;color:var(--ink-2)}
+.mv:disabled{opacity:.28;cursor:default;pointer-events:none}
+.modelRow .acts{flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:520px){
+  .modelRow{grid-template-columns:auto 1fr}
+  .modelRow .acts{grid-column:1 / -1;justify-content:flex-start;margin-top:8px}
+}

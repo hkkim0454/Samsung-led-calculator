@@ -58,10 +58,14 @@ function renderModelList() {
   const el = $('#modelList'); el.innerHTML = '';
   const vis = visibleModels();
   if (vis.length === 0) { el.innerHTML = '<div class="previewEmpty">표시할 라인이 없습니다. 위에서 제품 라인을 선택하세요.</div>'; return; }
-  for (const m of vis) {
+  vis.forEach((m, i) => {
     const row = document.createElement('div');
     row.className = 'modelRow' + (m.id === selectedId ? ' sel' : '');
     row.innerHTML = `
+      <div class="mvcol">
+        <button class="tiny ghost mv" data-act="up" data-id="${m.id}" title="위로"${i === 0 ? ' disabled' : ''}>▲</button>
+        <button class="tiny ghost mv" data-act="down" data-id="${m.id}" title="아래로"${i === vis.length - 1 ? ' disabled' : ''}>▼</button>
+      </div>
       <div>
         <div class="mname">${esc(m.name)} ${statusBadge(m)}</div>
         <div class="mmeta">${esc(m.series || '')} · ${fmt(m.cabW,1)}×${fmt(m.cabH,1)}mm · P${fmt(m.pitch,2)}</div>
@@ -72,7 +76,18 @@ function renderModelList() {
         <button class="tiny ghost danger" data-act="del" data-id="${m.id}">삭제</button>
       </div>`;
     el.appendChild(row);
-  }
+  });
+}
+
+// Reorder within the visible list; reflected in the master models[] array.
+// Order persists via 데이터 저장/불러오기(JSON) — consistent with the rest of the library.
+function moveModel(id, dir) {
+  const vis = visibleModels();
+  const vi = vis.findIndex(m => m.id === id), tj = vi + dir;
+  if (vi < 0 || tj < 0 || tj >= vis.length) return;
+  const a = models.indexOf(vis[vi]), b = models.indexOf(vis[tj]);
+  [models[a], models[b]] = [models[b], models[a]];
+  renderAll();
 }
 
 function renderPreview() {
@@ -218,6 +233,8 @@ $('#fitMode').addEventListener('click', e => {
 $('#modelList').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const { id, act } = b.dataset;
+  if (act === 'up') return moveModel(id, -1);
+  if (act === 'down') return moveModel(id, 1);
   if (act === 'select') { selectedId = id; renderAll(); }
   if (act === 'edit') openEdit(id);
   if (act === 'del') {
