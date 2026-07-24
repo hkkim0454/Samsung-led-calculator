@@ -15,7 +15,8 @@
 ## 현재 위치
 
 - Phase: **INCEPTION 후반** (프로토타입 v0.2 존재, SPEC 초안 작성됨)
-- 방향 A 채택(2026-07-23, DEC-004): 본 프로젝트 유지 + DISPLAY FIT 우수 요소 흡수. S-Box 규칙 확정(DEC-005), dataStatus 3단계·모델별 typical·MP008F 검증전력 반영. 단위는 mm/meter만.
+- 방향 A 채택(2026-07-23, DEC-004): 본 프로젝트 유지 + DISPLAY FIT 우수 요소 흡수. dataStatus 3단계·모델별 typical·MP008F 검증전력 반영. 단위는 mm/meter만.
+- S-Box 규칙(2026-07-24, DEC-006): 영역 타일 `ceil(resW/3840)×ceil(resH/2160)`·이중화 ×2, CS4B(=CS4BPGS)·SNOWAAE 공통 4K. IFR/IEA 용량 반영, Outdoor(IB) 단종 삭제, 슈퍼와이드 16:9 최대해상도 산출. (DEC-005 대체)
 - 남은 미확정: `docs/SPEC.md` §4 Q1(세로 충진 규칙) / Q2(범위: 일체형·Video Wall 포함 여부) / 스페어율·Jig 규칙.
 
 ## 저장소 구조
