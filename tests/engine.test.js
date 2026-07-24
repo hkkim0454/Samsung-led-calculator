@@ -113,17 +113,21 @@ test('GBIC: gbicSets = 1 SET per 1920x2160 region, doubled by redundancy', () =>
   assert.equal(gbicSets(0, 0), null);
 });
 
-test('GBIC only appears when the CS4B(광전송) option is on', () => {
-  // Default (no cs4b): controller = model.sbox (MPF 기본 SNOWAAE), gbic = null.
-  const off = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
-  assert.equal(off.gbic, null);
-  assert.equal(off.controller, 'SBB-SNOWAAE');
-  // cs4b on: controller = SBB-CS4B, gbic computed (4480x2160 -> 3 SET).
-  const on = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, cs4b: true });
-  assert.equal(on.controller, 'SBB-CS4B');
-  assert.equal(on.gbic, 3);
-  // sbox count is unchanged by the CS4B option (both cap at 4K).
-  assert.equal(on.sbox, off.sbox);
+test('GBIC는 CS4B 계열 컨트롤러에서만 산출 (MMF 자동, 그 외는 CS4B 선택 시)', () => {
+  // MPF 기본 SNOWAAE -> GBIC 없음.
+  const mpOff = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(mpOff.controller, 'SBB-SNOWAAE');
+  assert.equal(mpOff.gbic, null);
+  // MPF + CS4B(광전송) 선택 -> 컨트롤러 CS4B, GBIC 3 (4480x2160).
+  const mpOn = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, cs4b: true });
+  assert.equal(mpOn.controller, 'SBB-CS4B');
+  assert.equal(mpOn.gbic, 3);
+  assert.equal(mpOn.sbox, mpOff.sbox); // S-Box 수량은 CS4B 옵션과 무관.
+  // MMF는 기본 컨트롤러가 CS4BPGS -> GBIC 자동 산출 (10x10 = 3840x2160 -> 2 SET).
+  const MM015F = MODELS.find(m => m.id === 'MM015F');
+  const mm = computeConfig(MM015F, 6000, 3400, { mode: 'fill' });
+  assert.equal(mm.controller, 'SBB-CS4BPGS');
+  assert.equal(mm.gbic, 2);
 });
 
 test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {
