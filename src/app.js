@@ -71,7 +71,7 @@ function renderModelList() {
       </div>
       <div class="minfo">
         <div class="mname">${esc(m.name)} ${statusBadge(m)}</div>
-        <div class="mmeta">${esc(m.series || '')} · ${fmt(m.cabW,1)}×${fmt(m.cabH,1)}mm · P${fmt(m.pitch,2)}</div>
+        <div class="mmeta">${esc(lineLabel(m.series))} · ${fmt(m.cabW,1)}×${fmt(m.cabH,1)}mm · P${fmt(m.pitch,2)}</div>
       </div>
       <div class="acts">
         <button class="tiny ghost" data-act="edit" data-id="${m.id}">편집</button>

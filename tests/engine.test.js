@@ -74,9 +74,8 @@ test('S-Box redundancy doubles the controller count', () => {
 });
 
 test('S-Box is null when controller capacity is unknown (no fake numbers)', () => {
-  const MM015F = MODELS.find(m => m.id === 'MM015F'); // MM line has no S-Box capacity yet
-  const r = computeConfig(MM015F, 6000, 3400, { mode: 'fill' });
-  assert.equal(r.sbox, null);
+  const noCap = { maxInputW: null, maxInputH: null };
+  assert.equal(sboxCount(noCap, 3840, 2160), null);
 });
 
 test('per-model typical power is preferred over the global factor', () => {
