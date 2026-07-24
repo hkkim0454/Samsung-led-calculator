@@ -128,7 +128,7 @@ function renderPreview() {
   wall.style.gridTemplateColumns = `repeat(${r.cols},1fr)`;
   wall.style.gridTemplateRows = `repeat(${r.rows},1fr)`;
   const cellW = arW / r.cols, cellH = arH / r.rows;
-  const showNums = r.cols <= 26 && r.rows <= 18 && cellW >= 17 && cellH >= 15;
+  const showNums = signalMode === 'off' && r.cols <= 26 && r.rows <= 18 && cellW >= 17 && cellH >= 15;
   const drawCells = Math.min(r.total, 2000);
   for (let i = 0; i < drawCells; i++) {
     const ci = i % r.cols, ri = (i / r.cols) | 0;
@@ -175,19 +175,17 @@ function renderReadout() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
-  // Signal-region count (matches the FHD/UHD preview overlay)
-  let sig = null;
-  if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
-    const [bw, bh, label] = signalMode === 'uhd' ? [3840, 2160, 'UHD'] : [1920, 1080, 'FHD'];
-    const nC = Math.ceil(r.resW / bw), nR = Math.ceil(r.resH / bh);
-    sig = { label, nC, nR, total: nC * nR };
-  }
+  // Signal-region counts (matches the FHD/UHD preview overlay) — always show both.
+  const hasRes = r.resW > 0 && r.resH > 0;
+  const fhd = hasRes ? { c: Math.ceil(r.resW / 1920), r: Math.ceil(r.resH / 1080) } : null;
+  const uhd = hasRes ? { c: Math.ceil(r.resW / 3840), r: Math.ceil(r.resH / 2160) } : null;
   const cells = [
     { k: '실제 모듈 크기', v: `${fmt(r.actualW)} × ${fmt(r.actualH)}`, u: 'mm', hero: true },
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total}` },
     { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
     { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: r.is169 ? 'px (16:9)' : 'px' },
-    ...(sig ? [{ k: `신호 영역 (${sig.label})`, v: `${sig.nC} × ${sig.nR}`, u: `= ${sig.total}개` }] : []),
+    ...(fhd ? [{ k: 'FHD 신호 영역', v: `${fhd.c} × ${fhd.r}`, u: `= ${fhd.c * fhd.r}개` }] : []),
+    ...(uhd ? [{ k: 'UHD 신호 영역', v: `${uhd.c} × ${uhd.r}`, u: `= ${uhd.c * uhd.r}개` }] : []),
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '대각', v: fmt(r.diagIn, 1), u: '"' },
