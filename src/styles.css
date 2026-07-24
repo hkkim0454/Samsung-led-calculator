@@ -144,7 +144,13 @@ header.top{
   width:52px;height:52px;flex:none;border-radius:14px;
   background:linear-gradient(150deg,#0A84FF,#5E5CE6 55%,#BF5AF2);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.35), 0 8px 20px -6px rgba(10,132,255,.6);
+  position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;
 }
+/* 애플 앱 아이콘 느낌의 상단 광택 */
+.swatch::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 46%)}
+/* 캐비닛 배열(그리드) 글리프 */
+.swatchGrid{position:relative;width:30px;height:auto;filter:drop-shadow(0 1px 1.5px rgba(10,26,60,.22))}
 .title-block h1{font-size:27px;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.1}
 .title-block .sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase;margin:0}
 .toolbar{display:flex;gap:9px;flex-wrap:wrap}
