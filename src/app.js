@@ -2,15 +2,21 @@
 import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js';
 import { MODELS } from './models.js';
 
-let models = structuredClone(MODELS);
+// Sales lines shown by default. Marketing name (label) -> internal series code.
+const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
+// 기본 노출 라인 + 기본 표시 순서 (IFR → IEA → MMF → MPF).
+const SALES_LINES = ['IF', 'IE', 'MM', 'MP'];
+
+// 기본 모델 목록: 라인을 SALES_LINES 순서로 배치한다. 같은 라인 내부(피치 순)와
+// 사용자 커스텀 정렬(▲▼)·JSON 불러오기 순서는 stable sort 로 그대로 보존된다.
+const lineRank = s => { const i = SALES_LINES.indexOf(s); return i < 0 ? SALES_LINES.length : i; };
+const defaultModels = () => structuredClone(MODELS).sort((a, b) => lineRank(a.series) - lineRank(b.series));
+
+let models = defaultModels();
 let selectedId = models[0].id;
 let mode = 'fill';
 let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
-
-// Sales lines shown by default. Marketing name (label) -> internal series code.
-const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
-const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF
 // 삼성 판매 정책(2026-07-24): 앞으로 P0.8~P1.8 제품만 판매. 이 범위 밖은 기본 화면에서 숨김.
 const MIN_PITCH = 0.8;
 const MAX_PITCH = 1.8;
@@ -289,7 +295,7 @@ $('#cmpBody').addEventListener('click', e => {
 });
 $('#btnAddModel').addEventListener('click', () => openEdit(null));
 $('#btnResetModels').addEventListener('click', () => {
-  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = structuredClone(MODELS); selectedId = models[0].id; visibleLines = new Set(SALES_LINES); renderAll(); }
+  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = defaultModels(); selectedId = models[0].id; visibleLines = new Set(SALES_LINES); renderAll(); }
 });
 
 const dlg = $('#dlg');
