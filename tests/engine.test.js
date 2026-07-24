@@ -114,10 +114,10 @@ test('GBIC: gbicSets = 1 SET per 1920x2160 region, doubled by redundancy', () =>
 });
 
 test('GBIC only appears when the CS4B(광전송) option is on', () => {
-  // Default (no cs4b): controller = model.sbox, gbic = null.
+  // Default (no cs4b): controller = model.sbox (MPF 기본 SNOWAAE), gbic = null.
   const off = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
   assert.equal(off.gbic, null);
-  assert.equal(off.controller, 'SBB-CS4BPGS');
+  assert.equal(off.controller, 'SBB-SNOWAAE');
   // cs4b on: controller = SBB-CS4B, gbic computed (4480x2160 -> 3 SET).
   const on = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, cs4b: true });
   assert.equal(on.controller, 'SBB-CS4B');
