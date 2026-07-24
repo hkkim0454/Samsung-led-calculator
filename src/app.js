@@ -175,11 +175,19 @@ function renderReadout() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
+  // Signal-region count (matches the FHD/UHD preview overlay)
+  let sig = null;
+  if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
+    const [bw, bh, label] = signalMode === 'uhd' ? [3840, 2160, 'UHD'] : [1920, 1080, 'FHD'];
+    const nC = Math.ceil(r.resW / bw), nR = Math.ceil(r.resH / bh);
+    sig = { label, nC, nR, total: nC * nR };
+  }
   const cells = [
     { k: '실제 모듈 크기', v: `${fmt(r.actualW)} × ${fmt(r.actualH)}`, u: 'mm', hero: true },
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total}` },
     { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
     { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: r.is169 ? 'px (16:9)' : 'px' },
+    ...(sig ? [{ k: `신호 영역 (${sig.label})`, v: `${sig.nC} × ${sig.nR}`, u: `= ${sig.total}개` }] : []),
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '대각', v: fmt(r.diagIn, 1), u: '"' },
@@ -238,7 +246,7 @@ $('#signalMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-sig]'); if (!b) return;
   signalMode = b.dataset.sig;
   $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  renderPreview();
+  renderPreview(); renderReadout();
 });
 $('#lineFilter').addEventListener('change', e => {
   const cb = e.target.closest('input[data-line]'); if (!cb) return;
