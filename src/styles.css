@@ -2,6 +2,17 @@
    LED Wall Configurator — iOS "Liquid Glass" theme
    Markup & class hooks unchanged (app.js untouched). Light + dark auto.
    ========================================================================== */
+
+/* Pretendard — 전체 본문 서체(애플 SF 느낌 + 완전한 한글). 저장소에 폰트 파일 동봉(self-host).
+   가변(variable) woff2 한 파일로 모든 굵기 지원. 라이선스: SIL Open Font License 1.1(무료·상업사용 가능). */
+@font-face{
+  font-family:"Pretendard Variable";
+  font-weight:45 920;
+  font-style:normal;
+  font-display:swap;
+  src:url("./fonts/PretendardVariable.woff2") format("woff2-variations");
+}
+
 :root{
   color-scheme: light dark;
 
@@ -44,8 +55,9 @@
 
   --r-card:24px; --r-field:13px; --r-inner:16px; --r-pill:980px;
 
-  --mono: ui-monospace, "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Noto Sans KR", Roboto, sans-serif;
+  /* 숫자·데이터용. Pretendard로 통일(애플 UI처럼 본문/숫자 동일 서체). 폰트 미로딩 시 monospace로 폴백. */
+  --mono: "Pretendard Variable", Pretendard, ui-monospace, "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark){
@@ -91,6 +103,7 @@ body{
   color:var(--ink);
   font-family:var(--sans);
   font-size:14px;line-height:1.45;
+  font-variant-numeric:tabular-nums; /* 숫자 자릿수 정렬(스펙 값·비교표) */
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
   min-height:100vh;
