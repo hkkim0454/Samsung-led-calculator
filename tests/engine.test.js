@@ -40,8 +40,8 @@ test('does not fit when space smaller than one cabinet', () => {
 });
 
 test('null weight/power propagate as null (no fake numbers)', () => {
-  const IF025R = MODELS.find(m => m.id === 'IF025R');
-  const r = computeConfig(IF025R, 6000, 3400, { mode: 'fill' });
+  const IF040R = MODELS.find(m => m.id === 'IF040R'); // still no datasheet power/weight
+  const r = computeConfig(IF040R, 6000, 3400, { mode: 'fill' });
   assert.equal(r.weightKg, null);
   assert.equal(r.maxW, null);
   assert.ok(r.resW > 0); // geometry still computed
