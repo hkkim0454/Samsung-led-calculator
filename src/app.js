@@ -8,7 +8,7 @@ let mode = 'fill';
 let editingId = null;
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
-const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA', IW: 'IW', IB: 'Outdoor' };
+const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA', IW: 'IW' };
 const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF — hidden: IW, Outdoor
 let visibleLines = new Set(SALES_LINES);
 

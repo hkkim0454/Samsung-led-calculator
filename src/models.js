@@ -93,10 +93,5 @@ export const MODELS = [
     weight: null, maxPower: null, typicalPower: null, maxInputW: null, maxInputH: null,
     sbox: null, cabinetPart: null, dataStatus: 'derived' },
 
-  // ---- Outdoor ----
-  { id: 'IB025F', name: 'IB025F', category: 'Outdoor', series: 'IB',
-    pitch: 2.5, cabW: 1000, cabH: 500, depth: 42, resW: 400, resH: 200,
-    brightnessPeak: 3500, brightnessReduced: null, refreshHz: 3840, ovd_m: 8.6,
-    weight: null, maxPower: null, typicalPower: null, maxInputW: null, maxInputH: null,
-    sbox: null, cabinetPart: null, dataStatus: 'derived' },
+  // (Outdoor IB series removed 2026-07-24 — discontinued by Samsung.)
 ];
