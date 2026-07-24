@@ -6,6 +6,7 @@ let models = structuredClone(MODELS);
 let selectedId = models[0].id;
 let mode = 'fill';
 let editingId = null;
+let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -136,6 +137,25 @@ function renderPreview() {
   }
   scene.appendChild(wall);
 
+  // FHD/UHD signal-region overlay (blue borders + tag), like the Samsung tool
+  if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
+    const [bw, bh, label] = signalMode === 'uhd' ? [3840, 2160, 'UHD'] : [1920, 1080, 'FHD'];
+    const nC = Math.ceil(r.resW / bw), nR = Math.ceil(r.resH / bh);
+    const cbw = arW * bw / r.resW, cbh = arH * bh / r.resH;
+    const ov = document.createElement('div');
+    ov.className = 'pvSignal';
+    ov.style.cssText = `left:${offX}px;top:${offY}px;width:${arW}px;height:${arH}px`;
+    for (let rr = 0; rr < nR; rr++) for (let cc = 0; cc < nC; cc++) {
+      const bx = cc * cbw, by = rr * cbh;
+      const w = Math.min(cbw, arW - bx), h = Math.min(cbh, arH - by);
+      const blk = document.createElement('div'); blk.className = 'pvSig';
+      blk.style.cssText = `left:${bx}px;top:${by}px;width:${w}px;height:${h}px`;
+      blk.innerHTML = `<span class="pvSigTag">${label}</span>`;
+      ov.appendChild(blk);
+    }
+    scene.appendChild(ov);
+  }
+
   // dimension pills
   const pill = (cls, txt, css) => { const d = document.createElement('div'); d.className = 'pvPill ' + cls; d.textContent = txt; d.style.cssText = css; scene.appendChild(d); };
   pill('big', meters(r.actualW), `left:${offX + arW / 2}px;top:-30px;transform:translateX(-50%)`);
@@ -213,6 +233,12 @@ function renderAll() { ensureSelectionVisible(); renderFilters(); renderModelLis
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
+$('#signalMode').addEventListener('click', e => {
+  const b = e.target.closest('button[data-sig]'); if (!b) return;
+  signalMode = b.dataset.sig;
+  $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  renderPreview();
+});
 $('#lineFilter').addEventListener('change', e => {
   const cb = e.target.closest('input[data-line]'); if (!cb) return;
   if (cb.checked) visibleLines.add(cb.dataset.line); else visibleLines.delete(cb.dataset.line);
