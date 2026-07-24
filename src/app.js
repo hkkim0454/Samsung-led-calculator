@@ -239,12 +239,13 @@ function renderCompare() {
       <td class="name">${esc(m.name)}${m.id === bestId ? '<span class="badge">최다화소</span>' : ''}</td>
       <td>${fmtPitch(m.pitch)}</td>
       <td>${r.fits ? `${r.cols}×${r.rows}` : '—'}</td>
-      <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
-      <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
       <td>${r.fits ? fmt(r.diagIn, 1) : '—'}</td>
+      <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
+      <td>${r.fits ? `${fmt(r.res169W)}×${fmt(r.res169H)}` : '—'}</td>
+      <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
+      <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
-      <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
       <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · 광 ${fmt(r.gbic)}` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
     body.appendChild(tr);
