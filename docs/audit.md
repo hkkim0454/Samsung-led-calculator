@@ -88,6 +88,8 @@
 | DEC-008 | 2026-07-24 | 밝기 표시를 peak → "최대"(운영 최대)로 변경. 산출 스펙·비교표 모두 `brightnessMax = brightnessReduced ?? brightnessPeak` 사용 | 삼성 세일즈 자료가 "최대 밝기" 기준(예: MPF 1000 / IFR 800 / IEA 500 / MMF 600 nit)을 사용 — 실제 견적/운영 값에 부합 | 김현규 | Approved |
 | DEC-009 | 2026-07-24 | 기본 노출 피치 범위를 P0.8~P1.8로 한정(기존 ≤2.5). 범위 밖(IF020R P2.0, IF025R/IE025A P2.5, IF040R P4.0)은 데이터 보존한 채 기본 숨김 | 삼성 판매 정책상 앞으로 P0.8~P1.8만 판매. 안 팔리는 피치는 기본 목록에서 제외(데이터는 유지, 필터만 조정) | 김현규 | Approved |
 | DEC-010 | 2026-07-24 | MMF 시리즈에 MM009F(P0.9375, 640×360)·MM012F(P1.25, 480×270) 추가. 밝기 최대 600 nit, 최대전력 85.8W·92.7W(=삼성 시트 W/㎡ × 캐비닛 0.2025㎡), 부품코드 LH009MMFRGS·LH012MMFRGS. weight/typical은 세일즈 시트에 없어 null(데이터시트 필요) | 삼성 MMF 세일즈 자료(slide 13)로 피치·해상도·밝기·최대전력(W/㎡) 확인. MM015F(467→94.6W) 검증값이 동일 산식으로 재현되어 산식 신뢰 | 김현규 | Approved |
+| DEC-011 | 2026-07-24 | 모델 라이브러리 기본 표시 순서를 IFR→IEA→MMF→MPF로 변경(SALES_LINES 순서 + stable sort, 라인 내부·커스텀·JSON 순서 보존) | 오너 설계 우선순위 반영 | 김현규 | Approved |
+| DEC-012 | 2026-07-24 | IFR/IEA 기본 컨트롤러(S-Box)를 SBB-SNOWJMU로 변경(필요시 CS4B). 산출 스펙의 S-Box 항목이 모델별 실제 컨트롤러명을 표시하도록 개선(하드코딩 라벨 제거). MPF/MMF는 SBB-CS4BPGS 유지 | IFR/IEA는 SNOWJMU로 주 설계, CS4B는 예비. S-Box **수량 산식(박스당 4K, maxInputW/H)** 은 SNOWJMU 용량 데이터 미확보로 변경하지 않음(수량 결과 불변, 삼성 정합성 유지) | 김현규 | Approved |
 
 ## Approval Log
 
