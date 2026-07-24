@@ -103,3 +103,29 @@ test('16:9 max equals full resolution when the panel is exactly 16:9', () => {
   // 3840x2160 (4K UHD) is exactly 16:9.
   assert.deepEqual(fit169(3840, 2160), { w: 3840, h: 2160 });
 });
+
+test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {
+  // MP008F peak 1800 / reduced 1000 -> operating max is 1000.
+  const MP008F = MODELS.find(m => m.id === 'MP008F');
+  assert.equal(computeConfig(MP008F, 6000, 3400, { mode: 'fill' }).brightnessMax, 1000);
+  // MM015F has reduced=null; the 600 nit peak IS the 최대.
+  const MM015F = MODELS.find(m => m.id === 'MM015F');
+  assert.equal(computeConfig(MM015F, 6000, 3400, { mode: 'fill' }).brightnessMax, 600);
+});
+
+test('MMF P0.9375 and P1.25 models exist with Samsung sheet figures', () => {
+  const MM009F = MODELS.find(m => m.id === 'MM009F');
+  const MM012F = MODELS.find(m => m.id === 'MM012F');
+  // geometry / resolution derived from cabinet 600x337.5 and pitch (matches Samsung sheet).
+  assert.deepEqual({ p: MM009F.pitch, w: MM009F.resW, h: MM009F.resH }, { p: 0.9375, w: 640, h: 360 });
+  assert.deepEqual({ p: MM012F.pitch, w: MM012F.resW, h: MM012F.resH }, { p: 1.25, w: 480, h: 270 });
+  // Max power per cabinet = (W/m^2 from sheet) x 0.2025 m^2.
+  assert.equal(MM009F.maxPower, 85.8);
+  assert.equal(MM012F.maxPower, 92.7);
+  // weight/typical not in the sales sheet -> stays null (no fabricated specs).
+  assert.equal(MM009F.weight, null);
+  assert.equal(MM012F.typicalPower, null);
+  const r = computeConfig(MM009F, 6000, 3400, { mode: 'fill' });
+  assert.equal(r.weightKg, null);          // null propagates
+  assert.equal(r.brightnessMax, 600);
+});

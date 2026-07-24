@@ -11,9 +11,10 @@ let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on th
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
 const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF
-const MAX_PITCH = 2.5; // 픽셀피치 2.5mm 초과 모델은 기본 화면에서 숨김
-const HIDDEN_PITCHES = new Set([2.0]); // 잘 사용하지 않는 피치(단일값)도 기본 숨김
-const pitchOk = m => m.pitch <= MAX_PITCH + 1e-9 && !HIDDEN_PITCHES.has(m.pitch);
+// 삼성 판매 정책(2026-07-24): 앞으로 P0.8~P1.8 제품만 판매. 이 범위 밖은 기본 화면에서 숨김.
+const MIN_PITCH = 0.8;
+const MAX_PITCH = 1.8;
+const pitchOk = m => m.pitch >= MIN_PITCH - 1e-9 && m.pitch <= MAX_PITCH + 1e-9;
 let visibleLines = new Set(SALES_LINES);
 
 const $ = s => document.querySelector(s);
@@ -190,7 +191,7 @@ function renderReadout() {
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '대각', v: fmt(r.diagIn, 1), u: '"' },
     { k: '총 중량', v: fmt(r.weightKg, 1), u: 'kg' },
-    { k: '밝기 peak', v: fmt(r.brightnessPeak), u: 'nit' },
+    { k: '밝기 (최대)', v: fmt(r.brightnessMax), u: 'nit' },
     { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
@@ -227,7 +228,7 @@ function renderCompare() {
       <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
       <td>${r.fits ? fmt(r.diagIn, 1) : '—'}</td>
       <td>${fmt(r.weightKg, 1)}</td>
-      <td>${fmt(r.brightnessPeak)}</td>
+      <td>${fmt(r.brightnessMax)}</td>
       <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
       <td>${r.fits ? sboxText(r.sbox) : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;

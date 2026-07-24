@@ -110,6 +110,8 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     deadW, deadH,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
+    // "최대"(운영 최대) 밝기. 모델에 reduced 값이 있으면 그 값, 없으면 peak 값을 최대로 사용한다.
+    brightnessMax: (model.brightnessReduced ?? model.brightnessPeak) ?? null,
   };
 }
 
