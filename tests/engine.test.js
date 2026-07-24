@@ -74,8 +74,8 @@ test('S-Box redundancy doubles the controller count', () => {
 });
 
 test('S-Box is null when controller capacity is unknown (no fake numbers)', () => {
-  const MM012F = MODELS.find(m => m.id === 'MM012F'); // MM line has no S-Box capacity yet
-  const r = computeConfig(MM012F, 6000, 3400, { mode: 'fill' });
+  const MM015F = MODELS.find(m => m.id === 'MM015F'); // MM line has no S-Box capacity yet
+  const r = computeConfig(MM015F, 6000, 3400, { mode: 'fill' });
   assert.equal(r.sbox, null);
 });
 

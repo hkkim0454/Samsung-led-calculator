@@ -71,10 +71,10 @@ export const MODELS = [
     weight: null, maxPower: null, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
     sbox: 'SBB-CS4B', cabinetPart: null, dataStatus: 'derived' },
 
-  // ---- MM series (cabinet 600 x 337.5) ----
-  { id: 'MM012F', name: 'MM012F', category: 'Indoor', series: 'MM',
-    pitch: 1.25, cabW: 600, cabH: 337.5, depth: 49.8, resW: 480, resH: 270,
-    brightnessPeak: 600, brightnessReduced: null, refreshHz: 3840, ovd_m: 4.3,
+  // ---- MM series (MMF, cabinet 600 x 337.5) ----
+  { id: 'MM015F', name: 'MM015F', category: 'Indoor', series: 'MM',
+    pitch: 1.5625, cabW: 600, cabH: 337.5, depth: 49.8, resW: 384, resH: 216,
+    brightnessPeak: null, brightnessReduced: null, refreshHz: 3840, ovd_m: null,
     weight: null, maxPower: null, typicalPower: null, maxInputW: null, maxInputH: null,
     sbox: null, cabinetPart: null, dataStatus: 'derived' },
 
