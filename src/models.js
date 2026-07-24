@@ -35,22 +35,7 @@ export const MODELS = [
     weight: null, maxPower: null, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
     sbox: 'SBB-CS4BPGS', cabinetPart: null, dataStatus: 'derived' },
 
-  // ---- The Wall (IW series, cabinet 806.4 x 453.6) ----
-  { id: 'IW008C', name: 'IW008C', category: 'LED Indoor (The Wall)', series: 'IW',
-    pitch: 0.84, cabW: 806.4, cabH: 453.6, depth: 75, resW: 960, resH: 540,
-    brightnessPeak: 1800, brightnessReduced: 600, refreshHz: 3840, ovd_m: 2.9,
-    weight: null, maxPower: null, typicalPower: null, maxInputW: null, maxInputH: null,
-    sbox: null, cabinetPart: null, dataStatus: 'derived' },
-  { id: 'IW012C', name: 'IW012C', category: 'LED Indoor (The Wall)', series: 'IW',
-    pitch: 1.26, cabW: 806.4, cabH: 453.6, depth: 75, resW: 640, resH: 360,
-    brightnessPeak: 1800, brightnessReduced: 1000, refreshHz: 3840, ovd_m: 4.4,
-    weight: null, maxPower: null, typicalPower: null, maxInputW: null, maxInputH: null,
-    sbox: null, cabinetPart: null, dataStatus: 'derived' },
-  { id: 'IW016C', name: 'IW016C', category: 'LED Indoor (The Wall)', series: 'IW',
-    pitch: 1.68, cabW: 806.4, cabH: 453.6, depth: 75, resW: 480, resH: 270,
-    brightnessPeak: 1600, brightnessReduced: 1200, refreshHz: 3840, ovd_m: 5.8,
-    weight: null, maxPower: null, typicalPower: null, maxInputW: null, maxInputH: null,
-    sbox: null, cabinetPart: null, dataStatus: 'derived' },
+  // (The Wall IW series removed 2026-07-24 — discontinued, superseded by MPF.)
 
   // ---- IF series (indoor flat, cabinet 960 x 540) — IFR, S-Box CS4B/SNOWAAE compatible ----
   { id: 'IF015R', name: 'IF015R', category: 'Indoor', series: 'IF',

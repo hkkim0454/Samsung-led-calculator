@@ -8,8 +8,10 @@ let mode = 'fill';
 let editingId = null;
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
-const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA', IW: 'IW' };
-const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF — hidden: IW, Outdoor
+const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
+const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF
+const MAX_PITCH = 2.5; // 픽셀피치 2.5mm 초과 모델은 기본 화면에서 숨김
+const pitchOk = m => m.pitch <= MAX_PITCH + 1e-9;
 let visibleLines = new Set(SALES_LINES);
 
 const $ = s => document.querySelector(s);
@@ -28,8 +30,8 @@ function statusBadge(m) {
 function sboxText(v) { return v == null ? '—' : (v === 0 ? '내장' : fmt(v)); }
 
 const lineLabel = s => LINE_NAMES[s] ?? (s || '기타');
-function familiesInOrder() { const seen = []; for (const m of models) if (!seen.includes(m.series)) seen.push(m.series); return seen; }
-const visibleModels = () => models.filter(m => visibleLines.has(m.series));
+function familiesInOrder() { const seen = []; for (const m of models) if (pitchOk(m) && !seen.includes(m.series)) seen.push(m.series); return seen; }
+const visibleModels = () => models.filter(m => visibleLines.has(m.series) && pitchOk(m));
 function ensureSelectionVisible() {
   const vis = visibleModels();
   if (!vis.some(m => m.id === selectedId)) selectedId = vis[0]?.id ?? null;
@@ -39,7 +41,7 @@ function renderFilters() {
   const el = $('#lineFilter'); if (!el) return;
   el.innerHTML = familiesInOrder().map(s => {
     const on = visibleLines.has(s);
-    const n = models.filter(m => m.series === s).length;
+    const n = models.filter(m => m.series === s && pitchOk(m)).length;
     return `<label class="lineChip${on ? ' on' : ''}"><input type="checkbox" data-line="${esc(s)}"${on ? ' checked' : ''}/>${esc(lineLabel(s))}<span class="cnt">${n}</span></label>`;
   }).join('');
 }
