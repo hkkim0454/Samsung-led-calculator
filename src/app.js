@@ -26,6 +26,8 @@ let visibleLines = new Set(SALES_LINES);
 const $ = s => document.querySelector(s);
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n, d = 0) => (isFinite(n) && n != null) ? n.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
+// 피치 표기: 최대 소수 2자리, 끝자리 0은 생략 (1.5→"1.5", 1.25→"1.25", 1.5625→"1.56").
+const fmtPitch = p => (p != null && isFinite(p)) ? p.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : '—';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uid = () => 'm' + Math.random().toString(36).slice(2, 8);
 
@@ -79,7 +81,7 @@ function renderModelList() {
       </div>
       <div class="minfo">
         <div class="mname">${esc(m.name)} ${statusBadge(m)}</div>
-        <div class="mmeta">${esc(lineLabel(m.series))} · ${fmt(m.cabW,1)}×${fmt(m.cabH,1)}mm · P${fmt(m.pitch,2)}</div>
+        <div class="mmeta">${esc(lineLabel(m.series))} · ${fmt(m.cabW,1)}×${fmt(m.cabH,1)}mm · P${fmtPitch(m.pitch)}</div>
       </div>
       <div class="acts">
         <button class="tiny ghost" data-act="edit" data-id="${m.id}">편집</button>
@@ -232,7 +234,7 @@ function renderCompare() {
     tr.dataset.id = m.id;
     tr.innerHTML = `
       <td class="name">${esc(m.name)}${m.id === bestId ? '<span class="badge">최다화소</span>' : ''}</td>
-      <td>${fmt(m.pitch, 2)}</td>
+      <td>${fmtPitch(m.pitch)}</td>
       <td>${r.fits ? `${r.cols}×${r.rows}` : '—'}</td>
       <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
       <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
