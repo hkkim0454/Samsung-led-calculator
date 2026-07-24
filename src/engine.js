@@ -28,16 +28,19 @@ export function cabinetResolution(model) {
 }
 
 /**
- * S-Box (controller) count = ceil(totalPixels / controller max-input pixels).
- * Redundancy doubles it. Integrated-controller models need none (return 0).
- * If the controller's max input capacity is unknown, return null (no fake numbers).
- * Rule verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 units (SBB-CS4BPGS, 3840x2160).
+ * S-Box (controller) count by width/height region tiling:
+ *   ceil(resW / capW) * ceil(resH / capH)
+ * where cap is one box's max output resolution. Redundancy doubles it.
+ * Integrated-controller models need none (return 0). Unknown capacity -> null (no fake numbers).
+ * Rule confirmed by owner + datasheet (SBB-CS4B = model code SBB-CS4BPGS, and SBB-SNOWAAE
+ * limited to 4K): both boxes cap at 3840x2160. Verified vs Samsung: MP012F 42 cabinets
+ * (4480x2160) -> ceil(4480/3840)*ceil(2160/2160) = 2 units.
  */
-export function sboxCount(model, totalPixels, opts = {}) {
+export function sboxCount(model, resW, resH, opts = {}) {
   if (model.integratedController) return 0;
   const capW = model.maxInputW, capH = model.maxInputH;
-  if (capW == null || capH == null || !(totalPixels > 0)) return null;
-  const base = Math.max(1, Math.ceil(totalPixels / (capW * capH)));
+  if (capW == null || capH == null || !(resW > 0) || !(resH > 0)) return null;
+  const base = Math.ceil(resW / capW) * Math.ceil(resH / capH);
   return opts.redundancy ? base * 2 : base;
 }
 
@@ -86,7 +89,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const heatTypBTU = typW != null ? typW * WATT_TO_BTU : null;
 
   const redundancy = opts.redundancy ?? false;
-  const sbox = sboxCount(model, pixels, { redundancy });
+  const sbox = sboxCount(model, resW, resH, { redundancy });
 
   // Largest 16:9 resolution that fits inside the panel's output resolution.
   // For a super-wide wall (wider than 16:9) the full height is used and the width is
@@ -118,7 +121,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 export function bom(model, total, opts = {}) {
   const spareRate = opts.spareRate ?? DEFAULTS.spareRate;
   const spares = total > 0 ? Math.ceil(total * spareRate) : 0;
-  const sboxQty = opts.pixels != null ? sboxCount(model, opts.pixels, opts) : null;
+  const sboxQty = (opts.resW != null && opts.resH != null) ? sboxCount(model, opts.resW, opts.resH, opts) : null;
   return {
     cabinetPart: model.cabinetPart ?? null,
     cabinets: total,

@@ -82,7 +82,8 @@
 | DEC-002 | 2026-07-23 | 산출 항목·데이터 스키마를 삼성 실측 기준으로 정렬(Pitch, W×H×D, weight, max/typ power, resolution, brightness, OVD, BOM) | 사내 견적 정합성 확보 | 김현규 | Proposed |
 | DEC-003 | 2026-07-23 | 평균전력 계수 0.35 → 0.53 정정 | 삼성 MP012F 실측(3234/6132=0.527) 반영 | 김현규 | Proposed |
 | DEC-004 | 2026-07-23 | 방향 A 채택 — 본 프로젝트 유지 + DISPLAY FIT 우수 요소(S-Box 규칙·dataStatus 3단계·검증 전력) 흡수. feet 미도입 | 가벼운 배포 이점 유지하며 산출 정확도 보강 | 김현규 | Approved |
-| DEC-005 | 2026-07-23 | S-Box 수량 = `ceil(전체픽셀/컨트롤러용량)`, 이중화 ×2 | 삼성 검증(42캐비닛→2대) 일치 | 김현규 | Approved |
+| DEC-005 | 2026-07-23 | S-Box 수량 = `ceil(전체픽셀/컨트롤러용량)`, 이중화 ×2 | 삼성 검증(42캐비닛→2대) 일치 | 김현규 | Superseded by DEC-006 |
+| DEC-006 | 2026-07-24 | S-Box 수량 = 영역 타일 `ceil(resW/3840)×ceil(resH/2160)`, 이중화 ×2. SBB-CS4B(=CS4BPGS)·SNOWAAE 공통 4K. IFR/IEA에도 용량 반영. Outdoor(IB) 단종 삭제. 슈퍼와이드 시 16:9 최대해상도 산출 | S-Box 데이터시트 스터디(CS4B/SNOWAAE 매뉴얼)로 박스당 최대 4K 확인, 영역 타일이 실제 신호 매핑에 부합하고 삼성 42→2 검증 유지. SNOWAAE 8K는 4K로 보수 운용 | 김현규 | Approved |
 
 ## Approval Log
 

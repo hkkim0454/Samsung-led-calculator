@@ -53,12 +53,19 @@ test('bom spare defaults to 10% rounded up', () => {
   assert.equal(b.totalCabinets, 47);
 });
 
-// S-Box rule verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 S-Box units.
+// S-Box rule (region tiling) verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 units.
 test('MP012F 42 cabinets need 2 S-Box (Samsung reference)', () => {
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
   assert.equal(r.sbox, 2);
-  const pixels = 4480 * 2160;
-  assert.equal(sboxCount(MP012F, pixels), 2);
+  // ceil(4480/3840) * ceil(2160/2160) = 2 * 1 = 2
+  assert.equal(sboxCount(MP012F, 4480, 2160), 2);
+});
+
+test('S-Box tiles by width and height (region-based)', () => {
+  // 5760 wide x 2160 tall, cap 3840x2160 -> ceil(5760/3840)=2 across, 1 tall = 2 boxes.
+  assert.equal(sboxCount(MP012F, 5760, 2160), 2);
+  // 3840 wide x 4320 tall -> 1 across, ceil(4320/2160)=2 tall = 2 boxes.
+  assert.equal(sboxCount(MP012F, 3840, 4320), 2);
 });
 
 test('S-Box redundancy doubles the controller count', () => {
@@ -67,8 +74,8 @@ test('S-Box redundancy doubles the controller count', () => {
 });
 
 test('S-Box is null when controller capacity is unknown (no fake numbers)', () => {
-  const IF025R = MODELS.find(m => m.id === 'IF025R');
-  const r = computeConfig(IF025R, 6000, 3400, { mode: 'fill' });
+  const MM012F = MODELS.find(m => m.id === 'MM012F'); // MM line has no S-Box capacity yet
+  const r = computeConfig(MM012F, 6000, 3400, { mode: 'fill' });
   assert.equal(r.sbox, null);
 });
 

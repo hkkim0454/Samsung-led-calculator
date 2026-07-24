@@ -36,7 +36,7 @@ Inception 산출물. 계산 공식·데이터 스키마·엣지케이스를 코�
 - 총 중량(kg): `total·weight` (weight 없으면 null)
 - 최대전력(W): `total·maxPower`; 평균전력 = `total·typicalPower` (없으면 `max·0.527`)
 - 발열(BTU/hr): `W·3.412142`
-- S-Box(컨트롤러): `ceil(전체 픽셀 / (maxInputW·maxInputH))`, 이중화 시 ×2, 일체형(integratedController)은 0, 용량 미상은 null
+- S-Box(컨트롤러): `ceil(resW/maxInputW) × ceil(resH/maxInputH)` (가로·세로 영역 타일), 이중화 시 ×2, 일체형(integratedController)은 0, 용량 미상은 null. 박스 최대 4K(3840×2160), CS4B·SNOWAAE 공통(SNOWAAE는 4K로 제한 운용)
 - 여백(mm): `deadW = W - actualW`, 센터 정렬 시 각 변 `deadW/2`
 
 **정합성 기준 (테스트로 고정됨):** MP012F, 6000×3400, 7×6 → 42캐비닛, 5644.8×2721.6mm, 15.362m², 246.7", 4480×2160, 386.4kg, 최대 6132W / 평균 3234W, 20916 BTU. → `tests/engine.test.js` 통과 필수.
@@ -53,7 +53,7 @@ Flat 캐비닛형만(1차) vs Curved 포함. 현재: **Flat 전용**.
 
 ### BOM 규칙
 - 스페어 캐비닛: 현재 `ceil(total·0.10)`. 단 삼성은 42캐비닛에 스페어 **4**(≈9.5%)를 표기 → 반올림/버림 규칙 확인 필요.
-- ~~S-Box 대수~~ **[확정 2026-07-23]** `ceil(전체 픽셀 / 컨트롤러 최대입력)`, 이중화 시 ×2. 삼성 검증: MP012F 42캐비닛(4480×2160) ÷ SBB-CS4BPGS(3840×2160) = 2대와 일치. 컨트롤러 용량 미상 모델은 산출하지 않음(null). *스페어 S-Box 규칙은 별도 미확정.*
+- ~~S-Box 대수~~ **[확정 2026-07-24]** 영역 타일 방식 `ceil(resW/3840) × ceil(resH/2160)`, 이중화 시 ×2. 데이터시트 확인: **SBB-CS4B = 모델코드 SBB-CS4BPGS**(동일 제품), 박스 최대 4K(3840×2160); **SBB-SNOWAAE**는 최대 8K이나 오너 결정으로 4K로 제한 운용 → 두 박스 공통 3840×2160. 삼성 검증: 42캐비닛(4480×2160) → 2대 일치. CS4B 호환 라인(MPF·IFR·IEA)에 용량 반영, 그 외(MMF 등)는 미상(null). *스페어 S-Box 규칙은 별도 미확정.*
 - Jig 대수: 삼성 3 (규칙 미확정, null).
 - 회로 계산(110/208/230V, daisy chain): 미구현(후속).
 
