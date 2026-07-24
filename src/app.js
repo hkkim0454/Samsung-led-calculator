@@ -128,7 +128,7 @@ function renderPreview() {
   wall.style.gridTemplateColumns = `repeat(${r.cols},1fr)`;
   wall.style.gridTemplateRows = `repeat(${r.rows},1fr)`;
   const cellW = arW / r.cols, cellH = arH / r.rows;
-  const showNums = signalMode === 'off' && r.cols <= 26 && r.rows <= 18 && cellW >= 17 && cellH >= 15;
+  const showNums = r.cols <= 30 && r.rows <= 20 && cellW >= 14 && cellH >= 13;
   const drawCells = Math.min(r.total, 2000);
   for (let i = 0; i < drawCells; i++) {
     const ci = i % r.cols, ri = (i / r.cols) | 0;
