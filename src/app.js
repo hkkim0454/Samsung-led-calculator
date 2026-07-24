@@ -57,9 +57,10 @@ function renderFilters() {
 
 function opts() {
   const redundancy = $('#redundancy')?.checked ?? false;
+  const cs4b = $('#useCS4B')?.checked ?? false;
   return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy }
-    : { mode: 'fill', redundancy };
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b }
+    : { mode: 'fill', redundancy, cs4b };
 }
 
 function renderModelList() {
@@ -201,7 +202,8 @@ function renderReadout() {
     { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
-    { k: `S-Box${m.sbox ? ` (${esc(m.sbox)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
+    { k: `S-Box${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
+    ...(r.gbic != null ? [{ k: '광 지빅(GBIC)', v: fmt(r.gbic), u: `SET · SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)}` }] : []),
     { k: '화면비', v: fmt(aspect, 2), u: ': 1' },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
@@ -218,7 +220,8 @@ function renderReadout() {
 
 function renderCompare() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
-  const rows = visibleModels().map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill' }) }));
+  const cs4b = $('#useCS4B')?.checked ?? false;
+  const rows = visibleModels().map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill', cs4b }) }));
   let bestPx = -1, bestId = null;
   for (const { m, r } of rows) if (r.fits && r.pixels > bestPx) { bestPx = r.pixels; bestId = m.id; }
   const body = $('#cmpBody'); body.innerHTML = '';
@@ -236,7 +239,7 @@ function renderCompare() {
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
       <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
-      <td>${r.fits ? sboxText(r.sbox) : '—'}</td>
+      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · 광 ${fmt(r.gbic)}` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
     body.appendChild(tr);
   }
@@ -247,6 +250,7 @@ function renderAll() { ensureSelectionVisible(); renderFilters(); renderModelLis
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
+$('#useCS4B').addEventListener('change', renderAll);
 $('#signalMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-sig]'); if (!b) return;
   signalMode = b.dataset.sig;

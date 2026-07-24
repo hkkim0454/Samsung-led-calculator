@@ -44,6 +44,22 @@ export function sboxCount(model, resW, resH, opts = {}) {
   return opts.redundancy ? base * 2 : base;
 }
 
+// 광 지빅(GBIC, 광 컨버터) 신호 영역 단위: SBB-CS4B는 1920x2160 영역마다 1 SET 필요.
+export const GBIC_REGION_W = 1920, GBIC_REGION_H = 2160;
+
+/**
+ * 광 지빅(GBIC) SET 수량. SBB-CS4B로 설계할 때만 사용:
+ * 1920x2160 신호 영역마다 1 SET(SBOX측 1개 + LED측 1개 = 2개)이 필요하다.
+ *   SET 수 = ceil(resW/1920) * ceil(resH/2160)
+ * S-Box 이중화 시 신호 경로도 2배가 되므로 ×2. 해상도를 알 수 없으면 null(해당 없음).
+ * (실제 부품: Exatek EXA-40G-QSFP-LR4 등 40G QSFP 싱글모드 광모듈.)
+ */
+export function gbicSets(resW, resH, opts = {}) {
+  if (!(resW > 0) || !(resH > 0)) return null;
+  const base = Math.ceil(resW / GBIC_REGION_W) * Math.ceil(resH / GBIC_REGION_H);
+  return opts.redundancy ? base * 2 : base;
+}
+
 /**
  * Decide how many cabinets fit.
  * mode 'fill'   -> floor((space - 2*clearance) / cabinet) on each axis (pure max-fill)
@@ -90,6 +106,10 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 
   const redundancy = opts.redundancy ?? false;
   const sbox = sboxCount(model, resW, resH, { redundancy });
+  // CS4B(광전송)로 설계 시: 컨트롤러를 SBB-CS4B로 보고 광 지빅(GBIC) SET을 산출. 기본은 모델 지정 컨트롤러.
+  const cs4b = opts.cs4b ?? false;
+  const controller = cs4b ? 'SBB-CS4B' : (model.sbox ?? null);
+  const gbic = cs4b ? gbicSets(resW, resH, { redundancy }) : null;
 
   // Largest 16:9 resolution that fits inside the panel's output resolution.
   // For a super-wide wall (wider than 16:9) the full height is used and the width is
@@ -106,7 +126,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     resW, resH, pixels,
     res169W, res169H, is169,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
-    sbox, redundancy,
+    sbox, gbic, controller, redundancy,
     deadW, deadH,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,

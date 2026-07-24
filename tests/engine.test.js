@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount, fit169 } from '../src/engine.js';
+import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169 } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -102,6 +102,28 @@ test('16:9 max for the MP012F reference wall (4480x2160 is wider than 16:9)', ()
 test('16:9 max equals full resolution when the panel is exactly 16:9', () => {
   // 3840x2160 (4K UHD) is exactly 16:9.
   assert.deepEqual(fit169(3840, 2160), { w: 3840, h: 2160 });
+});
+
+test('GBIC: gbicSets = 1 SET per 1920x2160 region, doubled by redundancy', () => {
+  // 4480x2160 -> ceil(4480/1920)=3 * ceil(2160/2160)=1 = 3 SET.
+  assert.equal(gbicSets(4480, 2160), 3);
+  assert.equal(gbicSets(4480, 2160, { redundancy: true }), 6);
+  // 3840x2160 (4K) -> 2 SET; unknown resolution -> null.
+  assert.equal(gbicSets(3840, 2160), 2);
+  assert.equal(gbicSets(0, 0), null);
+});
+
+test('GBIC only appears when the CS4B(광전송) option is on', () => {
+  // Default (no cs4b): controller = model.sbox, gbic = null.
+  const off = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(off.gbic, null);
+  assert.equal(off.controller, 'SBB-CS4BPGS');
+  // cs4b on: controller = SBB-CS4B, gbic computed (4480x2160 -> 3 SET).
+  const on = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, cs4b: true });
+  assert.equal(on.controller, 'SBB-CS4B');
+  assert.equal(on.gbic, 3);
+  // sbox count is unchanged by the CS4B option (both cap at 4K).
+  assert.equal(on.sbox, off.sbox);
 });
 
 test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {
