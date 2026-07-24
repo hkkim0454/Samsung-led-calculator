@@ -74,6 +74,12 @@ tr.nofit td{color:var(--muted)}
 .badge{display:inline-block;font-family:var(--sans);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--accent);color:#fff;margin-left:6px}
 .rowbtn{cursor:pointer}
 .rowbtn:hover td{background:var(--accent-tint)}
+.lineFilter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.lineChip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-2);border:1px solid var(--line-2);background:#fff;border-radius:999px;padding:5px 10px;cursor:pointer;user-select:none}
+.lineChip.on{border-color:var(--accent);background:var(--accent-tint);color:var(--accent-2)}
+.lineChip input{width:14px;height:14px;accent-color:var(--accent);margin:0}
+.lineChip .cnt{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.lineChip.on .cnt{color:var(--accent)}
 .modelList{display:flex;flex-direction:column;gap:8px}
 .modelRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .modelRow.sel{border-color:var(--accent);background:var(--accent-tint)}

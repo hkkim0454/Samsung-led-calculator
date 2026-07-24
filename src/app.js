@@ -7,6 +7,11 @@ let selectedId = models[0].id;
 let mode = 'fill';
 let editingId = null;
 
+// Sales lines shown by default. Marketing name (label) -> internal series code.
+const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA', IW: 'IW', IB: 'Outdoor' };
+const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF — hidden: IW, Outdoor
+let visibleLines = new Set(SALES_LINES);
+
 const $ = s => document.querySelector(s);
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n, d = 0) => (isFinite(n) && n != null) ? n.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
@@ -22,6 +27,23 @@ function statusBadge(m) {
 
 function sboxText(v) { return v == null ? '—' : (v === 0 ? '내장' : fmt(v)); }
 
+const lineLabel = s => LINE_NAMES[s] ?? (s || '기타');
+function familiesInOrder() { const seen = []; for (const m of models) if (!seen.includes(m.series)) seen.push(m.series); return seen; }
+const visibleModels = () => models.filter(m => visibleLines.has(m.series));
+function ensureSelectionVisible() {
+  const vis = visibleModels();
+  if (!vis.some(m => m.id === selectedId)) selectedId = vis[0]?.id ?? null;
+}
+
+function renderFilters() {
+  const el = $('#lineFilter'); if (!el) return;
+  el.innerHTML = familiesInOrder().map(s => {
+    const on = visibleLines.has(s);
+    const n = models.filter(m => m.series === s).length;
+    return `<label class="lineChip${on ? ' on' : ''}"><input type="checkbox" data-line="${esc(s)}"${on ? ' checked' : ''}/>${esc(lineLabel(s))}<span class="cnt">${n}</span></label>`;
+  }).join('');
+}
+
 function opts() {
   const redundancy = $('#redundancy')?.checked ?? false;
   return mode === 'manual'
@@ -31,7 +53,9 @@ function opts() {
 
 function renderModelList() {
   const el = $('#modelList'); el.innerHTML = '';
-  for (const m of models) {
+  const vis = visibleModels();
+  if (vis.length === 0) { el.innerHTML = '<div class="previewEmpty">표시할 라인이 없습니다. 위에서 제품 라인을 선택하세요.</div>'; return; }
+  for (const m of vis) {
     const row = document.createElement('div');
     row.className = 'modelRow' + (m.id === selectedId ? ' sel' : '');
     row.innerHTML = `
@@ -115,7 +139,7 @@ function renderReadout() {
 
 function renderCompare() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
-  const rows = models.map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill' }) }));
+  const rows = visibleModels().map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill' }) }));
   let bestPx = -1, bestId = null;
   for (const { m, r } of rows) if (r.fits && r.pixels > bestPx) { bestPx = r.pixels; bestId = m.id; }
   const body = $('#cmpBody'); body.innerHTML = '';
@@ -139,11 +163,16 @@ function renderCompare() {
   }
 }
 
-function renderAll() { renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
+function renderAll() { ensureSelectionVisible(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
 
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
+$('#lineFilter').addEventListener('change', e => {
+  const cb = e.target.closest('input[data-line]'); if (!cb) return;
+  if (cb.checked) visibleLines.add(cb.dataset.line); else visibleLines.delete(cb.dataset.line);
+  renderAll();
+});
 $('#fitMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-mode]'); if (!b) return;
   mode = b.dataset.mode;
@@ -174,7 +203,7 @@ $('#cmpBody').addEventListener('click', e => {
 });
 $('#btnAddModel').addEventListener('click', () => openEdit(null));
 $('#btnResetModels').addEventListener('click', () => {
-  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = structuredClone(MODELS); selectedId = models[0].id; renderAll(); }
+  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = structuredClone(MODELS); selectedId = models[0].id; visibleLines = new Set(SALES_LINES); renderAll(); }
 });
 
 const dlg = $('#dlg');
@@ -208,7 +237,7 @@ $('#dlgSave').addEventListener('click', () => {
     brightnessPeak: orEmpty($('#e_nit').value), dataStatus: 'needs-verification',
   };
   if (editingId) Object.assign(models.find(x => x.id === editingId), data);
-  else { const nm = { id: uid(), ...data }; models.push(nm); selectedId = nm.id; }
+  else { const nm = { id: uid(), ...data }; models.push(nm); selectedId = nm.id; visibleLines.add(nm.series); }
   dlg.close(); renderAll();
 });
 
@@ -224,7 +253,8 @@ $('#fileImport').addEventListener('change', e => {
     try {
       const j = JSON.parse(rd.result); const arr = Array.isArray(j) ? j : j.models;
       if (!Array.isArray(arr)) throw 0;
-      models = arr.map(m => ({ id: m.id || uid(), ...m })); selectedId = models[0]?.id; renderAll();
+      models = arr.map(m => ({ id: m.id || uid(), ...m })); selectedId = models[0]?.id;
+      visibleLines = new Set(models.map(m => m.series)); renderAll();
     } catch { alert('유효한 모델 JSON 파일이 아닙니다.'); }
   };
   rd.readAsText(f); e.target.value = '';
