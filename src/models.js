@@ -79,9 +79,9 @@ export const MODELS = [
   // CONFIRMED via Samsung datasheet QZ-MM015F (The Wall M / MMF), controller CS4B.
   { id: 'MM015F', name: 'MM015F', category: 'Indoor', series: 'MM',
     pitch: 1.5625, cabW: 600, cabH: 337.5, depth: 49.8, resW: 384, resH: 216,
-    brightnessPeak: 600, brightnessReduced: null, refreshHz: 3840, ovd_m: null,
+    brightnessPeak: 600, brightnessReduced: null, refreshHz: 3840, ovd_m: 5.4,
     weight: 5.1, maxPower: 94.6, typicalPower: 37, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: null, dataStatus: 'verified' },
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH015MMFRGS', dataStatus: 'verified' }, // cross-checked vs Samsung export (10x10)
 
   // (Outdoor IB series removed 2026-07-24 — discontinued by Samsung.)
 ];
