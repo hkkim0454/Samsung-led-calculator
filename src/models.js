@@ -21,7 +21,7 @@ export const MODELS = [
     pitch: 0.84, cabW: 806.4, cabH: 453.6, depth: 49.4, resW: 960, resH: 540,
     brightnessPeak: 1800, brightnessReduced: 1000, refreshHz: 3840, ovd_m: 2.9,
     weight: 9.2, maxPower: 122, typicalPower: 64, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4BPGS', cabinetPart: null, dataStatus: 'verified' },
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH008MPFAAA', dataStatus: 'verified' }, // part code: Samsung DE datasheet
 
   { id: 'MP012F', name: 'MP012F', category: 'LED Indoor (The Wall)', series: 'MP',
     pitch: 1.26, cabW: 806.4, cabH: 453.6, depth: 49.4, resW: 640, resH: 360,

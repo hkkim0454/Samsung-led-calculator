@@ -11,7 +11,8 @@ let editingId = null;
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
 const SALES_LINES = ['MP', 'IF', 'IE', 'MM']; // MPF / IFR / IEA / MMF
 const MAX_PITCH = 2.5; // 픽셀피치 2.5mm 초과 모델은 기본 화면에서 숨김
-const pitchOk = m => m.pitch <= MAX_PITCH + 1e-9;
+const HIDDEN_PITCHES = new Set([2.0]); // 잘 사용하지 않는 피치(단일값)도 기본 숨김
+const pitchOk = m => m.pitch <= MAX_PITCH + 1e-9 && !HIDDEN_PITCHES.has(m.pitch);
 let visibleLines = new Set(SALES_LINES);
 
 const $ = s => document.querySelector(s);
@@ -63,7 +64,7 @@ function renderModelList() {
     row.innerHTML = `
       <div>
         <div class="mname">${esc(m.name)} ${statusBadge(m)}</div>
-        <div class="mmeta">${esc(m.series || '')} · ${fmt(m.cabW)}×${fmt(m.cabH)}mm · P${fmt(m.pitch,2)}</div>
+        <div class="mmeta">${esc(m.series || '')} · ${fmt(m.cabW,1)}×${fmt(m.cabH,1)}mm · P${fmt(m.pitch,2)}</div>
       </div>
       <div class="acts">
         <button class="tiny ghost" data-act="select" data-id="${m.id}">보기</button>
