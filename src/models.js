@@ -39,12 +39,13 @@ export const MODELS = [
   // (The Wall IW series removed 2026-07-24 — discontinued, superseded by MPF.)
 
   // ---- IF series (indoor flat, cabinet 960 x 540) — IFR, S-Box CS4B/SNOWAAE compatible ----
-  // Power from Samsung IFR datasheet (Max, given per m²; converted to per-cabinet x0.5184 m²).
+  // IF015R CONFIRMED via full Samsung datasheet: 11.8kg, max 360W (694 W/m²), typ 117W (226 W/m²),
+  // brightness 1600/800 (peak/max). IF025R power from summary sheet; weight/typ pending its full sheet.
   { id: 'IF015R', name: 'IF015R', category: 'Indoor', series: 'IF',
     pitch: 1.5, cabW: 960, cabH: 540, depth: 79.5, resW: 640, resH: 360,
-    brightnessPeak: 800, brightnessReduced: null, refreshHz: 3840, ovd_m: 5.2,
-    weight: null, maxPower: 359.8, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: 'LH015IFRCLS', dataStatus: 'verified' }, // 694 W/m²
+    brightnessPeak: 1600, brightnessReduced: 800, refreshHz: 3840, ovd_m: 5.2,
+    weight: 11.8, maxPower: 360, typicalPower: 117, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4B', cabinetPart: 'LH015IFRCLS', dataStatus: 'verified' },
   { id: 'IF020R', name: 'IF020R', category: 'Indoor', series: 'IF',
     pitch: 2.0, cabW: 960, cabH: 540, depth: 79.5, resW: 480, resH: 270,
     brightnessPeak: 1600, brightnessReduced: 1000, refreshHz: 3840, ovd_m: 7.0,
@@ -52,9 +53,9 @@ export const MODELS = [
     sbox: 'SBB-CS4B', cabinetPart: null, dataStatus: 'derived' },
   { id: 'IF025R', name: 'IF025R', category: 'Indoor', series: 'IF',
     pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: 384, resH: 216,
-    brightnessPeak: 1000, brightnessReduced: null, refreshHz: 3240, ovd_m: 8.6,
+    brightnessPeak: 2000, brightnessReduced: 1000, refreshHz: 3240, ovd_m: 8.6,
     weight: null, maxPower: 260.2, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: 'LH025IFRCLS', dataStatus: 'verified' }, // 502 W/m²
+    sbox: 'SBB-CS4B', cabinetPart: 'LH025IFRCLS', dataStatus: 'verified' }, // 502 W/m²; weight/typ pending full sheet
   { id: 'IF040R', name: 'IF040R', category: 'Indoor', series: 'IF',
     pitch: 4.0, cabW: 960, cabH: 540, depth: 79.5, resW: 240, resH: 135,
     brightnessPeak: 1500, brightnessReduced: 900, refreshHz: 3840, ovd_m: 13.8,
@@ -62,17 +63,17 @@ export const MODELS = [
     sbox: 'SBB-CS4B', cabinetPart: null, dataStatus: 'derived' },
 
   // ---- IE series (indoor, cabinet 960 x 540) — IEA, S-Box CS4B/SNOWAAE compatible ----
-  // Power from Samsung IEA datasheet (Max, per m²; converted to per-cabinet x0.5184 m²).
+  // IE015A CONFIRMED via full Samsung datasheet: 11.8kg, max 190W (367 W/m²), typ 105W (203 W/m²), 1000/500 nit.
   { id: 'IE015A', name: 'IE015A', category: 'Indoor', series: 'IE',
     pitch: 1.5, cabW: 960, cabH: 540, depth: 79.5, resW: 640, resH: 360,
-    brightnessPeak: 500, brightnessReduced: null, refreshHz: 3840, ovd_m: 5.2,
-    weight: null, maxPower: 190.3, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: 'LH015IEACLS', dataStatus: 'verified' }, // 367 W/m²
+    brightnessPeak: 1000, brightnessReduced: 500, refreshHz: 3840, ovd_m: 5.2,
+    weight: 11.8, maxPower: 190, typicalPower: 105, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4B', cabinetPart: 'LH015IEACLS', dataStatus: 'verified' },
   { id: 'IE025A', name: 'IE025A', category: 'Indoor', series: 'IE',
     pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: 384, resH: 216,
-    brightnessPeak: 500, brightnessReduced: null, refreshHz: 3840, ovd_m: 8.6,
+    brightnessPeak: 1000, brightnessReduced: 500, refreshHz: 3840, ovd_m: 8.6,
     weight: null, maxPower: 179.9, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: 'LH025IEACLS', dataStatus: 'verified' }, // 347 W/m²
+    sbox: 'SBB-CS4B', cabinetPart: 'LH025IEACLS', dataStatus: 'verified' }, // 347 W/m²; weight/typ pending full sheet
 
   // ---- MM series (MMF, cabinet 600 x 337.5) ----
   // CONFIRMED via Samsung datasheet QZ-MM015F (The Wall M / MMF), controller CS4B.
