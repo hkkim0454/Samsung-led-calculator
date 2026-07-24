@@ -76,6 +76,21 @@ export const MODELS = [
     sbox: 'SBB-CS4B', cabinetPart: 'LH025IEACLS', dataStatus: 'verified' }, // verified vs Samsung export 10x10: 1080kg/100, 18000W, typ 6000W
 
   // ---- MM series (MMF, cabinet 600 x 337.5) ----
+  // Pitch / resolution / brightness / max power(W/m^2) CONFIRMED via Samsung MMF sales sheet (2026-07-24):
+  //   MM009F P0.9375 640x360, MM012F P1.25 480x270, MM015F P1.5625 384x216, all 최대 600 nit.
+  //   Max power per cabinet = (W/m^2) x cabinet area(0.2025 m^2): 423.47->85.8W, 458->92.7W, 467->94.6W.
+  //   weight / typicalPower not in the sales sheet -> null (per-model datasheet required, do not fake).
+  { id: 'MM009F', name: 'MM009F', category: 'Indoor', series: 'MM',
+    pitch: 0.9375, cabW: 600, cabH: 337.5, depth: 49.8, resW: 640, resH: 360,
+    brightnessPeak: 600, brightnessReduced: null, refreshHz: 3840, ovd_m: null,
+    weight: null, maxPower: 85.8, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH009MMFRGS', dataStatus: 'derived' }, // weight/typ: datasheet required
+  { id: 'MM012F', name: 'MM012F', category: 'Indoor', series: 'MM',
+    pitch: 1.25, cabW: 600, cabH: 337.5, depth: 49.8, resW: 480, resH: 270,
+    brightnessPeak: 600, brightnessReduced: null, refreshHz: 3840, ovd_m: null,
+    weight: null, maxPower: 92.7, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH012MMFRGS', dataStatus: 'derived' }, // weight/typ: datasheet required
+
   // CONFIRMED via Samsung datasheet QZ-MM015F (The Wall M / MMF), controller CS4B.
   { id: 'MM015F', name: 'MM015F', category: 'Indoor', series: 'MM',
     pitch: 1.5625, cabW: 600, cabH: 337.5, depth: 49.8, resW: 384, resH: 216,
