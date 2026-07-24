@@ -133,8 +133,9 @@ function renderPreview() {
   wall.className = 'pvWall';
   wall.style.left = offX + 'px'; wall.style.top = offY + 'px';
   wall.style.width = arW + 'px'; wall.style.height = arH + 'px';
-  wall.style.gridTemplateColumns = `repeat(${r.cols},1fr)`;
-  wall.style.gridTemplateRows = `repeat(${r.rows},1fr)`;
+  // minmax(0,1fr): 셀 내용(번호 라벨)이 트랙을 밀어 벽 높이를 넘겨 마지막 줄이 잘리던 문제 방지.
+  wall.style.gridTemplateColumns = `repeat(${r.cols},minmax(0,1fr))`;
+  wall.style.gridTemplateRows = `repeat(${r.rows},minmax(0,1fr))`;
   const cellW = arW / r.cols, cellH = arH / r.rows;
   const showNums = r.cols <= 30 && r.rows <= 20 && cellW >= 14 && cellH >= 13;
   const drawCells = Math.min(r.total, 2000);
