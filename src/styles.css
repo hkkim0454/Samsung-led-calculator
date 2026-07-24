@@ -221,6 +221,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 }
 .seg button:hover{background:transparent}
 .seg button.on{background:var(--seg-thumb);color:var(--ink);box-shadow:var(--seg-thumb-shadow)}
+.seg button:disabled{opacity:.35;cursor:not-allowed;color:var(--muted);background:transparent;box-shadow:none}
 
 .rowbtns{margin-top:14px;display:flex;gap:9px}
 

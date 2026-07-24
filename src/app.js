@@ -102,13 +102,29 @@ function moveModel(id, dir) {
   renderAll();
 }
 
+// FHD/UHD 신호 버튼 활성/비활성: 벽 해상도가 해당 규격보다 작으면 못 누르게 한다.
+// (예: 2560x1440 벽은 UHD(3840x2160)를 담을 수 없으므로 UHD 비활성 — 실제보다 크게 그려지는 오해 방지.)
+function updateSigButtons(resW, resH) {
+  const canFHD = resW >= 1920 && resH >= 1080;
+  const canUHD = resW >= 3840 && resH >= 2160;
+  const fBtn = $('#signalMode button[data-sig="fhd"]'), uBtn = $('#signalMode button[data-sig="uhd"]');
+  if (fBtn) { fBtn.disabled = !canFHD; fBtn.title = canFHD ? '' : '해상도가 FHD(1920×1080)보다 작습니다'; }
+  if (uBtn) { uBtn.disabled = !canUHD; uBtn.title = canUHD ? '' : '해상도가 UHD(3840×2160)보다 작습니다'; }
+  // 현재 선택이 불가능해지면 '미선택'으로 되돌린다.
+  if ((signalMode === 'fhd' && !canFHD) || (signalMode === 'uhd' && !canUHD)) {
+    signalMode = 'off';
+    $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.sig === 'off'));
+  }
+}
+
 function renderPreview() {
   const m = models.find(x => x.id === selectedId);
   const stage = $('#stage');
   $('#pvModelName').textContent = m ? m.name : '—';
-  if (!m) { stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
+  if (!m) { updateSigButtons(0, 0); stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
+  updateSigButtons(r.resW, r.resH);
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
   const padX = 82, padY = 54;
@@ -259,7 +275,7 @@ function renderAll() { ensureSelectionVisible(); renderFilters(); renderModelLis
 $('#redundancy').addEventListener('change', renderAll);
 $('#useCS4B').addEventListener('change', renderAll);
 $('#signalMode').addEventListener('click', e => {
-  const b = e.target.closest('button[data-sig]'); if (!b) return;
+  const b = e.target.closest('button[data-sig]'); if (!b || b.disabled) return;
   signalMode = b.dataset.sig;
   $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   renderPreview(); renderReadout();
