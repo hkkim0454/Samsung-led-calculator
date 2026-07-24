@@ -201,7 +201,7 @@ function renderReadout() {
     { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
-    { k: 'S-Box (CS4B·SNOWAAE)', v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
+    { k: `S-Box${m.sbox ? ` (${esc(m.sbox)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
     { k: '화면비', v: fmt(aspect, 2), u: ': 1' },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
