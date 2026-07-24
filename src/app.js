@@ -155,7 +155,7 @@ function renderPreview() {
     const nC = Math.ceil(r.resW / bw), nR = Math.ceil(r.resH / bh);
     const cbw = arW * bw / r.resW, cbh = arH * bh / r.resH;
     const ov = document.createElement('div');
-    ov.className = 'pvSignal';
+    ov.className = 'pvSignal ' + signalMode; // fhd=파란색 / uhd=빨간색
     ov.style.cssText = `left:${offX}px;top:${offY}px;width:${arW}px;height:${arH}px`;
     for (let rr = 0; rr < nR; rr++) for (let cc = 0; cc < nC; cc++) {
       const bx = cc * cbw, by = rr * cbh;
@@ -207,7 +207,7 @@ function renderReadout() {
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
     { k: `S-Box${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
-    { k: '광 지빅(GBIC)', v: r.gbic ? fmt(r.gbic) : '—', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
+    { k: 'LR4 지빅', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '화면비', v: fmt(aspect, 2), u: ': 1' },
@@ -246,7 +246,7 @@ function renderCompare() {
       <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
-      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · 광 ${fmt(r.gbic)}` : '') : '—'}</td>
+      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · LR4 ${fmt(r.gbic)}` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
     body.appendChild(tr);
   }
