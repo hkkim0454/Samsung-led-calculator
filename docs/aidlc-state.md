@@ -8,7 +8,7 @@
 - **Current Phase**: INCEPTION
 - **Current Stage**: Requirements Analysis 완료 · Application Design 진행(프로토타입 검증) · Units Generation 승인 대기
 - **Project Owner**: 김현규 (서울영상테크 SI사업본부)
-- **Last Updated**: 2026-07-23
+- **Last Updated**: 2026-07-24
 
 ## Objectives and Scope
 
@@ -147,7 +147,7 @@
 ## Current Verification Status
 
 - **Build**: N/A (빌드리스 단일 HTML)
-- **Automated Tests**: `node:test` 10종 자동화, 전부 통과(2026-07-23). S-Box·평균전력·null 전파 포함.
+- **Automated Tests**: `node:test` 14종 자동화, 전부 통과(2026-07-24). S-Box 영역 타일(가로·세로)·이중화·평균전력·null 전파·16:9 최대해상도 포함.
 - **Integration Tests**: N/A
 - **Security Checks**: 외부 의존성 0, 개인정보 미수집 → 저위험. 정식 점검 미수행
 - **Acceptance Review**: 프로토타입 v0.1 오너 리뷰 대기
@@ -159,7 +159,7 @@
 | Q1 | Question | Fit-to-wall 세로 충진 규칙이 순수 floor와 다름(관측: 3.4m 벽에 6행=2.721m, 7행=3.175m도 물리적으로 가능). 삼성 클리어런스/여백 규칙 확인 필요 | 김현규 | 확인 필요 | Open | 세로 충진 규칙을 SPEC.md에 문서화 |
 | R1 | Risk | 스펙 데이터 정확도 — 임의값 사용 시 견적 오류 위험 | 김현규 | 확인 필요 | Open | 전 모델 데이터시트 실측값 확정 |
 | Q2 | Question | 대상 시리즈 범위(Flat 전용 vs Curved 포함) | 김현규 | 확인 필요 | Open | 범위 확정 |
-| D1 | Dependency | 삼성 공식 스펙 시트/부자재 규칙(스페어율, S-Box 대수 규칙) 확보 | 김현규 | 확인 필요 | Partly Resolved | S-Box 대수 규칙 확정(2026-07-23, 삼성 검증). 스페어율·Jig 규칙은 미확정 |
+| D1 | Dependency | 삼성 공식 스펙 시트/부자재 규칙(스페어율, S-Box 대수 규칙) 확보 | 김현규 | 확인 필요 | Partly Resolved | S-Box 대수 규칙 영역 타일 방식으로 확정(2026-07-24, DEC-006 — 데이터시트 스터디 + 삼성 검증). 스페어율·Jig 규칙은 미확정 |
 
 ## Next Actions
 
@@ -173,3 +173,5 @@
 ## Notes
 
 삼성 공식 도구(display-configurator.biz.samsung.com) 직접 검증(2026-07-23): MP012F(P1.26, 캐비닛 806.4×453.6×49.4mm, 9.2kg, 최대 146W/평균 77W, 640×360, 1800/1000nit, 3840Hz, OVD 4.4m)을 6×3.4m 벽에 Fit-to-wall → **7×6=42캐비닛**, 5.644×2.721m, 15.362m², 246.679", 386.4kg, 해상도 4480×2160, 최대 6132W/평균 3234W, 발열 최대 20916/평균 11046 BTU. BOM: 캐비닛 42+스페어 4=46(LH012MPFAAA), S-Box SBB-CS4BPGS 2+스페어 1, Jig CY-WJFPWP 3. 프로토타입 v0.1은 동일 조건에서 7×7로 계산(세로 규칙 차이) → P2/Q1로 조정 예정.
+
+**2026-07-24 (DEC-006) 반영:** S-Box 데이터시트 스터디(CS4B/SNOWAAE 매뉴얼)로 박스당 최대 4K 확인 후 산출 규칙을 **영역 타일** `ceil(resW/3840)×ceil(resH/2160)`(이중화 ×2)로 확정. SBB-CS4B=SBB-CS4BPGS(동일 제품)·SBB-SNOWAAE 공통 4K(SNOWAAE 8K는 보수 운용으로 4K 제한). CS4B 호환 라인 IFR·IEA에 컨트롤러 용량 반영, MMF 등은 미상(null 유지). Outdoor(IB) 시리즈 단종으로 모델 라이브러리에서 삭제. 슈퍼와이드(>16:9) 배열에 16:9 최대 콘텐츠 해상도 산출 추가. `tests/engine.test.js` 10→14종 확장, 전부 통과. 삼성 42캐비닛(4480×2160)→2대 검증 유지.
