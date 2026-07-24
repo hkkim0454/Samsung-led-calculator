@@ -81,27 +81,52 @@ function renderPreview() {
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
-  const stageW = stage.clientWidth - 52, stageH = 300 - 52;
+  const padX = 82, padY = 54;
+  const stageW = Math.max(140, stage.clientWidth - padX * 2), stageH = Math.max(140, stage.clientHeight - padY * 2);
   const refW = Math.max(sW, r.actualW), refH = Math.max(sH, r.actualH);
   const scale = Math.min(stageW / refW, stageH / refH);
   const spW = sW * scale, spH = sH * scale, arW = r.actualW * scale, arH = r.actualH * scale;
+  const offX = r.marginW * scale, offY = r.marginH * scale;
+  const meters = mm => (mm / 1000).toLocaleString('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m';
 
   stage.innerHTML = '';
-  const space = document.createElement('div');
-  space.className = 'space'; space.style.width = spW + 'px'; space.style.height = spH + 'px';
-  const array = document.createElement('div');
-  array.className = 'array' + (r.total > 400 ? ' compact' : '');
-  array.style.gridTemplateColumns = `repeat(${r.cols},1fr)`;
-  array.style.gridTemplateRows = `repeat(${r.rows},1fr)`;
-  array.style.width = arW + 'px'; array.style.height = arH + 'px';
+
+  // human silhouette (~1.7 m) for scale
+  const figH = Math.max(46, Math.min(spH * 1.02, 1700 * scale));
+  const fig = document.createElement('div');
+  fig.className = 'pvFigure'; fig.style.height = figH + 'px';
+  fig.innerHTML = '<svg viewBox="0 0 40 100" preserveAspectRatio="xMidYMax meet"><circle cx="20" cy="13" r="11"/><rect x="5" y="27" width="30" height="73" rx="15"/></svg>';
+  stage.appendChild(fig);
+
+  // installation space (white bezel/frame), LED wall centered inside
+  const scene = document.createElement('div');
+  scene.className = 'pvScene'; scene.style.width = spW + 'px'; scene.style.height = spH + 'px';
+  const wall = document.createElement('div');
+  wall.className = 'pvWall';
+  wall.style.left = offX + 'px'; wall.style.top = offY + 'px';
+  wall.style.width = arW + 'px'; wall.style.height = arH + 'px';
+  wall.style.gridTemplateColumns = `repeat(${r.cols},1fr)`;
+  wall.style.gridTemplateRows = `repeat(${r.rows},1fr)`;
+  const cellW = arW / r.cols, cellH = arH / r.rows;
+  const showNums = r.cols <= 26 && r.rows <= 18 && cellW >= 17 && cellH >= 15;
   const drawCells = Math.min(r.total, 2000);
-  for (let i = 0; i < drawCells; i++) { const c = document.createElement('div'); c.className = 'cab'; array.appendChild(c); }
-  space.appendChild(array);
-  if (r.deadW > 0.5) { const d = document.createElement('div'); d.className = 'dead'; d.style.cssText = `left:${arW}px;top:0;width:${spW - arW}px;height:${spH}px`; space.appendChild(d); }
-  if (r.deadH > 0.5) { const d = document.createElement('div'); d.className = 'dead'; d.style.cssText = `left:0;top:${arH}px;width:${arW}px;height:${spH - arH}px`; space.appendChild(d); }
-  const gc = document.createElement('div'); gc.className = 'dim active'; gc.style.cssText = 'left:4px;top:4px'; gc.textContent = `${r.cols} × ${r.rows} = ${r.total} 캐비닛`; space.appendChild(gc);
-  const dw = document.createElement('div'); dw.className = 'dim'; dw.style.cssText = `left:0;top:${spH + 4}px`; dw.textContent = `실제 ${fmt(r.actualW)} / 공간 ${fmt(sW)} mm`; space.appendChild(dw);
-  stage.appendChild(space);
+  for (let i = 0; i < drawCells; i++) {
+    const ci = i % r.cols, ri = (i / r.cols) | 0;
+    const c = document.createElement('div'); c.className = 'pvCab';
+    if (showNums && (ri === 0 || ci === 0)) c.textContent = ri === 0 ? (ci + 1) : (ri + 1);
+    wall.appendChild(c);
+  }
+  scene.appendChild(wall);
+
+  // dimension pills
+  const pill = (cls, txt, css) => { const d = document.createElement('div'); d.className = 'pvPill ' + cls; d.textContent = txt; d.style.cssText = css; scene.appendChild(d); };
+  pill('big', meters(r.actualW), `left:${offX + arW / 2}px;top:-30px;transform:translateX(-50%)`);
+  pill('big vert', meters(r.actualH), `top:${spH / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  if (r.marginW > 1) pill('sm', meters(r.marginW), `left:${offX / 2}px;top:-26px;transform:translateX(-50%)`);
+  if (r.marginH > 1) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
+
+  stage.appendChild(scene);
 }
 
 function renderReadout() {
