@@ -54,8 +54,8 @@ export const MODELS = [
   { id: 'IF025R', name: 'IF025R', category: 'Indoor', series: 'IF',
     pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: 384, resH: 216,
     brightnessPeak: 2000, brightnessReduced: 1000, refreshHz: 3240, ovd_m: 8.6,
-    weight: 11.8, maxPower: 260.2, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: 'LH025IFRCLS', dataStatus: 'verified' }, // 502 W/m²; weight 11.8kg = same 960x540 cabinet as IF015R; typ pending
+    weight: 12.4, maxPower: 260, typicalPower: 87, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4B', cabinetPart: 'LH025IFRCLS', dataStatus: 'verified' }, // verified vs Samsung export 10x5: 620kg/50, 13000W, typ 4350W
   { id: 'IF040R', name: 'IF040R', category: 'Indoor', series: 'IF',
     pitch: 4.0, cabW: 960, cabH: 540, depth: 79.5, resW: 240, resH: 135,
     brightnessPeak: 1500, brightnessReduced: 900, refreshHz: 3840, ovd_m: 13.8,
@@ -72,8 +72,8 @@ export const MODELS = [
   { id: 'IE025A', name: 'IE025A', category: 'Indoor', series: 'IE',
     pitch: 2.5, cabW: 960, cabH: 540, depth: 79.5, resW: 384, resH: 216,
     brightnessPeak: 1000, brightnessReduced: 500, refreshHz: 3840, ovd_m: 8.6,
-    weight: 11.8, maxPower: 179.9, typicalPower: null, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4B', cabinetPart: 'LH025IEACLS', dataStatus: 'verified' }, // 347 W/m²; weight 11.8kg = same 960x540 cabinet as IE015A; typ pending
+    weight: 10.8, maxPower: 180, typicalPower: 60, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4B', cabinetPart: 'LH025IEACLS', dataStatus: 'verified' }, // verified vs Samsung export 10x10: 1080kg/100, 18000W, typ 6000W
 
   // ---- MM series (MMF, cabinet 600 x 337.5) ----
   // CONFIRMED via Samsung datasheet QZ-MM015F (The Wall M / MMF), controller CS4B.
