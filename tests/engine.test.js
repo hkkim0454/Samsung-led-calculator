@@ -47,10 +47,17 @@ test('null weight/power propagate as null (no fake numbers)', () => {
   assert.ok(r.resW > 0); // geometry still computed
 });
 
-test('bom spare defaults to 10% rounded up', () => {
+test('bom spare defaults to 5% rounded up (owner rule 2026-07-26)', () => {
   const b = bom(MP012F, 42);
-  assert.equal(b.spares, 5);        // ceil(4.2) = 5   (NOTE: Samsung showed 4 -> spare rule pending)
-  assert.equal(b.totalCabinets, 47);
+  assert.equal(b.spares, 3);        // ceil(42 * 0.05) = ceil(2.1) = 3
+  assert.equal(b.totalCabinets, 45);
+});
+
+test('computeConfig exposes spares (5% ceil) and total-with-spares', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(r.total, 42);
+  assert.equal(r.spares, 3);            // ceil(42 * 0.05) = 3
+  assert.equal(r.totalWithSpares, 45);
 });
 
 // S-Box rule (region tiling) verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 units.

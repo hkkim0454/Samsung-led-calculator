@@ -16,7 +16,7 @@ export function fit169(w, h) {
 
 export const DEFAULTS = Object.freeze({
   powerFactor: 0.527,  // typical = max * powerFactor (Samsung MP012F: 3234/6132 = 0.5274)
-  spareRate: 0.10,     // spare cabinets ~10% of installed, rounded up (RULE PENDING — see SPEC Q "BOM")
+  spareRate: 0.05,     // spare cabinets = 5% of installed, rounded up (owner rule 2026-07-26)
   edgeClearanceMm: 0,  // per-edge clearance subtracted before fill (VERTICAL FILL RULE PENDING — see SPEC Q1)
 });
 
@@ -86,6 +86,10 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const pf = opts.powerFactor ?? DEFAULTS.powerFactor;
   const { cols, rows, fits } = fitCabinets(model, spaceW, spaceH, opts);
   const total = cols * rows;
+  // 예비 캐비닛 = 설치 수량의 5%, 무조건 올림 (오너 규칙 2026-07-26).
+  const spareRate = opts.spareRate ?? DEFAULTS.spareRate;
+  const spares = total > 0 ? Math.ceil(total * spareRate) : 0;
+  const totalWithSpares = total + spares;
   const { resW: cRW, resH: cRH } = cabinetResolution(model);
 
   const actualW = cols * model.cabW;         // mm
@@ -128,7 +132,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const deadH = Math.max(0, spaceH - actualH);
 
   return {
-    cols, rows, fits, total,
+    cols, rows, fits, total, spares, totalWithSpares,
     actualW, actualH, areaM2, diagIn,
     resW, resH, pixels,
     res169W, res169H, is169, diag169In,
