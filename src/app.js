@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=58';
-import { MODELS } from './models.js?v=58';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=59';
+import { MODELS } from './models.js?v=59';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -255,7 +255,7 @@ function renderReadout() {
     { k: 'Gbic', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
-    { k: '화면비', v: `${trim1(aspect * 9)} : 9`, u: `16:9 가로 ${trim1(aspect * 9 / 16)}개` },
+    { k: '화면비', v: `${trim1(aspect * 9)}:9`, u: `(16:9 가로 ${trim1(aspect * 9 / 16)}개)` },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
 
