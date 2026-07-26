@@ -28,7 +28,7 @@ export function cabinetResolution(model) {
 }
 
 /**
- * S-Box (controller) count by width/height region tiling:
+ * SBOX (controller) count by width/height region tiling:
  *   ceil(resW / capW) * ceil(resH / capH)
  * where cap is one box's max output resolution. Redundancy doubles it.
  * Integrated-controller models need none (return 0). Unknown capacity -> null (no fake numbers).
@@ -51,7 +51,7 @@ export const GBIC_REGION_W = 1920, GBIC_REGION_H = 2160;
  * 광 지빅(GBIC) SET 수량. SBB-CS4B로 설계할 때만 사용:
  * 1920x2160 신호 영역마다 1 SET(SBOX측 1개 + LED측 1개 = 2개)이 필요하다.
  *   SET 수 = ceil(resW/1920) * ceil(resH/2160)
- * S-Box 이중화 시 신호 경로도 2배가 되므로 ×2. 해상도를 알 수 없으면 null(해당 없음).
+ * SBOX 이중화 시 신호 경로도 2배가 되므로 ×2. 해상도를 알 수 없으면 null(해당 없음).
  * (실제 부품: Exatek EXA-40G-QSFP-LR4 등 40G QSFP 싱글모드 광모듈.)
  */
 export function gbicSets(resW, resH, opts = {}) {
@@ -149,7 +149,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 }
 
 /**
- * Bill of materials. Spare rule: ceil(total * spareRate). S-Box quantity uses the
+ * Bill of materials. Spare rule: ceil(total * spareRate). SBOX quantity uses the
  * confirmed rule (see sboxCount) when total pixels are supplied via opts.pixels.
  * Jig quantity rule is still model-specific and undefined — returned as null.
  */

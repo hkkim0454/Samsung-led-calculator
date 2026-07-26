@@ -3,7 +3,7 @@
 //   pitch, cabinet dimensions (W x H x depth), peak/reduced brightness, refresh, OVD  = OBSERVED
 //   resolution                                                                        = OBSERVED / derived (size / pitch)
 //   weight, maxPower, typicalPower (per cabinet)                                       = DATASHEET REQUIRED unless verified
-//   maxInputW/H = controller (S-Box) max input pixels; used for S-Box count.
+//   maxInputW/H = controller (SBOX) max input pixels; used for SBOX count.
 // Fill weight/power from official datasheets before using for quotes.
 //
 // dataStatus:
@@ -11,10 +11,10 @@
 //   'derived'            = dimensions observed; power/weight derived or missing (needs datasheet)
 //   'needs-verification' = values still uncertain, confirm before use
 //
-// S-Box capacity note: all supported controllers (SBB-SNOWAAE / SBB-SNOWJMU / SBB-CS4B(=CS4BPGS))
-//   cap at 3840x2160 (4K). Confirmed by Samsung's own output (MP012F 42 cabinets = 4480x2160 -> 2 S-Box).
+// SBOX capacity note: all supported controllers (SBB-SNOWAAE / SBB-SNOWJMU / SBB-CS4B(=CS4BPGS))
+//   cap at 3840x2160 (4K). Confirmed by Samsung's own output (MP012F 42 cabinets = 4480x2160 -> 2 SBOX).
 //   Default controller per line: MPF=SBB-SNOWAAE(또는 CS4B), IFR/IEA=SBB-SNOWJMU(필요시 CS4B), MMF=SBB-CS4BPGS.
-//   maxInputW/H null이면 S-Box는 "—"로 표시(가짜 수치 금지).
+//   maxInputW/H null이면 SBOX는 "—"로 표시(가짜 수치 금지).
 
 export const MODELS = [
   // ---- The Wall — LED Indoor (MP series, cabinet 806.4 x 453.6) ----

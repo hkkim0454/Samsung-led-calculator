@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=67"/>
+<link rel="stylesheet" href="./styles.css?v=68"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -56,7 +56,7 @@
         </label>
         <label class="checkline">
           <input type="checkbox" id="redundancy"/>
-          <span>S-Box 이중화 (redundancy) — 컨트롤러 수량 2배</span>
+          <span>SBOX 이중화 (redundancy) — 컨트롤러 수량 2배</span>
         </label>
         <label class="checkline">
           <input type="checkbox" id="useCS4B"/>
@@ -107,9 +107,9 @@
         <div class="tableWrap">
           <table id="cmpTable">
             <thead><tr>
-              <th>모델</th><th>Pitch</th><th>배열</th><th>대각 (")</th><th>S-Box(Gbic)</th>
-              <th>해상도 (px)</th><th>16:9 해상도 (px)</th><th>최대전력 (kW)</th>
-              <th>LED 크기 (m)</th><th>중량 (kg)</th><th>밝기 (nit)</th><th>여백 (mm)</th>
+              <th>모델</th><th>Pitch</th><th>배열</th><th>대각 (")</th><th>SBOX(Gbic)</th>
+              <th>해상도 (px)</th><th>16:9 해상도 (px)</th><th>LED 크기 (m)</th><th>최대전력 (kW)</th>
+              <th>중량 (kg)</th><th>밝기 (nit)</th><th>여백 (mm)</th>
             </tr></thead>
             <tbody id="cmpBody"></tbody>
           </table>
@@ -119,7 +119,7 @@
       <div class="footnote">
         <strong>계산 규칙</strong> — cols = ⌊W/캐비닛W⌋, rows = ⌊H/캐비닛H⌋. 총량 = (cols×rows)×단위값.
         평균전력 = 모델 실측 typical(없으면 최대 × 0.527), 발열(BTU/hr) = W × 3.412 (삼성 MP012F 실측 일치).
-        S-Box = ⌈가로/3840⌉ × ⌈세로/2160⌉ (박스당 최대 4K 가정), 이중화 시 ×2 (삼성 42캐비닛 → 2대 일치).
+        SBOX = ⌈가로/3840⌉ × ⌈세로/2160⌉ (박스당 최대 4K 가정), 이중화 시 ×2 (삼성 42캐비닛 → 2대 일치).
         컨트롤러 — MPF 기본 SBB-SNOWAAE(또는 CS4B), IFR/IEA 기본 SBB-SNOWJMU(필요시 CS4B), MMF SBB-CS4BPGS.
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
@@ -144,15 +144,15 @@
       <label>중량/캐비닛 (kg)<input type="number" id="e_weight" step="0.1"/></label>
       <label>최대전력/캐비닛 (W)<input type="number" id="e_maxP"/></label>
       <label>밝기 최대 (nit)<input type="number" id="e_nit"/></label>
-      <label>S-Box 최대입력 W (px)<input type="number" id="e_inW"/></label>
-      <label>S-Box 최대입력 H (px)<input type="number" id="e_inH"/></label>
+      <label>SBOX 최대입력 W (px)<input type="number" id="e_inW"/></label>
+      <label>SBOX 최대입력 H (px)<input type="number" id="e_inH"/></label>
     </div>
-    <div class="hint">해상도를 비우면 크기÷피치로 자동 계산합니다. S-Box 최대입력을 비우면 컨트롤러 수량은 산출하지 않습니다(—).</div>
+    <div class="hint">해상도를 비우면 크기÷피치로 자동 계산합니다. SBOX 최대입력을 비우면 컨트롤러 수량은 산출하지 않습니다(—).</div>
   </div>
   <div class="dlgFoot"><button class="ghost" id="dlgCancel">취소</button><button class="primary" id="dlgSave">저장</button></div>
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=67"></script>
+<script type="module" src="./app.js?v=68"></script>
 </body>
 </html>
