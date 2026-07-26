@@ -176,10 +176,17 @@ function renderPreview() {
     for (let rr = 0; rr < sigR; rr++) for (let cc = 0; cc < sigC; cc++) {
       const blk = document.createElement('div'); blk.className = 'pvSig';
       blk.style.cssText = `left:${cc * cbw}px;top:${rr * cbh}px;width:${cbw}px;height:${cbh}px`;
-      blk.innerHTML = `<span class="pvSigTag">${sig.label}</span>`;
+      blk.innerHTML = `<span class="pvSigTag">${sig.label} 신호 영역</span>`;
       ov.appendChild(blk);
     }
     scene.appendChild(ov);
+    // 신호 영역이 벽보다 클 때만 'LED 표시 영역' 라벨을 벽 중앙에 표기(구분이 필요한 경우).
+    if (sigFootW > r.actualW + 1 || sigFootH > r.actualH + 1) {
+      const led = document.createElement('div');
+      led.className = 'pvLedTag'; led.textContent = 'LED 표시 영역';
+      led.style.cssText = `left:${offX + arW / 2}px;top:${offY + arH / 2}px`;
+      scene.appendChild(led);
+    }
   }
 
   // dimension pills
