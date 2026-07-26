@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=47';
-import { MODELS } from './models.js?v=47';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=48';
+import { MODELS } from './models.js?v=48';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };

@@ -360,6 +360,12 @@ a:hover{color:var(--accent-2);text-decoration:underline}
 /* UHD 신호 영역은 빨간색(FHD는 파란색 유지) */
 .pvSignal.uhd .pvSig{border-color:rgba(255,59,48,.9)}
 .pvSignal.uhd .pvSigTag{background:rgba(255,59,48,.92)}
+/* 모바일: 미리보기 라벨·치수 알약 글자/여백 축소(작은 화면 가독성). 정의 뒤에 두어 우선 적용. */
+@media(max-width:520px){
+  .pvPill{font-size:9px;padding:2px 6px;border-radius:6px}
+  .pvPill.sm{font-size:8px;padding:2px 5px}
+  .pvSigTag{font-size:8px;padding:1px 4px;border-radius:0 0 3px 0}
+}
 
 /* ---- Model row: clickable select + clean no-wrap layout ---- */
 .modelRow{cursor:pointer}
