@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=54"/>
+<link rel="stylesheet" href="./styles.css?v=55"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -49,10 +49,10 @@
         <label class="field">
           <span class="lab">배열 기준</span>
           <div class="seg" id="fitMode">
-            <button data-mode="fill" class="on">공간 최대 충진</button>
+            <button data-mode="fill" class="on">자동 채움</button>
             <button data-mode="manual">배열 직접 지정</button>
           </div>
-          <div class="hint">최대 충진 = 각 축 floor 배수. 삼성 Fit-to-wall의 세로 규칙은 확정 전(SPEC Q1).</div>
+          <div class="hint">자동 채움 = 공간에 들어가는 최대 수량으로 자동 배치(각 축 floor 배수). 삼성 Fit-to-wall의 세로 규칙은 확정 전(SPEC Q1).</div>
         </label>
         <label class="checkline">
           <input type="checkbox" id="redundancy"/>
@@ -153,6 +153,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=54"></script>
+<script type="module" src="./app.js?v=55"></script>
 </body>
 </html>
