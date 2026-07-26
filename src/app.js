@@ -111,12 +111,12 @@ function renderPreview() {
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
-  // 신호 레이어: 미선택이 아니면 FHD를 표시, UHD 모드면 UHD도 함께(둘 다 동시). FHD=파랑 / UHD=빨강.
-  // 각 신호 영역은 '풀 크기'(FHD 1920x1080 / UHD 3840x2160)로 그려 벽보다 크면 밖으로 확장된다.
+  // 신호 레이어: HD=HD만, UHD=UHD만, 둘다(both)=HD+UHD 동시. HD=파랑 / UHD=빨강.
+  // 각 신호 영역은 '풀 크기'(HD 1920x1080 / UHD 3840x2160)로 그려 벽보다 크면 밖으로 확장된다.
   const sigLayers = [];
   if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
-    sigLayers.push({ bw: 1920, bh: 1080, label: 'HD', cls: 'fhd' });
-    if (signalMode === 'uhd') sigLayers.push({ bw: 3840, bh: 2160, label: 'UHD', cls: 'uhd' });
+    if (signalMode === 'fhd' || signalMode === 'both') sigLayers.push({ bw: 1920, bh: 1080, label: 'HD', cls: 'fhd' });
+    if (signalMode === 'uhd' || signalMode === 'both') sigLayers.push({ bw: 3840, bh: 2160, label: 'UHD', cls: 'uhd' });
   }
   let sigFootW = 0, sigFootH = 0; // 그려질 신호 발자국의 최대(스케일 기준)
   for (const L of sigLayers) {
