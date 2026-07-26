@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=49';
-import { MODELS } from './models.js?v=49';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=50';
+import { MODELS } from './models.js?v=50';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -115,7 +115,7 @@ function renderPreview() {
   // 각 신호 영역은 '풀 크기'(HD 1920x1080 / UHD 3840x2160)로 그려 벽보다 크면 밖으로 확장된다.
   const sigLayers = [];
   if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
-    if (signalMode === 'fhd' || signalMode === 'both') sigLayers.push({ bw: 1920, bh: 1080, label: 'HD', cls: 'fhd' });
+    if (signalMode === 'fhd' || signalMode === 'both') sigLayers.push({ bw: 1920, bh: 1080, label: 'FHD', cls: 'fhd' });
     if (signalMode === 'uhd' || signalMode === 'both') sigLayers.push({ bw: 3840, bh: 2160, label: 'UHD', cls: 'uhd' });
   }
   let sigFootW = 0, sigFootH = 0; // 그려질 신호 발자국의 최대(스케일 기준)
@@ -219,7 +219,7 @@ function renderReadout() {
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total}` },
     { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
     { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: `px (${fmt(r.diag169In, 1)}")` },
-    ...(fhd ? [{ k: 'HD 신호 영역', v: `${fhd.c} × ${fhd.r}`, u: `= ${fhd.c * fhd.r}개` }] : []),
+    ...(fhd ? [{ k: 'FHD 신호 영역', v: `${fhd.c} × ${fhd.r}`, u: `= ${fhd.c * fhd.r}개` }] : []),
     ...(uhd ? [{ k: 'UHD 신호 영역', v: `${uhd.c} × ${uhd.r}`, u: `= ${uhd.c * uhd.r}개` }] : []),
     { k: '인치', v: fmt(r.diagIn, 1), u: '"' },
     { k: '총 중량', v: fmt(r.weightKg, 1), u: 'kg' },
@@ -228,10 +228,10 @@ function renderReadout() {
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
     { k: `S-Box${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
-    { k: 'LR4 지빅', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
+    { k: 'Gbic', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
-    { k: '화면비', v: fmt(aspect, 2), u: ': 1' },
+    { k: '화면비', v: `${fmt(aspect * 9, 1)} : 9`, u: `16:9 가로 ${fmt(aspect * 9 / 16, 1)}개` },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
 
@@ -267,7 +267,7 @@ function renderCompare() {
       <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
-      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · LR4 ${fmt(r.gbic)}` : '') : '—'}</td>
+      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · Gbic ${fmt(r.gbic)}` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
     body.appendChild(tr);
   }
@@ -363,25 +363,6 @@ $('#dlgSave').addEventListener('click', () => {
   if (editingId) Object.assign(models.find(x => x.id === editingId), data);
   else { const nm = { id: uid(), ...data }; models.push(nm); selectedId = nm.id; visibleLines.add(nm.series); }
   dlg.close(); renderAll();
-});
-
-$('#btnExport').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ version: 1, models }, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'led-models.json'; a.click(); URL.revokeObjectURL(a.href);
-});
-$('#btnImport').addEventListener('click', () => $('#fileImport').click());
-$('#fileImport').addEventListener('change', e => {
-  const f = e.target.files[0]; if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => {
-    try {
-      const j = JSON.parse(rd.result); const arr = Array.isArray(j) ? j : j.models;
-      if (!Array.isArray(arr)) throw 0;
-      models = arr.map(m => ({ id: m.id || uid(), ...m })); selectedId = models[0]?.id;
-      visibleLines = new Set(models.map(m => m.series)); renderAll();
-    } catch { alert('유효한 모델 JSON 파일이 아닙니다.'); }
-  };
-  rd.readAsText(f); e.target.value = '';
 });
 
 window.addEventListener('resize', renderPreview);
