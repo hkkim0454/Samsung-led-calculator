@@ -111,16 +111,19 @@ function renderPreview() {
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
-  // 선택된 신호 규격의 '풀 영역' 발자국(mm). 벽 좌상단 기준으로 우/하 확장 — 벽보다 클 수 있다
-  // (예: 2560x1440 벽에서 UHD는 3840x2160 = IF015R 6x6 크기의 윤곽으로, 지금 벽이 UHD에 얼마나 모자란지 표시).
-  const sig = (signalMode !== 'off' && r.resW > 0 && r.resH > 0)
-    ? (signalMode === 'uhd' ? { bw: 3840, bh: 2160, label: 'UHD' } : { bw: 1920, bh: 1080, label: 'FHD' })
-    : null;
-  let sigFootW = 0, sigFootH = 0, sigC = 0, sigR = 0;
-  if (sig) {
-    sigC = Math.ceil(r.resW / sig.bw); sigR = Math.ceil(r.resH / sig.bh);
-    sigFootW = sigC * sig.bw / r.resW * r.actualW; // px→mm (벽 기준)
-    sigFootH = sigR * sig.bh / r.resH * r.actualH;
+  // 신호 레이어: 미선택이 아니면 FHD를 표시, UHD 모드면 UHD도 함께(둘 다 동시). FHD=파랑 / UHD=빨강.
+  // 각 신호 영역은 '풀 크기'(FHD 1920x1080 / UHD 3840x2160)로 그려 벽보다 크면 밖으로 확장된다.
+  const sigLayers = [];
+  if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
+    sigLayers.push({ bw: 1920, bh: 1080, label: 'FHD', cls: 'fhd' });
+    if (signalMode === 'uhd') sigLayers.push({ bw: 3840, bh: 2160, label: 'UHD', cls: 'uhd' });
+  }
+  let sigFootW = 0, sigFootH = 0; // 그려질 신호 발자국의 최대(스케일 기준)
+  for (const L of sigLayers) {
+    L.nC = Math.ceil(r.resW / L.bw); L.nR = Math.ceil(r.resH / L.bh);
+    L.footW = L.nC * L.bw / r.resW * r.actualW; // px→mm(벽 기준)
+    L.footH = L.nR * L.bh / r.resH * r.actualH;
+    sigFootW = Math.max(sigFootW, L.footW); sigFootH = Math.max(sigFootH, L.footH);
   }
 
   const padX = 82, padY = 54;
@@ -167,26 +170,24 @@ function renderPreview() {
   }
   scene.appendChild(wall);
 
-  // FHD/UHD 신호 영역 오버레이 — '풀 영역' 크기로 그린다(벽보다 크면 밖으로 확장). FHD=파랑 / UHD=빨강.
-  if (sig) {
-    const cbw = arW * sig.bw / r.resW, cbh = arH * sig.bh / r.resH;
+  // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 라벨은 신호당 1개:
+  // FHD는 좌상단, UHD는 중앙(서로 겹치지 않게). FHD를 먼저 그리고 UHD를 위에 얹는다.
+  for (const L of sigLayers) {
+    const cbw = arW * L.bw / r.resW, cbh = arH * L.bh / r.resH;
     const ov = document.createElement('div');
-    ov.className = 'pvSignal ' + signalMode;
+    ov.className = 'pvSignal ' + L.cls;
     ov.style.cssText = `left:${offX}px;top:${offY}px`;
-    for (let rr = 0; rr < sigR; rr++) for (let cc = 0; cc < sigC; cc++) {
+    for (let rr = 0; rr < L.nR; rr++) for (let cc = 0; cc < L.nC; cc++) {
       const blk = document.createElement('div'); blk.className = 'pvSig';
       blk.style.cssText = `left:${cc * cbw}px;top:${rr * cbh}px;width:${cbw}px;height:${cbh}px`;
-      blk.innerHTML = `<span class="pvSigTag">${sig.label} 신호 영역</span>`;
       ov.appendChild(blk);
     }
+    const tag = document.createElement('div'); tag.className = 'pvSigTag'; tag.textContent = L.label;
+    tag.style.cssText = L.cls === 'uhd'
+      ? `left:${L.footW * scale / 2}px;top:${L.footH * scale / 2}px;transform:translate(-50%,-50%);border-radius:8px`
+      : `left:0;top:0`;
+    ov.appendChild(tag);
     scene.appendChild(ov);
-    // 신호 영역이 벽보다 클 때만 'LED 표시 영역' 라벨을 벽 중앙에 표기(구분이 필요한 경우).
-    if (sigFootW > r.actualW + 1 || sigFootH > r.actualH + 1) {
-      const led = document.createElement('div');
-      led.className = 'pvLedTag'; led.textContent = 'LED 표시 영역';
-      led.style.cssText = `left:${offX + arW / 2}px;top:${offY + arH / 2}px`;
-      scene.appendChild(led);
-    }
   }
 
   // dimension pills
