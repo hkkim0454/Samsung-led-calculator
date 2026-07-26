@@ -230,6 +230,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* MMF 등 CS4B 필수 모델: 체크박스 강제 체크·비활성 상태를 시각적으로 표시 */
 .checkline.locked{opacity:.6;cursor:default}
 .checkline.locked input{cursor:default}
+/* 체크박스 옵션 바로 뒤에 오는 입력칸(예: 예비 캐비닛 비율)은 위쪽 여백을 넉넉히 */
+.checkline + .field{margin-top:20px}
 
 /* ---- Preview stage ---- */
 .previewStage{
