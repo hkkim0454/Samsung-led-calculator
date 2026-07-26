@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=45';
-import { MODELS } from './models.js?v=45';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=46';
+import { MODELS } from './models.js?v=46';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -170,8 +170,8 @@ function renderPreview() {
   }
   scene.appendChild(wall);
 
-  // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 라벨은 신호당 1개:
-  // FHD는 좌상단, UHD는 중앙(서로 겹치지 않게). FHD를 먼저 그리고 UHD를 위에 얹는다.
+  // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 각 영역(타일)마다 좌상단에 라벨(HD/UHD).
+  // HD를 먼저, UHD를 위에 얹어(둘다 모드에서 겹치는 좌상단은 UHD가 위에 보이게).
   for (const L of sigLayers) {
     const cbw = arW * L.bw / r.resW, cbh = arH * L.bh / r.resH;
     const ov = document.createElement('div');
@@ -180,13 +180,9 @@ function renderPreview() {
     for (let rr = 0; rr < L.nR; rr++) for (let cc = 0; cc < L.nC; cc++) {
       const blk = document.createElement('div'); blk.className = 'pvSig';
       blk.style.cssText = `left:${cc * cbw}px;top:${rr * cbh}px;width:${cbw}px;height:${cbh}px`;
+      blk.innerHTML = `<span class="pvSigTag">${L.label}</span>`;
       ov.appendChild(blk);
     }
-    const tag = document.createElement('div'); tag.className = 'pvSigTag'; tag.textContent = L.label;
-    tag.style.cssText = L.cls === 'uhd'
-      ? `left:${L.footW * scale / 2}px;top:${L.footH * scale / 2}px;transform:translate(-50%,-50%);border-radius:8px`
-      : `left:0;top:0`;
-    ov.appendChild(tag);
     scene.appendChild(ov);
   }
 
