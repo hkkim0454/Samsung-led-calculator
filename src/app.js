@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=67';
-import { MODELS } from './models.js?v=67';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=68';
+import { MODELS } from './models.js?v=68';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -253,7 +253,7 @@ function renderReadout() {
     { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
-    { k: `S-Box${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
+    { k: `SBOX${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
     { k: 'Gbic', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
@@ -265,7 +265,7 @@ function renderReadout() {
   else if (r.deadW > 0.5 || r.deadH > 0.5) nt.innerHTML = `<div class="notice info">여백 — 가로 ${fmt(r.deadW)}mm · 세로 ${fmt(r.deadH)}mm (센터 정렬 시 각 ${fmt(r.marginW)}/${fmt(r.marginH)}mm).</div>`;
   if (r.fits && !r.is169 && r.res169W > 0) nt.innerHTML += `<div class="notice info">16:9가 아닌 구성(슈퍼와이드 등)입니다. 16:9 콘텐츠 최대 해상도는 ${fmt(r.res169W)} × ${fmt(r.res169H)} px입니다.</div>`;
   if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
-  if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(S-Box) 입력 용량 정보가 없어 S-Box 수량을 산출할 수 없습니다.</div>`;
+  if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(SBOX) 입력 용량 정보가 없어 SBOX 수량을 산출할 수 없습니다.</div>`;
   const d = cabinetResolution(m);
   if (Math.abs(m.cabW / m.pitch - d.resW) > 1 || Math.abs(m.cabH / m.pitch - d.resH) > 1)
     nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
@@ -288,8 +288,8 @@ function renderCompare() {
       <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? `(${fmt(r.gbic)})` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
       <td>${r.fits ? `${fmt(r.res169W)}×${fmt(r.res169H)}` : '—'}</td>
-      <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
       <td>${r.fits ? `${fmtMeters(r.actualW)}×${fmtMeters(r.actualH)}` : '—'}</td>
+      <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
