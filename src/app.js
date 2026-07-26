@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=51';
-import { MODELS } from './models.js?v=51';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=52';
+import { MODELS } from './models.js?v=52';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -210,6 +210,8 @@ function renderReadout() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
+  // 소수 1자리까지 표기하되 .0이면 정수로(예: 32.0→"32", 21.33→"21.3"). 화면비 x:9·가로 N개에 사용.
+  const trim1 = n => (isFinite(n) ? n.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) : '—');
   // Signal-region counts (matches the FHD/UHD preview overlay) — always show both.
   const hasRes = r.resW > 0 && r.resH > 0;
   const fhd = hasRes ? { c: Math.ceil(r.resW / 1920), r: Math.ceil(r.resH / 1080) } : null;
@@ -231,7 +233,7 @@ function renderReadout() {
     { k: 'Gbic', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
-    { k: '화면비', v: `${fmt(aspect * 9, 1)} : 9`, u: `16:9 가로 ${fmt(aspect * 9 / 16, 1)}개` },
+    { k: '화면비', v: `${trim1(aspect * 9)} : 9`, u: `16:9 가로 ${trim1(aspect * 9 / 16)}개` },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
 
