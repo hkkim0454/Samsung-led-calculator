@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=65';
-import { MODELS } from './models.js?v=65';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=66';
+import { MODELS } from './models.js?v=66';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -285,13 +285,13 @@ function renderCompare() {
       <td>${fmtPitch(m.pitch)}</td>
       <td>${r.fits ? `${r.cols}×${r.rows}` : '—'}</td>
       <td>${r.fits ? fmt(r.diagIn, 1) : '—'}</td>
+      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · Gbic ${fmt(r.gbic)}` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
       <td>${r.fits ? `${fmt(r.res169W)}×${fmt(r.res169H)}` : '—'}</td>
       <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
       <td>${r.fits ? `${fmtMeters(r.actualW)}×${fmtMeters(r.actualH)}` : '—'}</td>
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
-      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · Gbic ${fmt(r.gbic)}` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.deadW)}/${fmt(r.deadH)}` : '—'}</td>`;
     body.appendChild(tr);
   }
