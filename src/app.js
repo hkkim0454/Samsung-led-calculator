@@ -115,7 +115,7 @@ function renderPreview() {
   // 각 신호 영역은 '풀 크기'(FHD 1920x1080 / UHD 3840x2160)로 그려 벽보다 크면 밖으로 확장된다.
   const sigLayers = [];
   if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
-    sigLayers.push({ bw: 1920, bh: 1080, label: 'FHD', cls: 'fhd' });
+    sigLayers.push({ bw: 1920, bh: 1080, label: 'HD', cls: 'fhd' });
     if (signalMode === 'uhd') sigLayers.push({ bw: 3840, bh: 2160, label: 'UHD', cls: 'uhd' });
   }
   let sigFootW = 0, sigFootH = 0; // 그려질 신호 발자국의 최대(스케일 기준)
@@ -220,7 +220,7 @@ function renderReadout() {
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total}` },
     { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
     { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: `px (${fmt(r.diag169In, 1)}")` },
-    ...(fhd ? [{ k: 'FHD 신호 영역', v: `${fhd.c} × ${fhd.r}`, u: `= ${fhd.c * fhd.r}개` }] : []),
+    ...(fhd ? [{ k: 'HD 신호 영역', v: `${fhd.c} × ${fhd.r}`, u: `= ${fhd.c * fhd.r}개` }] : []),
     ...(uhd ? [{ k: 'UHD 신호 영역', v: `${uhd.c} × ${uhd.r}`, u: `= ${uhd.c * uhd.r}개` }] : []),
     { k: '인치', v: fmt(r.diagIn, 1), u: '"' },
     { k: '총 중량', v: fmt(r.weightKg, 1), u: 'kg' },
