@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=48';
-import { MODELS } from './models.js?v=48';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=49';
+import { MODELS } from './models.js?v=49';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -174,14 +174,16 @@ function renderPreview() {
   // HD를 먼저, UHD를 위에 얹어(둘다 모드에서 겹치는 좌상단은 UHD가 위에 보이게).
   for (const L of sigLayers) {
     const cbw = arW * L.bw / r.resW, cbh = arH * L.bh / r.resH;
-    const showLabel = !(signalMode === 'both' && L.cls === 'fhd'); // 둘다 모드에선 HD 라벨 생략(UHD만)
+    // 둘다 모드에선 HD 라벨 생략(UHD만). 영역이 많으면(>4) 라벨을 첫 칸에만 — 'HD'가 화면을 가득 채우는 것 방지.
+    const showLabel = !(signalMode === 'both' && L.cls === 'fhd');
+    const perTile = L.nC * L.nR <= 4;
     const ov = document.createElement('div');
     ov.className = 'pvSignal ' + L.cls;
     ov.style.cssText = `left:${offX}px;top:${offY}px`;
     for (let rr = 0; rr < L.nR; rr++) for (let cc = 0; cc < L.nC; cc++) {
       const blk = document.createElement('div'); blk.className = 'pvSig';
       blk.style.cssText = `left:${cc * cbw}px;top:${rr * cbh}px;width:${cbw}px;height:${cbh}px`;
-      if (showLabel) blk.innerHTML = `<span class="pvSigTag">${L.label}</span>`;
+      if (showLabel && (perTile || (cc === 0 && rr === 0))) blk.innerHTML = `<span class="pvSigTag">${L.label}</span>`;
       ov.appendChild(blk);
     }
     scene.appendChild(ov);
