@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=56';
-import { MODELS } from './models.js?v=56';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=57';
+import { MODELS } from './models.js?v=57';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -232,12 +232,14 @@ function renderReadout() {
   const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
   // 소수 1자리까지 표기하되 .0이면 정수로(예: 32.0→"32", 21.33→"21.3"). 화면비 x:9·가로 N개에 사용.
   const trim1 = n => (isFinite(n) ? n.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) : '—');
+  // 소수 3자리까지 표기하되 뒤의 0은 생략(예: 3.840→"3.84", 4.000→"4"). 실제 모듈 크기(m)에 사용.
+  const trim3 = n => (isFinite(n) ? n.toLocaleString('ko-KR', { maximumFractionDigits: 3 }) : '—');
   // Signal-region counts (matches the FHD/UHD preview overlay) — always show both.
   const hasRes = r.resW > 0 && r.resH > 0;
   const fhd = hasRes ? { c: Math.ceil(r.resW / 1920), r: Math.ceil(r.resH / 1080) } : null;
   const uhd = hasRes ? { c: Math.ceil(r.resW / 3840), r: Math.ceil(r.resH / 2160) } : null;
   const cells = [
-    { k: '실제 모듈 크기', v: `${fmt(r.actualW / 1000, 3)} × ${fmt(r.actualH / 1000, 3)}`, u: 'm', hero: true },
+    { k: '실제 모듈 크기', v: `${trim3(r.actualW / 1000)} × ${trim3(r.actualH / 1000)}`, u: 'm', hero: true },
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total} + 예비 ${r.spares} = ${r.totalWithSpares}` },
     { k: '총 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
     { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: `px (${fmt(r.diag169In, 1)}")` },
