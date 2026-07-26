@@ -137,6 +137,10 @@ test('GBIC는 CS4B 계열 컨트롤러에서만 산출 (MMF 자동, 그 외는 C
   const mm = computeConfig(MM015F, 6000, 3400, { mode: 'fill' });
   assert.equal(mm.controller, 'SBB-CS4BPGS');
   assert.equal(mm.gbic, 2);
+  // MMF에 cs4b 옵션이 켜져도 네이티브 CS4BPGS 컨트롤러를 SBB-CS4B로 다운그레이드하지 않는다.
+  const mmOn = computeConfig(MM015F, 6000, 3400, { mode: 'fill', cs4b: true });
+  assert.equal(mmOn.controller, 'SBB-CS4BPGS');
+  assert.equal(mmOn.gbic, 2);
 });
 
 test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {
