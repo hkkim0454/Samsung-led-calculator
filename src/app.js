@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=52';
-import { MODELS } from './models.js?v=52';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=53';
+import { MODELS } from './models.js?v=53';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -17,6 +17,8 @@ let selectedId = models[0].id;
 let mode = 'fill';
 let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
+// 사용자가 직접 선택한 CS4B 여부(비-MMF 모델용). MMF는 항상 CS4B 필수이므로 체크박스를 강제한다.
+let userCS4B = false;
 // 삼성 판매 정책(2026-07-24): 앞으로 P0.8~P1.8 제품만 판매. 이 범위 밖은 기본 화면에서 숨김.
 const MIN_PITCH = 0.8;
 const MAX_PITCH = 1.8;
@@ -57,12 +59,30 @@ function renderFilters() {
   }).join('');
 }
 
+// 예비 캐비닛 비율(%) 입력을 소수 비율로. 비어있거나 잘못된 값이면 기본값(5%).
+function spareRateOpt() {
+  const el = $('#spareRate');
+  if (!el || el.value === '') return DEFAULTS.spareRate;
+  return Math.max(0, num(el.value)) / 100;
+}
+
+// 선택 모델이 MMF면 CS4B 체크박스를 강제 체크+비활성(필수), 그 외에는 사용자 선택값을 따른다.
+function syncCS4B() {
+  const m = models.find(x => x.id === selectedId);
+  const isMMF = m && m.series === 'MM';
+  const cb = $('#useCS4B'); if (!cb) return;
+  cb.checked = isMMF ? true : userCS4B;
+  cb.disabled = !!isMMF;
+  cb.closest('.checkline')?.classList.toggle('locked', !!isMMF);
+}
+
 function opts() {
   const redundancy = $('#redundancy')?.checked ?? false;
   const cs4b = $('#useCS4B')?.checked ?? false;
+  const spareRate = spareRateOpt();
   return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b }
-    : { mode: 'fill', redundancy, cs4b };
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, spareRate }
+    : { mode: 'fill', redundancy, cs4b, spareRate };
 }
 
 function renderModelList() {
@@ -275,12 +295,12 @@ function renderCompare() {
   }
 }
 
-function renderAll() { ensureSelectionVisible(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
+function renderAll() { ensureSelectionVisible(); syncCS4B(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
 
 /* events */
-['spaceW', 'spaceH', 'manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
-$('#useCS4B').addEventListener('change', renderAll);
+$('#useCS4B').addEventListener('change', () => { userCS4B = $('#useCS4B').checked; renderAll(); });
 $('#signalMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-sig]'); if (!b) return;
   signalMode = b.dataset.sig;

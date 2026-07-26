@@ -227,6 +227,9 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* ---- Checkbox line ---- */
 .checkline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);font-weight:600;margin-top:14px;cursor:pointer}
 .checkline input{width:18px;height:18px;accent-color:var(--accent);flex:none;border-radius:6px}
+/* MMF 등 CS4B 필수 모델: 체크박스 강제 체크·비활성 상태를 시각적으로 표시 */
+.checkline.locked{opacity:.6;cursor:default}
+.checkline.locked input{cursor:default}
 
 /* ---- Preview stage ---- */
 .previewStage{
