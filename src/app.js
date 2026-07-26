@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=63';
-import { MODELS } from './models.js?v=63';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=64';
+import { MODELS } from './models.js?v=64';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -273,15 +273,13 @@ function renderCompare() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const cs4b = $('#useCS4B')?.checked ?? false;
   const rows = visibleModels().map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill', cs4b }) }));
-  let bestPx = -1, bestId = null;
-  for (const { m, r } of rows) if (r.fits && r.pixels > bestPx) { bestPx = r.pixels; bestId = m.id; }
   const body = $('#cmpBody'); body.innerHTML = '';
   for (const { m, r } of rows) {
     const tr = document.createElement('tr');
     tr.className = 'rowbtn' + (m.id === selectedId ? ' pick' : '') + (!r.fits ? ' nofit' : '');
     tr.dataset.id = m.id;
     tr.innerHTML = `
-      <td class="name">${esc(m.name)}${m.id === bestId ? '<span class="badge">최다화소</span>' : ''}</td>
+      <td class="name">${esc(m.name)}</td>
       <td>${fmtPitch(m.pitch)}</td>
       <td>${r.fits ? `${r.cols}×${r.rows}` : '—'}</td>
       <td>${r.fits ? fmt(r.diagIn, 1) : '—'}</td>
