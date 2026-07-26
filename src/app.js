@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=64';
-import { MODELS } from './models.js?v=64';
+import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=65';
+import { MODELS } from './models.js?v=65';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -30,6 +30,8 @@ const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n, d = 0) => (isFinite(n) && n != null) ? n.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
 // 피치 표기: 최대 소수 2자리, 끝자리 0은 생략 (1.5→"1.5", 1.25→"1.25", 1.5625→"1.56").
 const fmtPitch = p => (p != null && isFinite(p)) ? p.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : '—';
+// mm → m 표기: 최대 소수 3자리, 끝자리 0은 생략 (3840→"3.84", 4000→"4").
+const fmtMeters = mm => (isFinite(mm) ? (mm / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 3 }) : '—');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uid = () => 'm' + Math.random().toString(36).slice(2, 8);
 
@@ -286,7 +288,7 @@ function renderCompare() {
       <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
       <td>${r.fits ? `${fmt(r.res169W)}×${fmt(r.res169H)}` : '—'}</td>
       <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
-      <td>${r.fits ? `${fmt(r.actualW)}×${fmt(r.actualH)}` : '—'}</td>
+      <td>${r.fits ? `${fmtMeters(r.actualW)}×${fmtMeters(r.actualH)}` : '—'}</td>
       <td>${fmt(r.weightKg, 1)}</td>
       <td>${fmt(r.brightnessMax)}</td>
       <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? ` · Gbic ${fmt(r.gbic)}` : '') : '—'}</td>
