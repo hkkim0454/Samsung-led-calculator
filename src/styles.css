@@ -269,7 +269,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .metric .k{font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .metric .v{font-family:var(--mono);font-size:21px;font-weight:600;letter-spacing:-.01em;margin-top:4px;line-height:1.1}
 /* 값이 없을 때(예: LR4 지빅 미사용) '—'를 작게·연하게 */
-.metric .v .vdash{font-size:14px;font-weight:600;color:var(--muted)}
+.metric .v .vdash{font-size:11px;font-weight:600;color:var(--muted)}
 .metric .u{font-size:11px;color:var(--muted);font-weight:600;margin-left:3px}
 .metric.hero{background:linear-gradient(155deg,var(--accent),var(--accent-2));color:#fff}
 .metric.hero .k{color:rgba(255,255,255,.78)}.metric.hero .v{color:#fff}.metric.hero .u{color:rgba(255,255,255,.78)}
