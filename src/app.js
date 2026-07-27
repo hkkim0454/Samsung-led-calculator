@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS } from './engine.js?v=69';
-import { MODELS } from './models.js?v=69';
+import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=70';
+import { MODELS } from './models.js?v=70';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -19,6 +19,8 @@ let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
 // 사용자가 직접 선택한 CS4B 여부(비-MMF 모델용). MMF는 항상 CS4B 필수이므로 체크박스를 강제한다.
 let userCS4B = false;
+// 예비율 입력칸에 현재 시리즈 기본율을 자동 반영하기 위한 추적(모델이 바뀔 때만 덮어씀).
+let spareRateModelId = null;
 // 삼성 판매 정책(2026-07-24): 앞으로 P0.8~P1.8 제품만 판매. 이 범위 밖은 기본 화면에서 숨김.
 const MIN_PITCH = 0.8;
 const MAX_PITCH = 1.8;
@@ -61,11 +63,24 @@ function renderFilters() {
   }).join('');
 }
 
-// 예비 캐비닛 비율(%) 입력을 소수 비율로. 비어있거나 잘못된 값이면 기본값(5%).
+// 예비 캐비닛 비율(%) 입력을 소수 비율로. 비어있으면 선택 모델 시리즈의 기본율.
 function spareRateOpt() {
   const el = $('#spareRate');
-  if (!el || el.value === '') return DEFAULTS.spareRate;
+  const m = models.find(x => x.id === selectedId);
+  const fallback = m ? spareRateForSeries(m.series) : DEFAULTS.spareRate;
+  if (!el || el.value === '') return fallback;
   return Math.max(0, num(el.value)) / 100;
+}
+
+// 모델이 바뀌면 예비율 입력칸을 그 시리즈 기본율(IFR/IEA 3%·MMF 5%·MPF 7%)로 채운다.
+// 같은 모델에서 사용자가 값을 직접 바꾼 경우는 유지(모델 전환 시에만 덮어씀).
+function syncSpareRate() {
+  const el = $('#spareRate'); if (!el) return;
+  const m = models.find(x => x.id === selectedId);
+  if (m && selectedId !== spareRateModelId) {
+    el.value = +(spareRateForSeries(m.series) * 100).toFixed(2);
+    spareRateModelId = selectedId;
+  }
 }
 
 // 선택 모델이 MMF면 CS4B 체크박스를 강제 체크+비활성(필수), 그 외에는 사용자 선택값을 따른다.
@@ -297,7 +312,7 @@ function renderCompare() {
   }
 }
 
-function renderAll() { ensureSelectionVisible(); syncCS4B(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
+function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
 
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate'].forEach(id => $('#' + id).addEventListener('input', renderAll));

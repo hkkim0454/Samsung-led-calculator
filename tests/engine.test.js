@@ -53,11 +53,31 @@ test('bom spare defaults to 5% rounded up (owner rule 2026-07-26)', () => {
   assert.equal(b.totalCabinets, 45);
 });
 
-test('computeConfig exposes spares (5% ceil) and total-with-spares', () => {
+test('computeConfig exposes spares and total-with-spares', () => {
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
   assert.equal(r.total, 42);
-  assert.equal(r.spares, 3);            // ceil(42 * 0.05) = 3
+  assert.equal(r.spares, 3);            // MPF 7%: ceil(42 * 0.07) = ceil(2.94) = 3
   assert.equal(r.totalWithSpares, 45);
+});
+
+// 예비율은 시리즈별로 다르다 — 삼성 공식 configurator export로 검증(2026-07-27).
+// IFR/IEA 3% · MMF 5% · MPF 7%, 모두 올림. 100·144·50캐비닛 실측 수량과 일치.
+test('spare rate is series-specific (verified vs Samsung export)', () => {
+  const IF015R = MODELS.find(m => m.id === 'IF015R');
+  const IE015A = MODELS.find(m => m.id === 'IE015A');
+  const MM009F = MODELS.find(m => m.id === 'MM009F');
+  const MP008F = MODELS.find(m => m.id === 'MP008F');
+  const man = (m, c, r) => computeConfig(m, 0, 0, { mode: 'manual', cols: c, rows: r }).spares;
+  // 100 캐비닛 (10x10): IFR/IEA 3, MMF 5, MPF 7 (삼성 export 일치)
+  assert.equal(man(IF015R, 10, 10), 3);
+  assert.equal(man(IE015A, 10, 10), 3);
+  assert.equal(man(MM009F, 10, 10), 5);
+  assert.equal(man(MP008F, 10, 10), 7);
+  // MPF 144(12x12) -> 11, IFR 50(10x5) -> 2
+  assert.equal(man(MP008F, 12, 12), 11);
+  assert.equal(man(IF015R, 10, 5), 2);
+  // 사용자 지정 비율(opts.spareRate)이 있으면 그 값이 우선한다.
+  assert.equal(computeConfig(MP008F, 0, 0, { mode: 'manual', cols: 10, rows: 10, spareRate: 0.05 }).spares, 5);
 });
 
 // S-Box rule (region tiling) verified against Samsung: MP012F 42 cabinets (4480x2160) -> 2 units.
