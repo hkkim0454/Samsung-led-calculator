@@ -244,11 +244,11 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .previewEmpty{color:var(--muted);font-size:13px;text-align:center;font-family:var(--mono)}
 
 /* Samsung-configurator style preview */
-/* 설치 공간(선언한 벽면). 스테이지 배경과 잘 구분되도록 accent 링 + 은은한 글로우로 강조 */
+/* 설치 공간(선언한 벽면). 얇은 회색 윤곽 + 은은한 그림자 — FHD(파랑) 신호와 색이 겹치지 않게 */
 .pvScene{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   background:#fff;border-radius:3px;
-  box-shadow:0 10px 26px -8px rgba(0,122,255,.38), 0 0 0 2px rgba(0,122,255,.55)}
-@media (prefers-color-scheme: dark){ .pvScene{background:#26272b;box-shadow:0 12px 30px -8px rgba(10,132,255,.5), 0 0 0 2px rgba(10,132,255,.72)} }
+  box-shadow:0 8px 22px -8px rgba(20,26,40,.30), 0 0 0 1px rgba(60,60,67,.45)}
+@media (prefers-color-scheme: dark){ .pvScene{background:#26272b;box-shadow:0 10px 26px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(200,200,210,.42)} }
 .pvWall{position:absolute;display:grid;gap:1px;background:#5a5d63;overflow:hidden}
 .pvCab{background:#3c3e42;display:flex;align-items:flex-start;justify-content:flex-end;overflow:hidden;
   color:rgba(255,255,255,.5);font-family:var(--mono);font-size:11px;padding:3px 5px 0 0;line-height:1}
