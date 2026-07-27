@@ -39,12 +39,13 @@ test('does not fit when space smaller than one cabinet', () => {
   assert.equal(f.cols * f.rows, 0);
 });
 
-test('null weight/power propagate as null (no fake numbers)', () => {
-  const IF040R = MODELS.find(m => m.id === 'IF040R'); // still no datasheet power/weight
+test('null weight propagates as null (no fake numbers)', () => {
+  // IF040R: 전력은 IFR 브로셔로 채웠지만 무게는 신뢰 가능한 실측이 없어 null 유지.
+  const IF040R = MODELS.find(m => m.id === 'IF040R');
   const r = computeConfig(IF040R, 6000, 3400, { mode: 'fill' });
-  assert.equal(r.weightKg, null);
-  assert.equal(r.maxW, null);
-  assert.ok(r.resW > 0); // geometry still computed
+  assert.equal(r.weightKg, null);   // 무게 null → 결과도 null(가짜 수치 금지)
+  assert.ok(r.maxW > 0);            // 전력은 채워졌으므로 산출됨
+  assert.ok(r.resW > 0);            // geometry still computed
 });
 
 test('bom spare defaults to 5% rounded up (owner rule 2026-07-26)', () => {
@@ -161,6 +162,24 @@ test('GBIC는 CS4B 계열 컨트롤러에서만 산출 (MMF 자동, 그 외는 C
   const mmOn = computeConfig(MM015F, 6000, 3400, { mode: 'fill', cs4b: true });
   assert.equal(mmOn.controller, 'SBB-CS4BPGS');
   assert.equal(mmOn.gbic, 2);
+});
+
+test('IFR/IEA specs match Samsung series brochures (IFR 220805 / IEA 220113)', () => {
+  const pick = id => MODELS.find(m => m.id === id);
+  // IEA 브로셔 실측 (per-cabinet): 무게/최대W/평균W/피크·최대 밝기.
+  const IE015A = pick('IE015A'), IE020A = pick('IE020A'), IE025A = pick('IE025A'), IE040A = pick('IE040A');
+  assert.deepEqual([IE015A.weight, IE015A.maxPower, IE015A.typicalPower], [11.8, 190, 105]);
+  assert.deepEqual([IE020A.weight, IE020A.maxPower, IE020A.typicalPower], [12.4, 190, 105]);
+  assert.deepEqual([IE025A.weight, IE025A.maxPower, IE025A.typicalPower], [10.8, 180, 60]);
+  assert.deepEqual([IE040A.weight, IE040A.maxPower, IE040A.typicalPower], [10.8, 180, 60]);
+  assert.deepEqual([IE040A.brightnessPeak, IE040A.brightnessReduced], [800, 500]);
+  // IFR 브로셔 전력(무게는 브로셔 신뢰도 낮아 IF015R만 실측 11.8, IF020R/040R 무게는 미입력).
+  const IF015R = pick('IF015R'), IF020R = pick('IF020R'), IF025R = pick('IF025R'), IF040R = pick('IF040R');
+  assert.equal(IF015R.weight, 11.8);                         // configurator 실측 유지(브로셔 12.4 아님)
+  assert.deepEqual([IF015R.maxPower, IF015R.typicalPower], [360, 117]);
+  assert.deepEqual([IF020R.maxPower, IF020R.typicalPower, IF020R.weight], [260, 87, null]);
+  assert.deepEqual([IF025R.maxPower, IF025R.typicalPower], [260, 87]);
+  assert.deepEqual([IF040R.maxPower, IF040R.typicalPower, IF040R.weight], [260, 87, null]);
 });
 
 test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {
