@@ -16,9 +16,17 @@ export function fit169(w, h) {
 
 export const DEFAULTS = Object.freeze({
   powerFactor: 0.527,  // typical = max * powerFactor (Samsung MP012F: 3234/6132 = 0.5274)
-  spareRate: 0.05,     // spare cabinets = 5% of installed, rounded up (owner rule 2026-07-26)
+  spareRate: 0.05,     // fallback spare rate when a series has no entry (see SPARE_RATES)
   edgeClearanceMm: 0,  // per-edge clearance subtracted before fill (VERTICAL FILL RULE PENDING — see SPEC Q1)
 });
+
+// 예비 캐비닛 비율: 시리즈별로 다르다 (삼성 공식 configurator export로 검증, 2026-07-27).
+//   IFR/IEA 3% · MMF 5% · MPF 7% — 모두 올림(ceil). 22개 배열 구성에서 예비 수량 정확히 일치.
+export const SPARE_RATES = Object.freeze({ IF: 0.03, IE: 0.03, MM: 0.05, MP: 0.07 });
+/** 모델 시리즈의 기본 예비율(소수). 미등록 시리즈는 DEFAULTS.spareRate로 대체. */
+export function spareRateForSeries(series) {
+  return SPARE_RATES[series] ?? DEFAULTS.spareRate;
+}
 
 /** Resolution per cabinet: explicit if provided, else derived from size / pitch. */
 export function cabinetResolution(model) {
@@ -86,9 +94,10 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const pf = opts.powerFactor ?? DEFAULTS.powerFactor;
   const { cols, rows, fits } = fitCabinets(model, spaceW, spaceH, opts);
   const total = cols * rows;
-  // 예비 캐비닛 = 설치 수량의 5%, 무조건 올림 (오너 규칙 2026-07-26).
-  const spareRate = opts.spareRate ?? DEFAULTS.spareRate;
-  const spares = total > 0 ? Math.ceil(total * spareRate) : 0;
+  // 예비 캐비닛 = 설치 수량 × 시리즈별 예비율, 무조건 올림 (삼성 export 검증 2026-07-27).
+  // opts.spareRate가 주어지면(사용자 입력) 그 값을, 없으면 시리즈 기본율을 쓴다.
+  const spareRate = opts.spareRate ?? spareRateForSeries(model.series);
+  const spares = total > 0 ? Math.ceil(total * spareRate - 1e-9) : 0;
   const totalWithSpares = total + spares;
   const { resW: cRW, resH: cRH } = cabinetResolution(model);
 
@@ -154,8 +163,8 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
  * Jig quantity rule is still model-specific and undefined — returned as null.
  */
 export function bom(model, total, opts = {}) {
-  const spareRate = opts.spareRate ?? DEFAULTS.spareRate;
-  const spares = total > 0 ? Math.ceil(total * spareRate) : 0;
+  const spareRate = opts.spareRate ?? spareRateForSeries(model.series);
+  const spares = total > 0 ? Math.ceil(total * spareRate - 1e-9) : 0;
   const sboxQty = (opts.resW != null && opts.resH != null) ? sboxCount(model, opts.resW, opts.resH, opts) : null;
   return {
     cabinetPart: model.cabinetPart ?? null,
