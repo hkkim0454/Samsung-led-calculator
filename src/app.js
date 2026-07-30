@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=73';
-import { MODELS } from './models.js?v=73';
+import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=74';
+import { MODELS } from './models.js?v=74';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -257,7 +257,7 @@ function renderReadout() {
   const uhd = hasRes ? { c: Math.ceil(r.resW / 3840), r: Math.ceil(r.resH / 2160) } : null;
   const cells = [
     { k: '실제 모듈 크기', v: `${trim3(r.actualW / 1000)} × ${trim3(r.actualH / 1000)}`, u: 'm', hero: true },
-    { k: '대각', v: fmt(r.diagIn, 1), u: '"' },
+    { k: '대각', v: fmt(r.diagIn, 1), u: "'" },
     { k: '캐비닛 배열', v: `${r.cols} × ${r.rows}`, u: `= ${r.total} + 예비 ${r.spares} = ${r.totalWithSpares}` },
     { k: '전체 해상도', v: `${fmt(r.resW)} × ${fmt(r.resH)}`, u: 'px' },
     { k: '16:9 최대 해상도', v: `${fmt(r.res169W)} × ${fmt(r.res169H)}`, u: `px (${fmt(r.diag169In, 1)}")` },
