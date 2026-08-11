@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=74"/>
+<link rel="stylesheet" href="./styles.css?v=75"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -78,7 +78,8 @@
         <div class="lineFilter" id="lineFilter"></div>
         <div class="modelList" id="modelList"></div>
         <div class="rowbtns">
-          <button class="tiny primary" id="btnAddModel">+ 모델 추가</button>
+          <button class="tiny primary" id="btnLoadModel">+ 라이브러리에서 불러오기</button>
+          <button class="tiny ghost" id="btnAddModel">+ 신규 모델 직접 입력</button>
           <button class="tiny ghost" id="btnResetModels">기본값 복원</button>
         </div>
       </div>
@@ -152,7 +153,16 @@
   <div class="dlgFoot"><button class="ghost" id="dlgCancel">취소</button><button class="primary" id="dlgSave">저장</button></div>
 </dialog>
 
+<dialog id="loadDlg">
+  <div class="dlgHead"><h3>라이브러리에서 불러오기</h3><button class="tiny ghost" id="loadClose">닫기</button></div>
+  <div class="dlgBody">
+    <div class="hint">판매범위(P0.8~1.8) 밖이라 기본 화면에서 숨겨진 기존 모델입니다. 필요한 모델을 눌러 추가하세요(데이터는 그대로 불러옵니다).</div>
+    <div class="modelList" id="loadList" style="margin-top:12px"></div>
+  </div>
+  <div class="dlgFoot"><button class="ghost" id="loadCancel">닫기</button></div>
+</dialog>
+
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=74"></script>
+<script type="module" src="./app.js?v=75"></script>
 </body>
 </html>

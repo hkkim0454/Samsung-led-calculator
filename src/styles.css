@@ -302,6 +302,11 @@ tr.nofit td{color:var(--muted)}
 .modelRow .mname{font-weight:700;font-size:14px;color:var(--ink)}
 .modelRow .mmeta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
 .modelRow .acts{display:flex;gap:5px}
+/* 라이브러리 불러오기 목록 행(클릭하면 추가) */
+.loadRow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:12px 14px;background:var(--field-fill);cursor:pointer;transition:border-color .15s, background .15s}
+.loadRow:hover{border-color:var(--accent);background:var(--accent-tint)}
+.loadRow .mname{font-weight:700;font-size:14px;color:var(--ink)}
+.loadRow .mmeta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
 .chk{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--ok);margin-left:5px}
 .todo{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--warn);margin-left:5px}
 .derived{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted);margin-left:5px}
