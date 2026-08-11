@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=74';
-import { MODELS } from './models.js?v=74';
+import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=75';
+import { MODELS } from './models.js?v=75';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -25,6 +25,8 @@ let spareRateModelId = null;
 const MIN_PITCH = 0.8;
 const MAX_PITCH = 1.8;
 const pitchOk = m => m.pitch >= MIN_PITCH - 1e-9 && m.pitch <= MAX_PITCH + 1e-9;
+// 화면 노출 대상: 판매범위(P0.8~1.8) 안이거나, 사용자가 라이브러리에서 불러온/직접 추가한 모델(_show).
+const shown = m => pitchOk(m) || m._show === true;
 let visibleLines = new Set(SALES_LINES);
 
 const $ = s => document.querySelector(s);
@@ -47,8 +49,8 @@ function statusBadge(m) {
 function sboxText(v) { return v == null ? '—' : (v === 0 ? '내장' : fmt(v)); }
 
 const lineLabel = s => LINE_NAMES[s] ?? (s || '기타');
-function familiesInOrder() { const seen = []; for (const m of models) if (pitchOk(m) && !seen.includes(m.series)) seen.push(m.series); return seen; }
-const visibleModels = () => models.filter(m => visibleLines.has(m.series) && pitchOk(m));
+function familiesInOrder() { const seen = []; for (const m of models) if (shown(m) && !seen.includes(m.series)) seen.push(m.series); return seen; }
+const visibleModels = () => models.filter(m => visibleLines.has(m.series) && shown(m));
 function ensureSelectionVisible() {
   const vis = visibleModels();
   if (!vis.some(m => m.id === selectedId)) selectedId = vis[0]?.id ?? null;
@@ -58,7 +60,7 @@ function renderFilters() {
   const el = $('#lineFilter'); if (!el) return;
   el.innerHTML = familiesInOrder().map(s => {
     const on = visibleLines.has(s);
-    const n = models.filter(m => m.series === s && pitchOk(m)).length;
+    const n = models.filter(m => m.series === s && shown(m)).length;
     return `<label class="lineChip${on ? ' on' : ''}"><input type="checkbox" data-line="${esc(s)}"${on ? ' checked' : ''}/>${esc(lineLabel(s))}<span class="cnt">${n}</span></label>`;
   }).join('');
 }
@@ -400,8 +402,38 @@ $('#dlgSave').addEventListener('click', () => {
     brightnessPeak: orEmpty($('#e_nit').value), dataStatus: 'needs-verification',
   };
   if (editingId) Object.assign(models.find(x => x.id === editingId), data);
-  else { const nm = { id: uid(), ...data }; models.push(nm); selectedId = nm.id; visibleLines.add(nm.series); }
+  else { const nm = { id: uid(), ...data, _show: true }; models.push(nm); selectedId = nm.id; visibleLines.add(nm.series); }
   dlg.close(); renderAll();
+});
+
+/* 라이브러리에서 불러오기 — 판매범위 밖이라 숨겨진 기존 모델을 골라 바로 추가·선택한다. */
+const loadDlg = $('#loadDlg');
+function renderLoadList() {
+  const el = $('#loadList');
+  const hidden = models.filter(m => !shown(m)).sort((a, b) => (lineRank(a.series) - lineRank(b.series)) || (a.pitch - b.pitch));
+  if (!hidden.length) { el.innerHTML = '<div class="previewEmpty">불러올 숨김 모델이 없습니다. (기본 모델이 모두 표시 중)</div>'; return; }
+  el.innerHTML = hidden.map(m => `
+    <div class="loadRow" data-load="${m.id}" title="눌러서 추가">
+      <div class="minfo">
+        <div class="mname">${esc(m.name)} ${statusBadge(m)}</div>
+        <div class="mmeta">${esc(lineLabel(m.series))} · ${fmt(m.cabW, 1)}×${fmt(m.cabH, 1)}mm · P${fmtPitch(m.pitch)}</div>
+      </div>
+      <button class="tiny primary" data-load="${m.id}">추가</button>
+    </div>`).join('');
+}
+function loadModel(id) {
+  const m = models.find(x => x.id === id); if (!m) return;
+  m._show = true;                 // 숨김 해제 → 목록/비교표에 노출
+  visibleLines.add(m.series);     // 해당 라인 필터도 켠다
+  selectedId = id;                // 바로 선택·적용
+  loadDlg.close(); renderAll();
+}
+$('#btnLoadModel').addEventListener('click', () => { renderLoadList(); loadDlg.showModal(); });
+$('#loadClose').addEventListener('click', () => loadDlg.close());
+$('#loadCancel').addEventListener('click', () => loadDlg.close());
+$('#loadList').addEventListener('click', e => {
+  const el = e.target.closest('[data-load]'); if (!el) return;
+  loadModel(el.dataset.load);
 });
 
 window.addEventListener('resize', renderPreview);
