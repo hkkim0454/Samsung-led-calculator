@@ -184,11 +184,13 @@ test('IFR/IEA specs match Samsung series brochures (IFR 220805 / IEA 220113)', (
 
 test('BDM far-viewer distance = 화면 세로 × (2 × %EH) (2.5% → ×5)', () => {
   // 2.16 m 화면, %EH 2.5% → 2.16 × 5 = 10.8 m
-  assert.ok(Math.abs(bdmFarViewerM(2160, 2.5) - 10.8) < 1e-9);
+  assert.ok(Math.abs(bdmFarViewerM(2160, 2.5) - 10.8) < 1e-9);   // 2.5% -> ×5
+  assert.ok(Math.abs(bdmFarViewerM(2160, 3) - 12.96) < 1e-9);    // 3%   -> ×6
   assert.equal(bdmFarViewerM(0, 2.5), 0);
-  // computeConfig가 bdm25M(세로 × 5)을 노출: MP012F 7x6 -> actualH 2721.6mm.
+  // computeConfig가 bdm25M(세로×5, 권장)·bdm30M(세로×6, 최대)을 노출: MP012F 7x6 -> actualH 2721.6mm.
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
   assert.ok(Math.abs(r.bdm25M - (2721.6 / 1000) * 5) < 1e-6, `bdm25M=${r.bdm25M}`);
+  assert.ok(Math.abs(r.bdm30M - (2721.6 / 1000) * 6) < 1e-6, `bdm30M=${r.bdm30M}`);
 });
 
 test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {

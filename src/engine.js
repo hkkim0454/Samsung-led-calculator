@@ -153,12 +153,13 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - actualH);
 
-  // BDM 최대 시청거리(m): %EH 2.5% 기준 → 화면 세로 × 5.
+  // BDM 시청거리(m): %EH 2.5% → 세로×5(권장), %EH 3% → 세로×6(최대).
   const bdm25M = bdmFarViewerM(actualH, 2.5);
+  const bdm30M = bdmFarViewerM(actualH, 3);
 
   return {
     cols, rows, fits, total, spares, totalWithSpares,
-    actualW, actualH, areaM2, diagIn, bdm25M,
+    actualW, actualH, areaM2, diagIn, bdm25M, bdm30M,
     resW, resH, pixels,
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
