@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=79';
-import { MODELS } from './models.js?v=79';
+import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=80';
+import { MODELS } from './models.js?v=80';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -275,8 +275,8 @@ function renderReadout() {
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '화면비', v: `${trim1(aspect * 9)}:9`, u: `(16:9 가로 ${trim1(aspect * 9 / 16)}개)` },
-    { k: 'BDM(세로x5)', v: fmt(r.bdm25M, 1), u: 'm · 권장 시청거리' },
-    { k: 'BDM(세로x6)', v: fmt(r.bdm30M, 1), u: 'm · 최대 시청거리' },
+    { k: '권장 시청거리', v: fmt(r.bdm25M, 1), u: 'm · BDM(세로x5)' },
+    { k: '최대 시청거리', v: fmt(r.bdm30M, 1), u: 'm · BDM(세로x6)' },
   ];
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
 
