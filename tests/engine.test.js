@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169 } from '../src/engine.js';
+import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -180,6 +180,15 @@ test('IFR/IEA specs match Samsung series brochures (IFR 220805 / IEA 220113)', (
   assert.deepEqual([IF020R.maxPower, IF020R.typicalPower, IF020R.weight], [260, 87, null]);
   assert.deepEqual([IF025R.maxPower, IF025R.typicalPower], [260, 87]);
   assert.deepEqual([IF040R.maxPower, IF040R.typicalPower, IF040R.weight], [260, 87, null]);
+});
+
+test('BDM far-viewer distance = 화면 세로 × (2 × %EH) (2.5% → ×5)', () => {
+  // 2.16 m 화면, %EH 2.5% → 2.16 × 5 = 10.8 m
+  assert.ok(Math.abs(bdmFarViewerM(2160, 2.5) - 10.8) < 1e-9);
+  assert.equal(bdmFarViewerM(0, 2.5), 0);
+  // computeConfig가 bdm25M(세로 × 5)을 노출: MP012F 7x6 -> actualH 2721.6mm.
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.ok(Math.abs(r.bdm25M - (2721.6 / 1000) * 5) < 1e-6, `bdm25M=${r.bdm25M}`);
 });
 
 test('brightnessMax uses operating "최대" (reduced when present, else peak)', () => {
