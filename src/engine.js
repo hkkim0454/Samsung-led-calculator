@@ -6,6 +6,17 @@ export const WATT_TO_BTU = 3.412142;   // W -> BTU/hr
 export const MM_PER_INCH = 25.4;
 export const RATIO_169 = 16 / 9;
 
+/**
+ * BDM 기준 최대 시청거리(m). 화면 세로(IH, Image Height)를 기준으로, 표시할 객체(글자)가
+ * 화면 세로의 %EH를 차지할 때 가독 한계가 되는 가장 먼 시청자(FV) 거리.
+ *   FV = IH × 200 × (%EH/100) = IH × 2 × %EH   → %EH 2.5%면 FV = IH × 5.
+ * imageHeightMm: 화면 세로(mm), ehPercent: %EH(퍼센트). 유효하지 않으면 0.
+ */
+export function bdmFarViewerM(imageHeightMm, ehPercent) {
+  if (!(imageHeightMm > 0) || !(ehPercent > 0)) return 0;
+  return (imageHeightMm / 1000) * 2 * ehPercent;
+}
+
 /** Largest 16:9 resolution (in whole pixels) that fits inside w x h. */
 export function fit169(w, h) {
   if (!(w > 0) || !(h > 0)) return { w: 0, h: 0 };
@@ -142,9 +153,12 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - actualH);
 
+  // BDM 최대 시청거리(m): %EH 2.5% 기준 → 화면 세로 × 5.
+  const bdm25M = bdmFarViewerM(actualH, 2.5);
+
   return {
     cols, rows, fits, total, spares, totalWithSpares,
-    actualW, actualH, areaM2, diagIn,
+    actualW, actualH, areaM2, diagIn, bdm25M,
     resW, resH, pixels,
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
