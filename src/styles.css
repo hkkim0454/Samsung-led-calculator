@@ -222,7 +222,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .seg button:hover{background:transparent}
 .seg button.on{background:var(--seg-thumb);color:var(--ink);box-shadow:var(--seg-thumb-shadow)}
 
-.rowbtns{margin-top:14px;display:flex;gap:9px}
+.rowbtns{margin-top:14px;display:flex;flex-wrap:wrap;gap:9px}
+.rowbtns .tiny{min-width:0}
 
 /* ---- Checkbox line ---- */
 .checkline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);font-weight:600;margin-top:14px;cursor:pointer}
