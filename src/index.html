@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=80"/>
+<link rel="stylesheet" href="./styles.css?v=81"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -43,8 +43,8 @@
       <div class="card">
         <h2><span class="idx">01</span> 설치 공간</h2>
         <div class="two">
-          <label class="field"><span class="lab">가로 W (mm)</span><input type="number" id="spaceW" value="4000" min="1"/></label>
-          <label class="field"><span class="lab">세로 H (mm)</span><input type="number" id="spaceH" value="2300" min="1"/></label>
+          <label class="field"><span class="lab">가로 W (mm)</span><input type="number" id="spaceW" value="4000" min="500" step="500"/></label>
+          <label class="field"><span class="lab">세로 H (mm)</span><input type="number" id="spaceH" value="2300" min="500" step="500"/></label>
         </div>
         <label class="field">
           <span class="lab">배열 기준</span>
@@ -163,6 +163,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=80"></script>
+<script type="module" src="./app.js?v=81"></script>
 </body>
 </html>
