@@ -136,9 +136,11 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const nativeCS4B = typeof model.sbox === 'string' && model.sbox.includes('CS4B');
   const controller = (cs4b && !nativeCS4B) ? 'SBB-CS4B' : (model.sbox ?? null);
   // 광 지빅(GBIC)은 CS4B 계열 컨트롤러에서만 필요: MMF(기본 SBB-CS4BPGS)는 자동, 그 외 라인은
-  // 'CS4B(광전송)' 선택 시. 1920x2160 신호 영역마다 1 SET(이중화 시 x2).
+  // 'CS4B(광전송)' 선택 시. 1920x2160 신호 영역마다 1 SET.
+  // Gbic 수량 2배 조건: SBOX 이중화(redundancy) 또는 Gbic 포워드/백워드(gbicFB) 중 하나라도 켜지면 ×2.
+  const gbicFB = opts.gbicFB ?? false;
   const usesCS4B = typeof controller === 'string' && controller.includes('CS4B');
-  const gbic = usesCS4B ? gbicSets(resW, resH, { redundancy }) : null;
+  const gbic = usesCS4B ? gbicSets(resW, resH, { redundancy: redundancy || gbicFB }) : null;
 
   // Largest 16:9 resolution that fits inside the panel's output resolution.
   // For a super-wide wall (wider than 16:9) the full height is used and the width is

@@ -164,6 +164,19 @@ test('GBIC는 CS4B 계열 컨트롤러에서만 산출 (MMF 자동, 그 외는 C
   assert.equal(mmOn.gbic, 2);
 });
 
+test('Gbic 포워드/백워드(gbicFB)로 Gbic 수량 2배 (SBOX 이중화와 독립)', () => {
+  const base = { mode: 'manual', cols: 7, rows: 6, cs4b: true };            // MPF+CS4B -> gbic 3
+  assert.equal(computeConfig(MP012F, 6000, 3400, base).gbic, 3);
+  // gbicFB만 켜면 Gbic ×2, SBOX 수량은 그대로.
+  const fb = computeConfig(MP012F, 6000, 3400, { ...base, gbicFB: true });
+  assert.equal(fb.gbic, 6);
+  assert.equal(fb.sbox, computeConfig(MP012F, 6000, 3400, base).sbox);
+  // SBOX 이중화만 켜도 Gbic ×2(기존 동작 유지).
+  assert.equal(computeConfig(MP012F, 6000, 3400, { ...base, redundancy: true }).gbic, 6);
+  // 둘 다 켜도 Gbic은 ×2(×4 아님).
+  assert.equal(computeConfig(MP012F, 6000, 3400, { ...base, redundancy: true, gbicFB: true }).gbic, 6);
+});
+
 test('IFR/IEA specs match Samsung series brochures (IFR 220805 / IEA 220113)', () => {
   const pick = id => MODELS.find(m => m.id === id);
   // IEA 브로셔 실측 (per-cabinet): 무게/최대W/평균W/피크·최대 밝기.

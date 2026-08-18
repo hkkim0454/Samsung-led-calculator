@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=81';
-import { MODELS } from './models.js?v=81';
+import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=82';
+import { MODELS } from './models.js?v=82';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -98,10 +98,11 @@ function syncCS4B() {
 function opts() {
   const redundancy = $('#redundancy')?.checked ?? false;
   const cs4b = $('#useCS4B')?.checked ?? false;
+  const gbicFB = $('#gbicFB')?.checked ?? false;
   const spareRate = spareRateOpt();
   return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, spareRate }
-    : { mode: 'fill', redundancy, cs4b, spareRate };
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, gbicFB, spareRate }
+    : { mode: 'fill', redundancy, cs4b, gbicFB, spareRate };
 }
 
 function renderModelList() {
@@ -321,6 +322,7 @@ function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); re
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
+$('#gbicFB').addEventListener('change', renderAll);
 $('#useCS4B').addEventListener('change', () => { userCS4B = $('#useCS4B').checked; renderAll(); });
 $('#signalMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-sig]'); if (!b) return;
