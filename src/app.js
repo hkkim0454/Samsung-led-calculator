@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=82';
-import { MODELS } from './models.js?v=82';
+import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=83';
+import { MODELS } from './models.js?v=83';
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -272,7 +272,7 @@ function renderReadout() {
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
     { k: `SBOX${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
-    { k: 'Gbic', v: r.gbic ? fmt(r.gbic) : '<span class="vdash">—</span>', u: r.gbic ? `SET (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
+    { k: 'Gbic', v: r.gbic ? fmt(r.gbic * 2) : '<span class="vdash">—</span>', u: r.gbic ? `EA (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
     { k: '화면비', v: `${trim1(aspect * 9)}:9`, u: `(16:9 가로 ${trim1(aspect * 9 / 16)}개)` },
@@ -306,7 +306,7 @@ function renderCompare() {
       <td>${r.fits ? `${r.cols}×${r.rows}` : '—'}</td>
       <td>${r.fits ? fmt(r.diagIn, 1) : '—'}</td>
       <td>${r.fits ? `${fmtMeters(r.actualW)}×${fmtMeters(r.actualH)}` : '—'}</td>
-      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? `(${fmt(r.gbic)})` : '') : '—'}</td>
+      <td>${r.fits ? sboxText(r.sbox) + (r.gbic != null ? `(${fmt(r.gbic * 2)})` : '') : '—'}</td>
       <td>${r.fits ? `${fmt(r.resW)}×${fmt(r.resH)}` : '—'}</td>
       <td>${r.fits ? `${fmt(r.res169W)}×${fmt(r.res169H)}` : '—'}</td>
       <td>${r.maxW == null ? '—' : fmt(r.maxW / 1000, 2)}</td>
