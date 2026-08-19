@@ -253,7 +253,8 @@ test('computeQuote: 품목별 원가/견적/마진 (가짜 단가)', () => {
     sbox: { 'SBB-SNOWAAE': { cost: 200, sell: 300 } },
     install: { costPerM2: 10, sellPerM2: 20 },
   };
-  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  // 예비 SBOX는 이 테스트에서 0으로 두어 패널/설치 검증에 집중(예비 SBOX는 별도 테스트).
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, sboxSpares: 0 });
   // 42 캐비닛, MP 예비율 7% → 예비 3 → 총 45. SBOX 2대(4480x2160). CS4B 아님 → Gbic 없음.
   const q = computeQuote(MP012F, r, P);
   const panel = q.lines.find(l => l.label.includes('LED 패널'));
@@ -324,4 +325,23 @@ test('computeQuote: 고소작업 시 설치비에 할증배수 적용', () => {
   const noMult = { panels: {}, install: { costPerM2: 10, sellPerM2: 20 } };
   const inst = computeQuote(MP012F, r, noMult, { highWork: true }).lines.find(l => l.label.includes('설치'));
   assert.ok(Math.abs(inst.cost - r.areaM2 * 10) < 1e-6);
+});
+
+test('예비 SBOX: 기본 1대, 직접 지정, 견적 수량 반영', () => {
+  const P = { panels: {}, sbox: { 'SBB-SNOWAAE': { cost: 200, sell: 300 } } };
+  // 기본: SBOX 2대 + 예비 1 = 3
+  const base = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(base.sbox, 2);
+  assert.equal(base.sboxSpares, 1);
+  assert.equal(base.sboxWithSpares, 3);
+  const s = computeQuote(MP012F, base, P).lines.find(l => l.label.includes('S-BOX'));
+  assert.equal(s.qty, 3);
+  assert.equal(s.cost, 600);         // 3 × 200
+  // 예비 3대 지정 → 2+3=5
+  const r3 = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, sboxSpares: 3 });
+  assert.equal(r3.sboxWithSpares, 5);
+  assert.equal(computeQuote(MP012F, r3, P).lines.find(l => l.label.includes('S-BOX')).qty, 5);
+  // 예비 0 → 2
+  const r0 = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, sboxSpares: 0 });
+  assert.equal(r0.sboxWithSpares, 2);
 });

@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=87';
-import { MODELS } from './models.js?v=87';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=88';
+import { MODELS } from './models.js?v=88';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=87')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=88')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -132,14 +132,22 @@ function syncCS4B() {
   cb.closest('.checkline')?.classList.toggle('locked', !!isMMF);
 }
 
+// 예비 SBOX 수량(대). 빈칸이면 기본 1대, 값을 넣으면 그 수(0 이상 정수).
+function sboxSparesOpt() {
+  const el = $('#sboxSpare');
+  if (!el || el.value === '') return 1;
+  return Math.max(0, Math.floor(num(el.value)));
+}
+
 function opts() {
   const redundancy = $('#redundancy')?.checked ?? false;
   const cs4b = $('#useCS4B')?.checked ?? false;
   const gbicFB = $('#gbicFB')?.checked ?? false;
   const spareRate = spareRateOpt();
+  const sboxSpares = sboxSparesOpt();
   return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, gbicFB, spareRate }
-    : { mode: 'fill', redundancy, cs4b, gbicFB, spareRate };
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, gbicFB, spareRate, sboxSpares }
+    : { mode: 'fill', redundancy, cs4b, gbicFB, spareRate, sboxSpares };
 }
 
 function renderModelList() {
@@ -308,7 +316,7 @@ function renderReadout() {
     { k: '최대 소비전력', v: fmt(r.maxW == null ? NaN : r.maxW / 1000, 2), u: 'kW' },
     { k: '평균 소비전력', v: fmt(r.typW == null ? NaN : r.typW / 1000, 2), u: 'kW' },
     { k: '발열 (최대)', v: fmt(r.heatMaxBTU == null ? NaN : r.heatMaxBTU / 1000, 1), u: 'kBTU/h' },
-    { k: `SBOX${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? (r.redundancy ? '대 · 이중화' : '대') : '') },
+    { k: `SBOX${r.controller ? ` (${esc(r.controller)})` : ''}`, v: sboxText(r.sbox), u: (r.sbox > 0 ? `대 + 예비 ${r.sboxSpares} = ${r.sboxWithSpares}${r.redundancy ? ' · 이중화' : ''}` : '') },
     { k: 'Gbic', v: r.gbic ? fmt(r.gbic * 2) : '<span class="vdash">—</span>', u: r.gbic ? `EA (SBOX ${fmt(r.gbic)} + LED ${fmt(r.gbic)})` : '' },
     { k: '총 화소수', v: fmt(r.pixels / 1e6, 1), u: 'MP' },
     { k: '면적', v: fmt(r.areaM2, 2), u: 'm²' },
@@ -415,7 +423,7 @@ function renderQuote() {
 function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
-['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate', 'sboxSpare'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
 $('#gbicFB').addEventListener('change', renderAll);
 ['etcCost', 'etcSell'].forEach(id => $('#' + id)?.addEventListener('input', renderQuote));

@@ -144,6 +144,9 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 
   const redundancy = opts.redundancy ?? false;
   const sbox = sboxCount(model, resW, resH, { redundancy });
+  // 예비 SBOX: 산출 대수(sbox>0)일 때만. 기본 1대, opts.sboxSpares로 직접 지정(0 이상 정수).
+  const sboxSpares = (sbox > 0) ? Math.max(0, Math.floor(opts.sboxSpares ?? 1)) : 0;
+  const sboxWithSpares = (sbox != null) ? sbox + sboxSpares : null;
   // 'CS4B(광전송)로 설계' 선택 시 컨트롤러 표시를 SBB-CS4B로 바꾼다(기본은 모델 지정 컨트롤러).
   // 단, 모델 기본 컨트롤러가 이미 CS4B 계열(MMF의 SBB-CS4BPGS 등)이면 그대로 둔다(다운그레이드 방지).
   const cs4b = opts.cs4b ?? false;
@@ -179,7 +182,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     resW, resH, pixels,
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
-    sbox, gbic, controller, redundancy,
+    sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy,
     deadW, deadH,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
@@ -210,10 +213,12 @@ export function computeQuote(model, config, prices, opts = {}) {
   const p = prices.panels?.[model.id] ?? null;
   add(`LED 패널 · ${model.name}`, config.totalWithSpares, 'EA', p?.cost ?? null, p?.sell ?? null, '예비 포함');
 
-  // 2) S-BOX(컨트롤러) — 산출된 대수(이중화 반영).
+  // 2) S-BOX(컨트롤러) — 산출 대수(이중화 반영) + 예비 SBOX.
   if (config.sbox > 0 && config.controller) {
     const s = prices.sbox?.[config.controller] ?? null;
-    add(`S-BOX · ${config.controller}`, config.sbox, 'EA', s?.cost ?? null, s?.sell ?? null);
+    const qty = config.sboxWithSpares ?? config.sbox;
+    const note = config.sboxSpares > 0 ? `예비 ${config.sboxSpares} 포함` : '';
+    add(`S-BOX · ${config.controller}`, qty, 'EA', s?.cost ?? null, s?.sell ?? null, note);
   }
 
   // 3) Gbic 광모듈 — EA = SET×2 (SBOX측+LED측). CS4B 설계일 때만 config.gbic 존재.
