@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=89';
-import { MODELS } from './models.js?v=89';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=90';
+import { MODELS } from './models.js?v=90';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=89')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=90')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -26,6 +26,7 @@ async function importPriceFile(file) {
     }
     if (!prices || typeof prices !== 'object' || !prices.panels) throw new Error('가격표 형식이 아닙니다(PRICES.panels 없음).');
     PRICES = prices;
+    indirectDisabled = null;   // 새 가격표의 기본 on/off로 재초기화
     localStorage.setItem(PRICES_KEY, JSON.stringify(prices));
     renderAll();
     alert('가격표를 불러왔습니다. 이 브라우저에 저장되어 다음에 열 때도 자동으로 표시됩니다.');
@@ -35,7 +36,14 @@ async function importPriceFile(file) {
 }
 function clearStoredPrices() {
   if (!confirm('이 브라우저에 저장된 가격표를 삭제할까요? (파일 원본은 그대로 남습니다)')) return;
-  localStorage.removeItem(PRICES_KEY); PRICES = null; renderAll();
+  localStorage.removeItem(PRICES_KEY); PRICES = null; indirectDisabled = null; renderAll();
+}
+
+// 간접비 항목 on/off 상태(화면 체크박스). null = 가격표 기준(enabled:false)으로 초기화 필요.
+let indirectDisabled = null;
+function ensureIndirectDefaults() {
+  if (indirectDisabled) return;
+  indirectDisabled = new Set((PRICES?.indirect?.items || []).filter(i => i.enabled === false).map(i => i.name));
 }
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
@@ -380,13 +388,14 @@ function renderQuote() {
   if (etcRow) etcRow.hidden = false;
   if (hwLine) hwLine.hidden = false;
   if (clearBtn) clearBtn.hidden = false;
+  ensureIndirectDefaults();
   const m = models.find(x => x.id === selectedId);
   if (!m) { box.innerHTML = ''; return; }
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   const etc = { cost: num($('#etcCost')?.value), sell: num($('#etcSell')?.value) };
   const highWork = $('#highWork')?.checked ?? false;
-  const q = computeQuote(m, r, PRICES, { etc, highWork });
+  const q = computeQuote(m, r, PRICES, { etc, highWork, indirectDisabled: Array.from(indirectDisabled) });
   if (!q) { box.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
   const won = v => v == null ? '<span class="vdash">—</span>' : fmt(v);
@@ -409,12 +418,15 @@ function renderQuote() {
   const baseLabel = { labor: '노무비', direct: '직접비', special: '직접비+간접노무+안전' };
   const indirectBlock = ind ? `
     <div class="indirectWrap">
-      <div class="subhead">간접비 <span class="muted-note">— 표준품셈 기준(원가 기준 산출) · 견적에만 가산</span></div>
+      <div class="subhead">간접비 <span class="muted-note">— 표준품셈 기준(원가 기준 산출) · 견적에만 가산 · 체크로 항목 포함/제외</span></div>
       <table class="quoteTable"><thead><tr>
-        <th>항목</th><th>기준</th><th>요율</th><th>금액</th>
+        <th>포함</th><th>항목</th><th>기준</th><th>요율</th><th>금액</th>
       </tr></thead><tbody>
-        ${ind.lines.map(l => `<tr><td class="name">${esc(l.name)}</td><td>${baseLabel[l.baseKind] || '-'}</td><td>${fmt(l.pct, 3)}%</td><td>${fmt(l.amount)}</td></tr>`).join('')}
-      </tbody><tfoot><tr class="qtot"><td>간접비 합계</td><td></td><td></td><td>${fmt(ind.total)}</td></tr></tfoot></table>
+        ${ind.lines.map(l => `<tr class="${l.included ? '' : 'off'}">
+          <td class="indck"><input type="checkbox" class="indChk" data-ind="${esc(l.name)}"${l.included ? ' checked' : ''}/></td>
+          <td class="name">${esc(l.name)}</td><td>${baseLabel[l.baseKind] || '-'}</td><td>${fmt(l.pct, 3)}%</td>
+          <td>${l.included ? fmt(l.amount) : '<span class="vdash">—</span>'}</td></tr>`).join('')}
+      </tbody><tfoot><tr class="qtot"><td></td><td>간접비 합계</td><td></td><td></td><td>${fmt(ind.total)}</td></tr></tfoot></table>
     </div>` : '';
   box.innerHTML = `
     <table id="quoteTable"><thead><tr>
@@ -443,6 +455,12 @@ $('#redundancy').addEventListener('change', renderAll);
 $('#gbicFB').addEventListener('change', renderAll);
 ['etcCost', 'etcSell'].forEach(id => $('#' + id)?.addEventListener('input', renderQuote));
 $('#highWork')?.addEventListener('change', renderQuote);
+$('#quoteBody')?.addEventListener('change', e => {
+  const cb = e.target.closest('.indChk'); if (!cb) return;
+  if (!indirectDisabled) indirectDisabled = new Set();
+  if (cb.checked) indirectDisabled.delete(cb.dataset.ind); else indirectDisabled.add(cb.dataset.ind);
+  renderQuote();
+});
 $('#btnPriceLoad')?.addEventListener('click', () => $('#priceFile')?.click());
 $('#priceFile')?.addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value = ''; importPriceFile(f); });
 $('#btnPriceClear')?.addEventListener('click', clearStoredPrices);
