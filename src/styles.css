@@ -296,6 +296,14 @@ tr.nofit td{color:var(--muted)}
 .rowbtn{cursor:pointer;transition:background .12s}
 .rowbtn:hover td{background:var(--accent-tint)}
 
+/* ---- 06 원가/견적 (사내 전용) ---- */
+#quoteTable tfoot td{font-weight:700;background:var(--field-fill);border-top:2px solid var(--line);color:var(--ink)}
+#quoteTable tfoot tr.qprofit td{background:var(--accent-tint)}
+#quoteTable td.name .muted-note{font-size:10px}
+.quoteNote{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5}
+.warnText{color:var(--warn)}
+.etcRow{margin-top:14px}
+
 /* ---- Model library rows ---- */
 .modelList{display:flex;flex-direction:column;gap:9px}
 .modelRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:12px 14px;background:var(--field-fill);transition:border-color .15s, background .15s}

@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=83"/>
+<link rel="stylesheet" href="./styles.css?v=84"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -121,6 +121,15 @@
         </div>
       </div>
 
+      <div class="card" id="quoteCard" hidden>
+        <h2><span class="idx">06</span> 원가 / 견적 <span class="muted-note">— 사내 전용(가격표 로딩 시에만 표시)</span></h2>
+        <div class="tableWrap"><div id="quoteBody"></div></div>
+        <div class="two etcRow">
+          <label class="field"><span class="lab">기타 자재 원가 (원)</span><input type="number" id="etcCost" value="0" min="0" step="100000"/></label>
+          <label class="field"><span class="lab">기타 자재 견적 (원)</span><input type="number" id="etcSell" value="0" min="0" step="100000"/></label>
+        </div>
+      </div>
+
       <div class="footnote">
         <strong>계산 규칙</strong> — cols = ⌊W/캐비닛W⌋, rows = ⌊H/캐비닛H⌋. 총량 = (cols×rows)×단위값.
         평균전력 = 모델 실측 typical(없으면 최대 × 0.527), 발열(BTU/hr) = W × 3.412 (삼성 MP012F 실측 일치).
@@ -167,6 +176,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=83"></script>
+<script type="module" src="./app.js?v=84"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM } from '../src/engine.js';
+import { computeConfig, computeQuote, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -239,4 +239,68 @@ test('MMF P0.9375 / P1.25 verified against Samsung configurator export', () => {
   assert.ok(Math.abs(b.maxW - 5939.2) < 0.1, `max=${b.maxW}`);
   assert.ok(Math.abs(b.typW - 2656) < 0.1, `typ=${b.typW}`);
   assert.equal(b.sbox, 1);
+});
+
+// ── 원가/견적 산출 (computeQuote) ──────────────────────────────────────────────
+// 실제 단가는 테스트에 넣지 않는다(가격정보 금지). 아래는 계산 검증용 가짜 단가.
+test('computeQuote: 품목별 원가/견적/마진 (가짜 단가)', () => {
+  const P = {
+    panels: { MP012F: { cost: 1000, sell: 1500 } },
+    sbox: { 'SBB-SNOWAAE': { cost: 200, sell: 300 } },
+    install: { costPerM2: 10, sellPerM2: 20 },
+  };
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  // 42 캐비닛, MP 예비율 7% → 예비 3 → 총 45. SBOX 2대(4480x2160). CS4B 아님 → Gbic 없음.
+  const q = computeQuote(MP012F, r, P);
+  const panel = q.lines.find(l => l.label.includes('LED 패널'));
+  assert.equal(panel.qty, 45, `panel qty=${panel.qty}`);      // 예비 포함
+  assert.equal(panel.cost, 45000);
+  assert.equal(panel.sell, 67500);
+  const sbox = q.lines.find(l => l.label.includes('S-BOX'));
+  assert.equal(sbox.qty, 2);
+  assert.equal(sbox.cost, 400);
+  assert.ok(!q.lines.some(l => l.label.includes('Gbic')), 'no gbic without CS4B');
+  // 설치: 면적 × ㎡단가
+  const inst = q.lines.find(l => l.label.includes('설치'));
+  assert.ok(Math.abs(inst.cost - r.areaM2 * 10) < 1e-6);
+  // 합계·마진
+  assert.ok(Math.abs(q.totalCost - (45000 + 400 + r.areaM2 * 10)) < 1e-6);
+  assert.ok(Math.abs(q.totalSell - (67500 + 600 + r.areaM2 * 20)) < 1e-6);
+  assert.ok(Math.abs(q.margin - (q.totalSell - q.totalCost) / q.totalSell) < 1e-9);
+  assert.equal(q.incomplete, false);
+});
+
+test('computeQuote: CS4B 모델은 Gbic 라인 포함, 기타자재 수동입력', () => {
+  const MM015F = MODELS.find(m => m.id === 'MM015F');
+  const P = {
+    panels: { MM015F: { cost: 100, sell: 150 } },
+    sbox: { 'SBB-CS4BPGS': { cost: 200, sell: 300 } },
+    gbic: { cost: 50, sell: 75 },
+    install: { costPerM2: 1, sellPerM2: 2 },
+  };
+  const r = computeConfig(MM015F, 0, 0, { mode: 'manual', cols: 10, rows: 10 }); // 3840x2160
+  const q = computeQuote(MM015F, r, P, { etc: { cost: 500, sell: 800 } });
+  const g = q.lines.find(l => l.label.includes('Gbic'));
+  assert.equal(g.qty, 4);          // SET 2 × 2 = 4 EA
+  assert.equal(g.cost, 200);
+  const etc = q.lines.find(l => l.label.includes('기타 자재'));
+  assert.equal(etc.cost, 500);
+  assert.equal(etc.sell, 800);
+});
+
+test('computeQuote: 가격표 없거나 미배치면 null', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(computeQuote(MP012F, r, null), null);
+  const nofit = computeConfig(MP012F, 100, 100, { mode: 'fill' });
+  assert.equal(computeQuote(MP012F, nofit, { panels: {} }), null);
+});
+
+test('computeQuote: 단가 미설정 항목은 incomplete=true, 합계 제외', () => {
+  const P = { panels: {} }; // 패널 단가 없음
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  const q = computeQuote(MP012F, r, P);
+  assert.equal(q.incomplete, true);
+  const panel = q.lines.find(l => l.label.includes('LED 패널'));
+  assert.equal(panel.cost, null);
+  assert.equal(q.totalCost, 0); // null은 합계에서 빠짐
 });

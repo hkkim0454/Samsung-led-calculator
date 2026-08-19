@@ -175,6 +175,60 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 }
 
 /**
+ * 원가/견적가 산출 (품목별). 실제 단가(prices)는 인자로만 받는다 — engine.js엔 가격을 하드코딩하지 않는다.
+ * prices 구조는 prices.example.js 참고. prices가 없으면(공개 배포 등) null 반환 → UI에서 06 카드 숨김.
+ *
+ * config: computeConfig() 결과. opts.etc = { cost, sell } 기타자재 수동 입력(선택).
+ * 각 라인: { label, qty, unit, unitCost, unitSell, cost, sell, note }. cost/sell는 단가 없으면 null.
+ * 반환: { lines, totalCost, totalSell, margin, incomplete }  (incomplete = 단가 미설정 항목 존재)
+ */
+export function computeQuote(model, config, prices, opts = {}) {
+  if (!prices || !config || !config.fits) return null;
+  const lines = [];
+  const add = (label, qty, unit, uc, us, note) => {
+    if (!(qty > 0)) return;
+    const cost = uc != null ? qty * uc : null;
+    const sell = us != null ? qty * us : null;
+    lines.push({ label, qty, unit, unitCost: uc ?? null, unitSell: us ?? null, cost, sell, note: note ?? '' });
+  };
+
+  // 1) LED 패널 — 예비 포함 총 캐비닛 수 기준(실제 구매/견적 수량과 일치).
+  const p = prices.panels?.[model.id] ?? null;
+  add(`LED 패널 · ${model.name}`, config.totalWithSpares, 'EA', p?.cost ?? null, p?.sell ?? null, '예비 포함');
+
+  // 2) S-BOX(컨트롤러) — 산출된 대수(이중화 반영).
+  if (config.sbox > 0 && config.controller) {
+    const s = prices.sbox?.[config.controller] ?? null;
+    add(`S-BOX · ${config.controller}`, config.sbox, 'EA', s?.cost ?? null, s?.sell ?? null);
+  }
+
+  // 3) Gbic 광모듈 — EA = SET×2 (SBOX측+LED측). CS4B 설계일 때만 config.gbic 존재.
+  if (config.gbic > 0 && prices.gbic) {
+    add('Gbic 광모듈', config.gbic * 2, 'EA', prices.gbic.cost ?? null, prices.gbic.sell ?? null, 'SET×2');
+  }
+
+  // 4) 설치 인건비 — 면적(㎡) × ㎡단가.
+  if (config.areaM2 > 0 && prices.install) {
+    add('설치 인건비', config.areaM2, '㎡', prices.install.costPerM2 ?? null, prices.install.sellPerM2 ?? null);
+  }
+
+  // 5) 기타 자재(프레임·지그·케이블 등) — 수량규칙 미정, 수동 입력 lump.
+  const etc = opts.etc;
+  if (etc && ((etc.cost ?? 0) > 0 || (etc.sell ?? 0) > 0)) {
+    add('기타 자재 (프레임·지그·케이블 등)', 1, '식', etc.cost ?? null, etc.sell ?? null, '수동 입력');
+  }
+
+  const sum = k => lines.reduce((a, l) => a + (l[k] ?? 0), 0);
+  const totalCost = sum('cost'), totalSell = sum('sell');
+  const incomplete = lines.some(l => l.unitSell == null || l.unitCost == null);
+  return {
+    lines, totalCost, totalSell,
+    margin: totalSell > 0 ? (totalSell - totalCost) / totalSell : 0,
+    incomplete,
+  };
+}
+
+/**
  * Bill of materials. Spare rule: ceil(total * spareRate). SBOX quantity uses the
  * confirmed rule (see sboxCount) when total pixels are supplied via opts.pixels.
  * Jig quantity rule is still model-specific and undefined — returned as null.
