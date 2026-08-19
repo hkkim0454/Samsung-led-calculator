@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=92';
-import { MODELS } from './models.js?v=92';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=93';
+import { MODELS } from './models.js?v=93';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=92')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=93')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -41,6 +41,8 @@ function clearStoredPrices() {
 
 // 간접비 항목 on/off 상태(화면 체크박스). null = 가격표 기준(enabled:false)으로 초기화 필요.
 let indirectDisabled = null;
+// 간접비 상세 펼침 상태(기본 닫힘). 재렌더 시에도 유지.
+let indirectOpen = false;
 function ensureIndirectDefaults() {
   if (indirectDisabled) return;
   indirectDisabled = new Set((PRICES?.indirect?.items || []).filter(i => i.enabled === false).map(i => i.name));
@@ -422,15 +424,21 @@ function renderQuote() {
   const baseLabel = { labor: '노무비', direct: '직접비', special: '직접비+간접노무+안전' };
   const indirectBlock = ind ? `
     <div class="indirectWrap">
-      <div class="subhead">간접비 <span class="muted-note">— 표준품셈 기준(원가 기준 산출) · 견적에만 가산 · 체크로 항목 포함/제외</span></div>
-      <table class="quoteTable"><thead><tr>
-        <th>포함</th><th>항목</th><th>기준</th><th>요율</th><th>금액</th>
-      </tr></thead><tbody>
-        ${ind.lines.map(l => `<tr class="${l.included ? '' : 'off'}">
-          <td class="indck"><input type="checkbox" class="indChk" data-ind="${esc(l.name)}"${l.included ? ' checked' : ''}/></td>
-          <td class="name">${esc(l.name)}</td><td>${baseLabel[l.baseKind] || '-'}</td><td>${fmt(l.pct, 3)}%</td>
-          <td>${l.included ? fmt(l.amount) : '<span class="vdash">—</span>'}</td></tr>`).join('')}
-      </tbody><tfoot><tr class="qtot"><td></td><td>간접비 합계</td><td></td><td></td><td>${fmt(ind.total)}</td></tr></tfoot></table>
+      <details class="indirectDetails"${indirectOpen ? ' open' : ''}>
+        <summary class="indSummary">
+          <span class="indTitle">간접비 합계</span>
+          <span class="indAmt">${fmt(ind.total)}</span>
+          <span class="muted-note indHint">표준품셈 · 견적에만 가산 · 클릭하여 항목 펼치기/접기</span>
+        </summary>
+        <table class="quoteTable indTable"><thead><tr>
+          <th>포함</th><th>항목</th><th>기준</th><th>요율</th><th>금액</th>
+        </tr></thead><tbody>
+          ${ind.lines.map(l => `<tr class="${l.included ? '' : 'off'}">
+            <td class="indck"><input type="checkbox" class="indChk" data-ind="${esc(l.name)}"${l.included ? ' checked' : ''}/></td>
+            <td class="name">${esc(l.name)}</td><td>${baseLabel[l.baseKind] || '-'}</td><td>${fmt(l.pct, 3)}%</td>
+            <td>${l.included ? fmt(l.amount) : '<span class="vdash">—</span>'}</td></tr>`).join('')}
+        </tbody></table>
+      </details>
     </div>` : '';
   box.innerHTML = `
     <table id="quoteTable"><thead><tr>
@@ -449,6 +457,8 @@ function renderQuote() {
       금액=공급가(VAT 별도). 패널은 예비 포함 수량. 간접비는 원가 기준으로 산출해 견적에만 가산(요율은 가격표에서 조정). ${q.incomplete ? '<b class="warnText">일부 품목은 단가 미설정(—)이라 합계에서 빠졌습니다.</b> ' : ''}
       프레임·지그·케이블 등 기타 자재는 아래 칸에 직접 입력하세요.
     </div>`;
+  // 간접비 펼침 상태를 사용자 조작에 맞춰 기억(재렌더 후에도 유지).
+  box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
 function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }

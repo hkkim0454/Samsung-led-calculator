@@ -302,7 +302,15 @@ tr.nofit td{color:var(--muted)}
 #quoteTable tfoot tr.qprofit td, .quoteTable tr.qprofit td{background:var(--accent-tint)}
 #quoteTable td.name .muted-note, .quoteTable td.name .muted-note{font-size:10px}
 .indirectWrap{margin-top:16px}
-.indirectWrap .subhead{font-weight:700;font-size:12.5px;color:var(--ink);margin:0 2px 7px}
+.indirectDetails{border:1px solid var(--line);border-radius:var(--r-inner);overflow:hidden}
+.indSummary{cursor:pointer;padding:11px 14px;background:var(--field-fill);display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;color:var(--ink);list-style:none;user-select:none}
+.indSummary::-webkit-details-marker{display:none}
+.indSummary::before{content:'▸';color:var(--muted);font-size:11px;transition:transform .15s}
+.indirectDetails[open] .indSummary::before{transform:rotate(90deg)}
+.indSummary .indAmt{font-family:var(--mono)}
+.indSummary .indHint{margin-left:auto;font-weight:500}
+.indTable{border:none;border-radius:0;border-top:1px solid var(--line)}
+@media(max-width:560px){.indSummary .indHint{display:none}}
 .grandTable{margin-top:12px}
 .grandTable td{border-bottom:1px solid var(--line)}
 .grandTable td:first-child{font-weight:700;color:var(--ink)}
