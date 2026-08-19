@@ -31,28 +31,20 @@ export const DEFAULTS = Object.freeze({
   edgeClearanceMm: 0,  // per-edge clearance subtracted before fill (VERTICAL FILL RULE PENDING — see SPEC Q1)
 });
 
-// 예비 캐비닛 규칙: 시리즈별로 다르다.
-//   MMF 5% · MPF 7% — 비율(올림). (삼성 configurator export로 검증, 2026-07-27)
-//   IFR/IEA — 3×3(=9)대당 1대 (오너 규칙, 2026-08-19). 이전 3% 비율을 대체.
-export const SPARE_RATES = Object.freeze({ MM: 0.05, MP: 0.07 });
-// 시리즈별 '캐비닛 N대당 예비 1대' 규칙(비율 대신 개수 기준). IFR/IEA = 9대(3×3)당 1대.
-export const SPARE_PER_UNIT = Object.freeze({ IF: 9, IE: 9 });
+// 예비 캐비닛 비율(시리즈별, 올림): IFR·IEA·MMF 5% · MPF 7% (오너 지침 2026-08-19, IFR/IEA 5%로 재조정).
+export const SPARE_RATES = Object.freeze({ IF: 0.05, IE: 0.05, MM: 0.05, MP: 0.07 });
 /** 모델 시리즈의 기본 예비율(소수). 미등록 시리즈는 DEFAULTS.spareRate로 대체. */
 export function spareRateForSeries(series) {
   return SPARE_RATES[series] ?? DEFAULTS.spareRate;
 }
 /**
- * 예비 캐비닛 수. 우선순위:
- *   ① opts.spareRate(사용자 지정 비율)가 있으면 ceil(total × 비율)
- *   ② 시리즈가 SPARE_PER_UNIT에 있으면(IFR/IEA) ceil(total / N)  — 3×3당 1대
- *   ③ 그 외(MMF/MPF)는 ceil(total × 시리즈 기본율)
+ * 예비 캐비닛 수 = 올림(설치수량 × 예비율).
+ * opts.spareRate(사용자 지정 비율)가 있으면 그 값을, 없으면 시리즈 기본율을 쓴다.
  */
 export function spareCount(series, total, opts = {}) {
   if (!(total > 0)) return 0;
-  if (opts.spareRate != null) return Math.ceil(total * opts.spareRate - 1e-9);
-  const per = SPARE_PER_UNIT[series];
-  if (per) return Math.ceil(total / per);
-  return Math.ceil(total * spareRateForSeries(series) - 1e-9);
+  const rate = opts.spareRate ?? spareRateForSeries(series);
+  return Math.ceil(total * rate - 1e-9);
 }
 
 /** Resolution per cabinet: explicit if provided, else derived from size / pitch. */
