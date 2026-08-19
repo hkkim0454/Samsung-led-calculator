@@ -3,3 +3,6 @@ dist/
 *.log
 .DS_Store
 led-models.json
+
+# 가격/계약 정보 — 절대 커밋 금지 (사내 로컬 전용). 견본은 prices.example.js 참고.
+src/prices.local.js

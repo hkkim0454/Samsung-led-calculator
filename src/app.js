@@ -1,6 +1,11 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=83';
-import { MODELS } from './models.js?v=83';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=84';
+import { MODELS } from './models.js?v=84';
+
+// 가격표는 사내 전용 파일(prices.local.js)에서만 불러온다. 파일이 없으면(공개 배포) null → 06 카드 숨김.
+// .gitignore 로 저장소·공개웹엔 안 올라가므로, 공개 사이트에선 원가/견적이 아예 노출되지 않는다.
+let PRICES = null;
+try { PRICES = (await import('./prices.local.js?v=84')).PRICES; } catch { PRICES = null; }
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -317,12 +322,59 @@ function renderCompare() {
   }
 }
 
-function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); }
+// 06 원가/견적 — prices.local.js 가 있을 때만 렌더(공개 배포엔 카드 자체를 숨긴다).
+function renderQuote() {
+  const card = $('#quoteCard');
+  if (!card) return;
+  if (!PRICES) { card.hidden = true; return; }
+  card.hidden = false;
+  const box = $('#quoteBody');
+  const m = models.find(x => x.id === selectedId);
+  if (!m) { box.innerHTML = ''; return; }
+  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const r = computeConfig(m, sW, sH, opts());
+  const etc = { cost: num($('#etcCost')?.value), sell: num($('#etcSell')?.value) };
+  const q = computeQuote(m, r, PRICES, { etc });
+  if (!q) { box.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
+
+  const won = v => v == null ? '<span class="vdash">—</span>' : fmt(v);
+  const qn = v => v == null ? '—' : v.toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+  const rows = q.lines.map(l => {
+    const mg = (l.sell > 0 && l.cost != null) ? ((l.sell - l.cost) / l.sell * 100) : null;
+    return `<tr>
+      <td class="name">${esc(l.label)}${l.note ? ` <span class="muted-note">${esc(l.note)}</span>` : ''}</td>
+      <td>${qn(l.qty)} ${esc(l.unit)}</td>
+      <td>${won(l.unitCost)}</td>
+      <td>${won(l.cost)}</td>
+      <td>${won(l.unitSell)}</td>
+      <td>${won(l.sell)}</td>
+      <td>${mg == null ? '—' : fmt(mg, 1) + '%'}</td>
+    </tr>`;
+  }).join('');
+  const totMg = q.totalSell > 0 ? (q.totalSell - q.totalCost) / q.totalSell * 100 : 0;
+  box.innerHTML = `
+    <table id="quoteTable"><thead><tr>
+      <th>품목</th><th>수량</th><th>원가단가</th><th>원가금액</th><th>견적단가</th><th>견적금액</th><th>마진</th>
+    </tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr class="qtot">
+      <td>합계</td><td></td><td></td><td>${fmt(q.totalCost)}</td><td></td><td>${fmt(q.totalSell)}</td>
+      <td>${fmt(totMg, 1)}%</td>
+    </tr>
+    <tr class="qprofit"><td>마진액</td><td colspan="5" class="qprofitv">${fmt(q.totalSell - q.totalCost)} 원</td>
+      <td>${fmt(totMg, 1)}%</td></tr></tfoot></table>
+    <div class="quoteNote">
+      금액=공급가(VAT 별도). 패널은 예비 포함 수량 기준. ${q.incomplete ? '<b class="warnText">일부 품목은 단가 미설정(—)이라 합계에서 빠졌습니다.</b> ' : ''}
+      프레임·지그·케이블 등 기타 자재는 아래 칸에 직접 입력하세요(수량 산출규칙 미정).
+    </div>`;
+}
+
+function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
 ['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 $('#redundancy').addEventListener('change', renderAll);
 $('#gbicFB').addEventListener('change', renderAll);
+['etcCost', 'etcSell'].forEach(id => $('#' + id)?.addEventListener('input', renderQuote));
 $('#useCS4B').addEventListener('change', () => { userCS4B = $('#useCS4B').checked; renderAll(); });
 $('#signalMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-sig]'); if (!b) return;
