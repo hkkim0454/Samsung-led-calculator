@@ -308,6 +308,8 @@ tr.nofit td{color:var(--muted)}
 .grandTable td:first-child{font-weight:700;color:var(--ink)}
 .grandTable td.amt{text-align:right;font-family:var(--mono);font-weight:700;color:var(--ink)}
 .grandTable tr.qprofit td{background:var(--accent-tint)}
+.quoteTable tr.off td{color:var(--muted)}
+.quoteTable .indck{text-align:center;width:44px}
 .quoteNote{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5}
 .warnText{color:var(--warn)}
 .etcRow{margin-top:14px}

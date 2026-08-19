@@ -248,7 +248,8 @@ export function computeQuote(model, config, prices, opts = {}) {
 
   // 간접비(표준품셈 방식) — 원가 기준(노무비=설치 원가, 직접비=총 원가)으로 산출해 '견적'에만 가산.
   // 요율/항목은 prices.indirect.items 에서 설정(오너 지침 2026-08-19). 없으면 간접비 미적용.
-  const indirect = prices.indirect ? computeIndirect(laborCost, directCost, prices.indirect) : null;
+  // opts.indirectDisabled: 화면 체크박스로 끈 항목명 배열(있으면 그것이 포함/제외의 기준).
+  const indirect = prices.indirect ? computeIndirect(laborCost, directCost, prices.indirect, opts.indirectDisabled) : null;
   const indirectTotal = indirect?.total ?? 0;
 
   const totalCost = directCost;                 // 간접비는 견적에만 → 원가 총액 불변
@@ -267,22 +268,29 @@ export function computeQuote(model, config, prices, opts = {}) {
  *   'labor'   → 노무비(직접노무비) 대비
  *   'direct'  → 직접비 대비
  *   'special' → (직접비 + 간접노무비 + 산업안전보건관리비) 대비  (공과잡비용)
- * items는 순서대로 계산되며 'special'은 앞서 계산된 간접노무비·산업안전보건관리비 금액을 참조한다.
- * 반환: { lines:[{name,pct,base,amount}], total }  (cfg 없으면 null)
+ * items는 순서대로 계산되며 'special'은 앞서 계산된(그리고 포함된) 간접노무비·산업안전보건관리비 금액을 참조한다.
+ * 포함 여부: disabled 배열이 주어지면 그 목록에 없는 항목만 포함(화면 체크박스 기준). 없으면 item.enabled!==false.
+ * 제외 항목은 total과 공과잡비 base 계산에서 모두 빠진다.
+ * 반환: { lines:[{name,pct,baseKind,base,amount,included}], total }  (cfg 없으면 null)
  */
-export function computeIndirect(labor, direct, cfg) {
+export function computeIndirect(labor, direct, cfg, disabled) {
   if (!cfg || !Array.isArray(cfg.items) || cfg.items.length === 0) return null;
-  const by = {};
+  const off = disabled != null
+    ? new Set(disabled)
+    : new Set(cfg.items.filter(i => i.enabled === false).map(i => i.name));
+  const by = {};  // 포함된 항목의 금액(공과잡비 base용). 제외 항목은 0.
   const lines = cfg.items.map(it => {
+    const included = !off.has(it.name);
     const base = it.base === 'labor' ? labor
       : it.base === 'direct' ? direct
       : it.base === 'special' ? (direct + (by['간접노무비'] || 0) + (by['산업안전보건관리비'] || 0))
       : 0;
     const amount = base * (Number(it.pct) || 0) / 100;
-    by[it.name] = amount;
-    return { name: it.name, pct: Number(it.pct) || 0, baseKind: it.base, base, amount };
+    by[it.name] = included ? amount : 0;
+    return { name: it.name, pct: Number(it.pct) || 0, baseKind: it.base, base, amount, included };
   });
-  return { lines, total: lines.reduce((a, l) => a + l.amount, 0) };
+  const total = lines.reduce((a, l) => a + (l.included ? l.amount : 0), 0);
+  return { lines, total };
 }
 
 /**

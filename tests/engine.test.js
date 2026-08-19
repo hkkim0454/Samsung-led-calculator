@@ -381,3 +381,23 @@ test('computeQuote: 간접비는 견적에만 가산(원가 불변)', () => {
   assert.equal(q.totalCost, q.directCost);                                  // 원가 불변
   assert.ok(Math.abs(q.totalSell - (q.directSell + q.indirect.total)) < 1e-6);
 });
+
+test('computeIndirect: enabled:false 기본 제외 + disabled 인자 우선', () => {
+  const cfg = { items: [
+    { name: '간접노무비', base: 'labor', pct: 10 },
+    { name: '연금보험료', base: 'labor', pct: 10, enabled: false },
+    { name: '공과잡비',   base: 'special', pct: 10 },
+  ]};
+  // 기본(disabled 미지정): enabled:false 인 연금보험료 제외.
+  const d = computeIndirect(1000, 5000, cfg);
+  assert.equal(d.lines.find(l => l.name === '연금보험료').included, false);
+  assert.equal(d.lines.find(l => l.name === '간접노무비').included, true);
+  // 공과잡비 base = 직접5000 + 간접노무비(100) = 5100 → 510. total = 간접노무비100 + 공과잡비510 = 610.
+  assert.ok(Math.abs(d.total - 610) < 1e-6, `d.total=${d.total}`);
+  // disabled 인자가 있으면 그것이 유일 기준(연금보험료 다시 포함, 간접노무비 제외).
+  const d2 = computeIndirect(1000, 5000, cfg, ['간접노무비']);
+  assert.equal(d2.lines.find(l => l.name === '연금보험료').included, true);
+  assert.equal(d2.lines.find(l => l.name === '간접노무비').included, false);
+  // 간접노무비 제외 → 공과잡비 base=5000→500. total = 연금100 + 공과잡비500 = 600.
+  assert.ok(Math.abs(d2.total - 600) < 1e-6, `d2.total=${d2.total}`);
+});
