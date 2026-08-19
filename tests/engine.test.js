@@ -61,25 +61,22 @@ test('computeConfig exposes spares and total-with-spares', () => {
   assert.equal(r.totalWithSpares, 45);
 });
 
-// 예비 규칙은 시리즈별로 다르다.
-//   MMF 5% · MPF 7% (비율, 삼성 export 검증). IFR/IEA = 3×3(9대)당 1대 (오너 규칙 2026-08-19).
-test('spare rule is series-specific (IFR/IEA per-9, MMF 5%, MPF 7%)', () => {
+// 예비 비율은 시리즈별 % (올림): IFR·IEA·MMF 5% · MPF 7% (오너 지침 2026-08-19, IFR/IEA 5%로 재조정).
+test('spare rate is series-specific (IFR/IEA/MMF 5%, MPF 7%)', () => {
   const IF015R = MODELS.find(m => m.id === 'IF015R');
   const IE015A = MODELS.find(m => m.id === 'IE015A');
   const MM009F = MODELS.find(m => m.id === 'MM009F');
   const MP008F = MODELS.find(m => m.id === 'MP008F');
   const man = (m, c, r) => computeConfig(m, 0, 0, { mode: 'manual', cols: c, rows: r }).spares;
-  // MMF/MPF: 비율(올림) — 100대에서 MMF 5, MPF 7
+  // 100대(10x10): IFR/IEA/MMF 5, MPF 7
+  assert.equal(man(IF015R, 10, 10), 5);
+  assert.equal(man(IE015A, 10, 10), 5);
   assert.equal(man(MM009F, 10, 10), 5);
   assert.equal(man(MP008F, 10, 10), 7);
   assert.equal(man(MP008F, 12, 12), 11);   // 144 * 0.07 -> 11
-  // IFR/IEA: 3×3(9)대당 1대 = ceil(total / 9)
-  assert.equal(man(IF015R, 3, 3), 1);      // 9 -> 1
+  // 올림 확인: IFR 50대 -> ceil(50*0.05)=ceil(2.5)=3, 9대 -> ceil(0.45)=1
+  assert.equal(man(IF015R, 10, 5), 3);
   assert.equal(man(IE015A, 3, 3), 1);
-  assert.equal(man(IF015R, 10, 10), 12);   // 100 -> ceil(100/9)=12
-  assert.equal(man(IE015A, 10, 10), 12);
-  assert.equal(man(IF015R, 10, 5), 6);     // 50 -> ceil(50/9)=6
-  assert.equal(man(IF015R, 3, 4), 2);      // 12 -> ceil(12/9)=2
   // 사용자 지정 비율(opts.spareRate)이 있으면 그 값이 우선한다(시리즈 규칙 무시).
   assert.equal(computeConfig(MP008F, 0, 0, { mode: 'manual', cols: 10, rows: 10, spareRate: 0.05 }).spares, 5);
   assert.equal(computeConfig(IF015R, 0, 0, { mode: 'manual', cols: 10, rows: 10, spareRate: 0.03 }).spares, 3);
