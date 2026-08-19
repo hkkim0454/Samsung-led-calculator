@@ -1,11 +1,42 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=84';
-import { MODELS } from './models.js?v=84';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=85';
+import { MODELS } from './models.js?v=85';
 
-// 가격표는 사내 전용 파일(prices.local.js)에서만 불러온다. 파일이 없으면(공개 배포) null → 06 카드 숨김.
-// .gitignore 로 저장소·공개웹엔 안 올라가므로, 공개 사이트에선 원가/견적이 아예 노출되지 않는다.
+// 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
+//   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
+//   공개 방문자는 저장값이 없어 06에 가격이 뜨지 않는다.
+const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
-try { PRICES = (await import('./prices.local.js?v=84')).PRICES; } catch { PRICES = null; }
+function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
+PRICES = readStoredPrices();
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=85')).PRICES; } catch { PRICES = null; } }
+
+// 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
+async function importPriceFile(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    let prices = null;
+    const trimmed = text.trim();
+    if (trimmed.startsWith('{')) {
+      prices = JSON.parse(trimmed);                    // 순수 JSON도 허용
+    } else {
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
+      try { prices = (await import(/* @vite-ignore */ url)).PRICES; } finally { URL.revokeObjectURL(url); }
+    }
+    if (!prices || typeof prices !== 'object' || !prices.panels) throw new Error('가격표 형식이 아닙니다(PRICES.panels 없음).');
+    PRICES = prices;
+    localStorage.setItem(PRICES_KEY, JSON.stringify(prices));
+    renderAll();
+    alert('가격표를 불러왔습니다. 이 브라우저에 저장되어 다음에 열 때도 자동으로 표시됩니다.');
+  } catch (e) {
+    alert('가격표 파일을 읽지 못했습니다.\nprices.local.js 파일이 맞는지 확인하세요.\n\n(' + e.message + ')');
+  }
+}
+function clearStoredPrices() {
+  if (!confirm('이 브라우저에 저장된 가격표를 삭제할까요? (파일 원본은 그대로 남습니다)')) return;
+  localStorage.removeItem(PRICES_KEY); PRICES = null; renderAll();
+}
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
 const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IE: 'IEA' };
@@ -322,13 +353,21 @@ function renderCompare() {
   }
 }
 
-// 06 원가/견적 — prices.local.js 가 있을 때만 렌더(공개 배포엔 카드 자체를 숨긴다).
+// 06 원가/견적 — 가격표가 이 브라우저에 있을 때만 표를 그린다. 없으면 '가격표 불러오기' 안내만 표시.
 function renderQuote() {
   const card = $('#quoteCard');
   if (!card) return;
-  if (!PRICES) { card.hidden = true; return; }
-  card.hidden = false;
   const box = $('#quoteBody');
+  const etcRow = $('#etcRow');
+  const clearBtn = $('#btnPriceClear');
+  if (!PRICES) {
+    if (etcRow) etcRow.hidden = true;
+    if (clearBtn) clearBtn.hidden = true;
+    box.innerHTML = '<div class="previewEmpty">사내 전용 — 위 <b>‘가격표 불러오기’</b> 버튼으로 가격표 파일(prices.local.js)을 한 번 불러오면 원가·견적이 여기에 표시됩니다.<br>불러온 값은 이 브라우저에 저장되어 다음에 열 때도 자동으로 나타납니다. (공개 방문자에겐 표시되지 않습니다.)</div>';
+    return;
+  }
+  if (etcRow) etcRow.hidden = false;
+  if (clearBtn) clearBtn.hidden = false;
   const m = models.find(x => x.id === selectedId);
   if (!m) { box.innerHTML = ''; return; }
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
@@ -375,6 +414,9 @@ function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); re
 $('#redundancy').addEventListener('change', renderAll);
 $('#gbicFB').addEventListener('change', renderAll);
 ['etcCost', 'etcSell'].forEach(id => $('#' + id)?.addEventListener('input', renderQuote));
+$('#btnPriceLoad')?.addEventListener('click', () => $('#priceFile')?.click());
+$('#priceFile')?.addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value = ''; importPriceFile(f); });
+$('#btnPriceClear')?.addEventListener('click', clearStoredPrices);
 $('#useCS4B').addEventListener('change', () => { userCS4B = $('#useCS4B').checked; renderAll(); });
 $('#signalMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-sig]'); if (!b) return;
