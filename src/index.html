@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=85"/>
+<link rel="stylesheet" href="./styles.css?v=86"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -69,7 +69,7 @@
         <label class="field">
           <span class="lab">예비 캐비닛 비율 (%)</span>
           <input type="number" id="spareRate" value="5" min="0" step="1"/>
-          <div class="hint">모델 선택 시 시리즈 기본 예비율 자동 반영(IFR/IEA 3% · MMF 5% · MPF 7%, 삼성 자료 기준). 직접 수정 가능, 소수점은 무조건 올림.</div>
+          <div class="hint">모델 선택 시 자동 반영 — <b>IFR/IEA는 3×3(9대)당 예비 1대</b>, MMF 5% · MPF 7%. 직접 % 입력 시 그 값이 우선(올림). IFR/IEA는 칸을 비우면 3×3 규칙 적용.</div>
         </label>
         <div class="two" id="manualBox" hidden>
           <label class="field"><span class="lab">열 (columns)</span><input type="number" id="manCols" value="0" min="0"/></label>
@@ -182,6 +182,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=85"></script>
+<script type="module" src="./app.js?v=86"></script>
 </body>
 </html>

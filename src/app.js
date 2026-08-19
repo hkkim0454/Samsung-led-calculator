@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=85';
-import { MODELS } from './models.js?v=85';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=86';
+import { MODELS } from './models.js?v=86';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=85')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=86')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -101,22 +101,23 @@ function renderFilters() {
   }).join('');
 }
 
-// 예비 캐비닛 비율(%) 입력을 소수 비율로. 비어있으면 선택 모델 시리즈의 기본율.
+// 예비율(%) 입력을 소수 비율로. 빈칸이면 null → 엔진이 시리즈 규칙 사용
+// (IFR/IEA 3×3당 1대, MMF 5%·MPF 7%). 값을 직접 넣으면 그 비율이 우선.
 function spareRateOpt() {
   const el = $('#spareRate');
-  const m = models.find(x => x.id === selectedId);
-  const fallback = m ? spareRateForSeries(m.series) : DEFAULTS.spareRate;
-  if (!el || el.value === '') return fallback;
+  if (!el || el.value === '') return null;
   return Math.max(0, num(el.value)) / 100;
 }
 
-// 모델이 바뀌면 예비율 입력칸을 그 시리즈 기본율(IFR/IEA 3%·MMF 5%·MPF 7%)로 채운다.
-// 같은 모델에서 사용자가 값을 직접 바꾼 경우는 유지(모델 전환 시에만 덮어씀).
+// 모델이 바뀌면 예비율 입력칸을 시리즈 기본값으로 맞춘다(모델 전환 시에만 덮어씀).
+//   IFR/IEA: 비율이 아니라 '3×3당 1대' 규칙 → 칸을 비우고 안내 placeholder만 표시.
+//   MMF/MPF: 기본율(5%/7%)을 채운다.
 function syncSpareRate() {
   const el = $('#spareRate'); if (!el) return;
   const m = models.find(x => x.id === selectedId);
   if (m && selectedId !== spareRateModelId) {
-    el.value = +(spareRateForSeries(m.series) * 100).toFixed(2);
+    if (m.series === 'IF' || m.series === 'IE') { el.value = ''; el.placeholder = '3×3당 1대 (자동)'; }
+    else { el.value = +(spareRateForSeries(m.series) * 100).toFixed(2); el.placeholder = ''; }
     spareRateModelId = selectedId;
   }
 }
@@ -399,7 +400,7 @@ function renderQuote() {
       <td>합계</td><td></td><td></td><td>${fmt(q.totalCost)}</td><td></td><td>${fmt(q.totalSell)}</td>
       <td>${fmt(totMg, 1)}%</td>
     </tr>
-    <tr class="qprofit"><td>마진액</td><td colspan="5" class="qprofitv">${fmt(q.totalSell - q.totalCost)} 원</td>
+    <tr class="qprofit"><td>마진액</td><td colspan="5" class="qprofitv">${fmt(q.totalSell - q.totalCost)}</td>
       <td>${fmt(totMg, 1)}%</td></tr></tfoot></table>
     <div class="quoteNote">
       금액=공급가(VAT 별도). 패널은 예비 포함 수량 기준. ${q.incomplete ? '<b class="warnText">일부 품목은 단가 미설정(—)이라 합계에서 빠졌습니다.</b> ' : ''}
