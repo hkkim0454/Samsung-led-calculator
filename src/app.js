@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=90';
-import { MODELS } from './models.js?v=90';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=91';
+import { MODELS } from './models.js?v=91';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=90')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=91')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -63,8 +63,11 @@ let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
 // 사용자가 직접 선택한 CS4B 여부(비-MMF 모델용). MMF는 항상 CS4B 필수이므로 체크박스를 강제한다.
 let userCS4B = false;
-// 예비율 입력칸에 현재 시리즈 기본율을 자동 반영하기 위한 추적(모델이 바뀔 때만 덮어씀).
-let spareRateModelId = null;
+// 예비율 입력칸 자동 표시: 모델·공간에 맞는 예비 비율(%)을 자동 기입한다.
+//   spareEdited=false → 자동(엔진은 시리즈 규칙 사용, 칸은 환산 %를 표시).
+//   spareEdited=true  → 사용자가 직접 입력한 %가 우선.
+let spareEdited = false;
+let spareModelId = null;   // 모델 전환 감지(전환 시 자동 모드로 복귀)
 // 삼성 판매 정책(2026-07-24): 앞으로 P0.8~P1.8 제품만 판매. 이 범위 밖은 기본 화면에서 숨김.
 const MIN_PITCH = 0.8;
 const MAX_PITCH = 1.8;
@@ -109,25 +112,31 @@ function renderFilters() {
   }).join('');
 }
 
-// 예비율(%) 입력을 소수 비율로. 빈칸이면 null → 엔진이 시리즈 규칙 사용
-// (IFR/IEA 3×3당 1대, MMF 5%·MPF 7%). 값을 직접 넣으면 그 비율이 우선.
+// 예비율(%) → 소수 비율. 자동 모드(미편집)면 null 반환 → 엔진이 시리즈 규칙 사용
+// (IFR/IEA 3×3당 1대, MMF 5%·MPF 7%). 사용자가 직접 입력하면 그 비율이 우선.
 function spareRateOpt() {
+  if (!spareEdited) return null;
   const el = $('#spareRate');
   if (!el || el.value === '') return null;
   return Math.max(0, num(el.value)) / 100;
 }
 
-// 모델이 바뀌면 예비율 입력칸을 시리즈 기본값으로 맞춘다(모델 전환 시에만 덮어씀).
-//   IFR/IEA: 비율이 아니라 '3×3당 1대' 규칙 → 칸을 비우고 안내 placeholder만 표시.
-//   MMF/MPF: 기본율(5%/7%)을 채운다.
+// 현재 모델·공간 기준, 시리즈 규칙으로 산출한 예비수량의 환산 비율(%). 칸에 자동 표시용.
+//   MMF/MPF는 기본율(5%/7%). IFR/IEA는 3×3당 1대를 현재 배열 기준 %로 환산.
+function effectiveSparePct(m) {
+  if (m.series === 'MM' || m.series === 'MP') return +(spareRateForSeries(m.series) * 100).toFixed(2);
+  const W = num($('#spaceW').value), H = num($('#spaceH').value);
+  const r = computeConfig(m, W, H, { ...opts(), spareRate: null });
+  return (r.total > 0) ? +(r.spares / r.total * 100).toFixed(1) : +(100 / 9).toFixed(1);
+}
+
+// 예비율 칸을 자동으로 채운다. 모델이 바뀌면 자동 모드로 복귀. 자동 모드에선 매 렌더마다
+// 현재 모델·공간에 맞는 환산 %를 다시 표시(공간을 바꿔도 값이 따라옴).
 function syncSpareRate() {
   const el = $('#spareRate'); if (!el) return;
-  const m = models.find(x => x.id === selectedId);
-  if (m && selectedId !== spareRateModelId) {
-    if (m.series === 'IF' || m.series === 'IE') { el.value = ''; el.placeholder = '3×3당 1대 (자동)'; }
-    else { el.value = +(spareRateForSeries(m.series) * 100).toFixed(2); el.placeholder = ''; }
-    spareRateModelId = selectedId;
-  }
+  const m = models.find(x => x.id === selectedId); if (!m) return;
+  if (selectedId !== spareModelId) { spareEdited = false; spareModelId = selectedId; }
+  if (!spareEdited) { el.value = String(effectiveSparePct(m)); el.placeholder = ''; }
 }
 
 // 선택 모델이 MMF면 CS4B 체크박스를 강제 체크+비활성(필수), 그 외에는 사용자 선택값을 따른다.
@@ -450,7 +459,9 @@ function renderQuote() {
 function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
-['spaceW', 'spaceH', 'manCols', 'manRows', 'spareRate', 'sboxSpare'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+['spaceW', 'spaceH', 'manCols', 'manRows', 'sboxSpare'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+// 예비율 칸: 값을 지우면 자동 모드로 복귀(환산 % 다시 표시), 숫자를 넣으면 그 값이 우선.
+$('#spareRate').addEventListener('input', () => { spareEdited = $('#spareRate').value !== ''; renderAll(); });
 $('#redundancy').addEventListener('change', renderAll);
 $('#gbicFB').addEventListener('change', renderAll);
 ['etcCost', 'etcSell'].forEach(id => $('#' + id)?.addEventListener('input', renderQuote));
