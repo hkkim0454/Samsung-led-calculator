@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!-- 브라우저가 옛 페이지를 캐시로 붙들지 않도록(변경 후 새로고침 시 최신 반영). -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=93"/>
+<link rel="stylesheet" href="./styles.css?v=94"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -191,6 +195,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=93"></script>
+<script type="module" src="./app.js?v=94"></script>
 </body>
 </html>
