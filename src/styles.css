@@ -177,7 +177,7 @@ button.danger:hover{background:var(--warn-tint)}
 
 /* ---- Layout ---- */
 .cols{display:grid;grid-template-columns:360px 1fr;gap:22px;align-items:start}
-@media(max-width:960px){.cols{grid-template-columns:1fr}}
+@media(max-width:1200px){.cols{grid-template-columns:1fr}}
 .col-left,.col-right{display:flex;flex-direction:column;gap:18px;min-width:0}
 
 /* ---- Glass cards ---- */
@@ -283,8 +283,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 
 /* ---- Comparison table ---- */
 .tableWrap{overflow-x:auto;border-radius:var(--r-inner);border:1px solid var(--line)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:right;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 tbody tr:last-child td{border-bottom:none}
 th:first-child,td:first-child{text-align:left}
 th{font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--field-fill)}
@@ -366,9 +366,21 @@ a:hover{color:var(--accent-2);text-decoration:underline}
 
 /* ---- Print ---- */
 @media print{
-  .bg-orbs,.toolbar,.editorCard,.seg,button{display:none!important}
+  @page{size:A4 portrait;margin:11mm}
+  /* 화면 전용 요소 숨김(장식·버튼·모델 라이브러리·미리보기). */
+  .bg-orbs,.toolbar,.editorCard,.seg,button,.previewCard{display:none!important}
   body{background:#fff;color:#000}
-  .card{border-color:#ccc;background:#fff;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .wrap{max-width:none;padding:0}
+  /* 인쇄는 세로 A4 한 단으로. */
+  .cols{display:block!important}
+  .col-left,.col-right{width:100%!important;display:block}
+  .card{border-color:#ccc;background:#fff;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;break-inside:avoid;margin-bottom:12px}
+  .readGrid,.metric,.modelRow,.loadRow,.indirectDetails,tr{break-inside:avoid}
+  /* ★ 표가 페이지 폭을 넘어 잘리던 문제 해결: 가로 스크롤 제거 + 폭 100% 고정 + 셀 줄바꿈. */
+  .tableWrap{overflow:visible!important;border:none}
+  table{width:100%!important;font-size:8px;table-layout:fixed}
+  th,td{padding:3px 4px!important;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere}
+  .quoteNote,.footnote,.hint{font-size:8px}
 }
 
 /* ---- Product-line filter chips ---- */
