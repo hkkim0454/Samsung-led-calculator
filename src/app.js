@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=86';
-import { MODELS } from './models.js?v=86';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=87';
+import { MODELS } from './models.js?v=87';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=86')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=87')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -361,20 +361,24 @@ function renderQuote() {
   const box = $('#quoteBody');
   const etcRow = $('#etcRow');
   const clearBtn = $('#btnPriceClear');
+  const hwLine = $('#highWorkLine');
   if (!PRICES) {
     if (etcRow) etcRow.hidden = true;
+    if (hwLine) hwLine.hidden = true;
     if (clearBtn) clearBtn.hidden = true;
     box.innerHTML = '<div class="previewEmpty">사내 전용 — 위 <b>‘가격표 불러오기’</b> 버튼으로 가격표 파일(prices.local.js)을 한 번 불러오면 원가·견적이 여기에 표시됩니다.<br>불러온 값은 이 브라우저에 저장되어 다음에 열 때도 자동으로 나타납니다. (공개 방문자에겐 표시되지 않습니다.)</div>';
     return;
   }
   if (etcRow) etcRow.hidden = false;
+  if (hwLine) hwLine.hidden = false;
   if (clearBtn) clearBtn.hidden = false;
   const m = models.find(x => x.id === selectedId);
   if (!m) { box.innerHTML = ''; return; }
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   const etc = { cost: num($('#etcCost')?.value), sell: num($('#etcSell')?.value) };
-  const q = computeQuote(m, r, PRICES, { etc });
+  const highWork = $('#highWork')?.checked ?? false;
+  const q = computeQuote(m, r, PRICES, { etc, highWork });
   if (!q) { box.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
   const won = v => v == null ? '<span class="vdash">—</span>' : fmt(v);
@@ -415,6 +419,7 @@ function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); re
 $('#redundancy').addEventListener('change', renderAll);
 $('#gbicFB').addEventListener('change', renderAll);
 ['etcCost', 'etcSell'].forEach(id => $('#' + id)?.addEventListener('input', renderQuote));
+$('#highWork')?.addEventListener('change', renderQuote);
 $('#btnPriceLoad')?.addEventListener('click', () => $('#priceFile')?.click());
 $('#priceFile')?.addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value = ''; importPriceFile(f); });
 $('#btnPriceClear')?.addEventListener('click', clearStoredPrices);

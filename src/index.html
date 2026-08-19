@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=86"/>
+<link rel="stylesheet" href="./styles.css?v=87"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -129,6 +129,10 @@
           </span>
         </h2>
         <input type="file" id="priceFile" accept=".js,.json,.txt" hidden/>
+        <label class="checkline" id="highWorkLine" hidden>
+          <input type="checkbox" id="highWork"/>
+          <span>고소작업 (고소장비·인건비 할증 — 설치비 증가)</span>
+        </label>
         <div class="tableWrap"><div id="quoteBody"></div></div>
         <div class="two etcRow" id="etcRow" hidden>
           <label class="field"><span class="lab">기타 자재 원가 (원)</span><input type="number" id="etcCost" value="0" min="0" step="100000"/></label>
@@ -182,6 +186,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=86"></script>
+<script type="module" src="./app.js?v=87"></script>
 </body>
 </html>
