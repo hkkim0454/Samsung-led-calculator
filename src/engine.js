@@ -221,9 +221,12 @@ export function computeQuote(model, config, prices, opts = {}) {
     add('Gbic 광모듈', config.gbic * 2, 'EA', prices.gbic.cost ?? null, prices.gbic.sell ?? null, 'SET×2');
   }
 
-  // 4) 설치 인건비 — 면적(㎡) × ㎡단가.
+  // 4) 설치 인건비 — 면적(㎡) × ㎡단가. 고소작업(opts.highWork) 시 할증배수(highWorkMultiplier) 적용.
   if (config.areaM2 > 0 && prices.install) {
-    add('설치 인건비', config.areaM2, '㎡', prices.install.costPerM2 ?? null, prices.install.sellPerM2 ?? null);
+    const mult = (opts.highWork && prices.install.highWorkMultiplier > 0) ? prices.install.highWorkMultiplier : 1;
+    const uc = prices.install.costPerM2 != null ? prices.install.costPerM2 * mult : null;
+    const us = prices.install.sellPerM2 != null ? prices.install.sellPerM2 * mult : null;
+    add('설치 인건비' + (mult > 1 ? ' · 고소작업' : ''), config.areaM2, '㎡', uc, us, mult > 1 ? `고소 할증 ×${mult}` : '');
   }
 
   // 5) 기타 자재(프레임·지그·케이블 등) — 수량규칙 미정, 수동 입력 lump.

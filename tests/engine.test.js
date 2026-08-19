@@ -308,3 +308,20 @@ test('computeQuote: 단가 미설정 항목은 incomplete=true, 합계 제외', 
   assert.equal(panel.cost, null);
   assert.equal(q.totalCost, 0); // null은 합계에서 빠짐
 });
+
+test('computeQuote: 고소작업 시 설치비에 할증배수 적용', () => {
+  const P = { panels: { MP012F: { cost: 1000, sell: 1500 } },
+              install: { costPerM2: 10, sellPerM2: 20, highWorkMultiplier: 1.5 } };
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  const base = computeQuote(MP012F, r, P);
+  const hw = computeQuote(MP012F, r, P, { highWork: true });
+  const bi = base.lines.find(l => l.label.includes('설치'));
+  const hi = hw.lines.find(l => l.label.includes('설치'));
+  assert.ok(Math.abs(hi.cost - bi.cost * 1.5) < 1e-6, `hw cost=${hi.cost}`);
+  assert.ok(Math.abs(hi.sell - bi.sell * 1.5) < 1e-6);
+  assert.ok(hi.label.includes('고소'));
+  // 배수 미설정이면 highWork여도 기본가 유지
+  const noMult = { panels: {}, install: { costPerM2: 10, sellPerM2: 20 } };
+  const inst = computeQuote(MP012F, r, noMult, { highWork: true }).lines.find(l => l.label.includes('설치'));
+  assert.ok(Math.abs(inst.cost - r.areaM2 * 10) < 1e-6);
+});

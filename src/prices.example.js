@@ -26,8 +26,9 @@ export const PRICES = {
   // 3) Gbic(광모듈): { cost, sell } (원/EA). 수량은 산출된 Gbic EA(=SET×2)로 자동. 없으면 생략.
   gbic: null, // 예: { cost: 0, sell: 0 }
 
-  // 4) 설치 인건비: { costPerM2, sellPerM2 } (원/㎡). 면적(㎡)에 자동 곱셈. 현장별 편차 큼 — 대표값으로 두고 필요 시 조정.
-  install: null, // 예: { costPerM2: 0, sellPerM2: 0 }
+  // 4) 설치 인건비: { costPerM2, sellPerM2, highWorkMultiplier } (원/㎡). 면적(㎡)에 자동 곱셈.
+  //    highWorkMultiplier: '고소작업' 체크 시 설치비에 곱하는 할증 배수(예: 1.4 = +40%). 현장별 편차 큼 — 필요 시 조정.
+  install: null, // 예: { costPerM2: 0, sellPerM2: 0, highWorkMultiplier: 1.4 }
 
   // 5) 기타 자재(프레임·지그·케이블·배관 등): 자동 수량규칙이 아직 없어 화면에서 직접 금액 입력.
   //    아래 값은 그 입력칸의 '초깃값'으로만 쓰입니다(프로젝트마다 달라 0 권장).
