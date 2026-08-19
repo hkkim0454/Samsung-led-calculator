@@ -297,6 +297,7 @@ tr.nofit td{color:var(--muted)}
 .rowbtn:hover td{background:var(--accent-tint)}
 
 /* ---- 06 원가/견적 (사내 전용) ---- */
+.priceCtl{float:right;display:inline-flex;gap:6px;align-items:center}
 #quoteTable tfoot td{font-weight:700;background:var(--field-fill);border-top:2px solid var(--line);color:var(--ink)}
 #quoteTable tfoot tr.qprofit td{background:var(--accent-tint)}
 #quoteTable td.name .muted-note{font-size:10px}
