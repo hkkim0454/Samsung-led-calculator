@@ -31,12 +31,28 @@ export const DEFAULTS = Object.freeze({
   edgeClearanceMm: 0,  // per-edge clearance subtracted before fill (VERTICAL FILL RULE PENDING — see SPEC Q1)
 });
 
-// 예비 캐비닛 비율: 시리즈별로 다르다 (삼성 공식 configurator export로 검증, 2026-07-27).
-//   IFR/IEA 3% · MMF 5% · MPF 7% — 모두 올림(ceil). 22개 배열 구성에서 예비 수량 정확히 일치.
-export const SPARE_RATES = Object.freeze({ IF: 0.03, IE: 0.03, MM: 0.05, MP: 0.07 });
+// 예비 캐비닛 규칙: 시리즈별로 다르다.
+//   MMF 5% · MPF 7% — 비율(올림). (삼성 configurator export로 검증, 2026-07-27)
+//   IFR/IEA — 3×3(=9)대당 1대 (오너 규칙, 2026-08-19). 이전 3% 비율을 대체.
+export const SPARE_RATES = Object.freeze({ MM: 0.05, MP: 0.07 });
+// 시리즈별 '캐비닛 N대당 예비 1대' 규칙(비율 대신 개수 기준). IFR/IEA = 9대(3×3)당 1대.
+export const SPARE_PER_UNIT = Object.freeze({ IF: 9, IE: 9 });
 /** 모델 시리즈의 기본 예비율(소수). 미등록 시리즈는 DEFAULTS.spareRate로 대체. */
 export function spareRateForSeries(series) {
   return SPARE_RATES[series] ?? DEFAULTS.spareRate;
+}
+/**
+ * 예비 캐비닛 수. 우선순위:
+ *   ① opts.spareRate(사용자 지정 비율)가 있으면 ceil(total × 비율)
+ *   ② 시리즈가 SPARE_PER_UNIT에 있으면(IFR/IEA) ceil(total / N)  — 3×3당 1대
+ *   ③ 그 외(MMF/MPF)는 ceil(total × 시리즈 기본율)
+ */
+export function spareCount(series, total, opts = {}) {
+  if (!(total > 0)) return 0;
+  if (opts.spareRate != null) return Math.ceil(total * opts.spareRate - 1e-9);
+  const per = SPARE_PER_UNIT[series];
+  if (per) return Math.ceil(total / per);
+  return Math.ceil(total * spareRateForSeries(series) - 1e-9);
 }
 
 /** Resolution per cabinet: explicit if provided, else derived from size / pitch. */
@@ -105,10 +121,8 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const pf = opts.powerFactor ?? DEFAULTS.powerFactor;
   const { cols, rows, fits } = fitCabinets(model, spaceW, spaceH, opts);
   const total = cols * rows;
-  // 예비 캐비닛 = 설치 수량 × 시리즈별 예비율, 무조건 올림 (삼성 export 검증 2026-07-27).
-  // opts.spareRate가 주어지면(사용자 입력) 그 값을, 없으면 시리즈 기본율을 쓴다.
-  const spareRate = opts.spareRate ?? spareRateForSeries(model.series);
-  const spares = total > 0 ? Math.ceil(total * spareRate - 1e-9) : 0;
+  // 예비 캐비닛 — 시리즈 규칙(MMF 5%·MPF 7% 비율, IFR/IEA 3×3당 1대) 또는 사용자 지정 비율(opts.spareRate).
+  const spares = spareCount(model.series, total, opts);
   const totalWithSpares = total + spares;
   const { resW: cRW, resH: cRH } = cabinetResolution(model);
 
@@ -234,8 +248,7 @@ export function computeQuote(model, config, prices, opts = {}) {
  * Jig quantity rule is still model-specific and undefined — returned as null.
  */
 export function bom(model, total, opts = {}) {
-  const spareRate = opts.spareRate ?? spareRateForSeries(model.series);
-  const spares = total > 0 ? Math.ceil(total * spareRate - 1e-9) : 0;
+  const spares = spareCount(model.series, total, opts);
   const sboxQty = (opts.resW != null && opts.resH != null) ? sboxCount(model, opts.resW, opts.resH, opts) : null;
   return {
     cabinetPart: model.cabinetPart ?? null,
