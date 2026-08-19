@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, computeQuote, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM } from '../src/engine.js';
+import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -344,4 +344,40 @@ test('예비 SBOX: 기본 1대, 직접 지정, 견적 수량 반영', () => {
   // 예비 0 → 2
   const r0 = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, sboxSpares: 0 });
   assert.equal(r0.sboxWithSpares, 2);
+});
+
+test('computeIndirect: 표준품셈 항목·공과잡비 특별기준', () => {
+  const cfg = { items: [
+    { name: '간접노무비', base: 'labor', pct: 4.860 },
+    { name: '고용보험료', base: 'labor', pct: 0.424 },
+    { name: '산재보험료', base: 'labor', pct: 0.961 },
+    { name: '연금보험료', base: 'labor', pct: 1.215 },
+    { name: '건강보험료', base: 'labor', pct: 0.957 },
+    { name: '노인장기요양보험료', base: 'labor', pct: 0.124 },
+    { name: '산업안전보건관리비', base: 'direct', pct: 3.110 },
+    { name: '퇴직공제부금비', base: 'labor', pct: 0.621 },
+    { name: '공과잡비', base: 'special', pct: 10.000 },
+  ]};
+  const ind = computeIndirect(1_000_000, 10_000_000, cfg);
+  const get = n => ind.lines.find(l => l.name === n).amount;
+  assert.ok(Math.abs(get('간접노무비') - 48600) < 1e-6);
+  assert.ok(Math.abs(get('산업안전보건관리비') - 311000) < 1e-6);
+  // 공과잡비 = (직접비 + 간접노무비 + 산업안전) × 10%
+  assert.ok(Math.abs(get('공과잡비') - (10_000_000 + 48600 + 311000) * 0.1) < 1e-6);
+  assert.ok(Math.abs(ind.total - 1_438_580) < 1e-3, `total=${ind.total}`);
+});
+
+test('computeQuote: 간접비는 견적에만 가산(원가 불변)', () => {
+  const P = {
+    panels: { MP012F: { cost: 1000, sell: 1000 } },
+    sbox: { 'SBB-SNOWAAE': { cost: 200, sell: 200 } },
+    install: { costPerM2: 100, sellPerM2: 100 },
+    indirect: { items: [{ name: '공과잡비', base: 'direct', pct: 10 }] },
+  };
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, sboxSpares: 0 });
+  const q = computeQuote(MP012F, r, P);
+  assert.ok(q.indirect);
+  assert.ok(Math.abs(q.indirect.total - q.directCost * 0.10) < 1e-6);
+  assert.equal(q.totalCost, q.directCost);                                  // 원가 불변
+  assert.ok(Math.abs(q.totalSell - (q.directSell + q.indirect.total)) < 1e-6);
 });

@@ -227,11 +227,14 @@ export function computeQuote(model, config, prices, opts = {}) {
   }
 
   // 4) 설치 인건비 — 면적(㎡) × ㎡단가. 고소작업(opts.highWork) 시 할증배수(highWorkMultiplier) 적용.
+  //    간접비 산출의 '노무비' 기준으로 쓰기 위해 설치 원가금액을 laborCost로 보관한다.
+  let laborCost = 0;
   if (config.areaM2 > 0 && prices.install) {
     const mult = (opts.highWork && prices.install.highWorkMultiplier > 0) ? prices.install.highWorkMultiplier : 1;
     const uc = prices.install.costPerM2 != null ? prices.install.costPerM2 * mult : null;
     const us = prices.install.sellPerM2 != null ? prices.install.sellPerM2 * mult : null;
     add('설치 인건비' + (mult > 1 ? ' · 고소작업' : ''), config.areaM2, '㎡', uc, us, mult > 1 ? `고소 할증 ×${mult}` : '');
+    laborCost = uc != null ? config.areaM2 * uc : 0;
   }
 
   // 5) 기타 자재(프레임·지그·케이블 등) — 수량규칙 미정, 수동 입력 lump.
@@ -241,13 +244,45 @@ export function computeQuote(model, config, prices, opts = {}) {
   }
 
   const sum = k => lines.reduce((a, l) => a + (l[k] ?? 0), 0);
-  const totalCost = sum('cost'), totalSell = sum('sell');
+  const directCost = sum('cost'), directSell = sum('sell');
+
+  // 간접비(표준품셈 방식) — 원가 기준(노무비=설치 원가, 직접비=총 원가)으로 산출해 '견적'에만 가산.
+  // 요율/항목은 prices.indirect.items 에서 설정(오너 지침 2026-08-19). 없으면 간접비 미적용.
+  const indirect = prices.indirect ? computeIndirect(laborCost, directCost, prices.indirect) : null;
+  const indirectTotal = indirect?.total ?? 0;
+
+  const totalCost = directCost;                 // 간접비는 견적에만 → 원가 총액 불변
+  const totalSell = directSell + indirectTotal; // 견적 = 직접 견적 + 간접비
   const incomplete = lines.some(l => l.unitSell == null || l.unitCost == null);
   return {
-    lines, totalCost, totalSell,
+    lines, directCost, directSell, indirect,
+    totalCost, totalSell,
     margin: totalSell > 0 ? (totalSell - totalCost) / totalSell : 0,
     incomplete,
   };
+}
+
+/**
+ * 간접비(표준품셈) 산출. base 종류:
+ *   'labor'   → 노무비(직접노무비) 대비
+ *   'direct'  → 직접비 대비
+ *   'special' → (직접비 + 간접노무비 + 산업안전보건관리비) 대비  (공과잡비용)
+ * items는 순서대로 계산되며 'special'은 앞서 계산된 간접노무비·산업안전보건관리비 금액을 참조한다.
+ * 반환: { lines:[{name,pct,base,amount}], total }  (cfg 없으면 null)
+ */
+export function computeIndirect(labor, direct, cfg) {
+  if (!cfg || !Array.isArray(cfg.items) || cfg.items.length === 0) return null;
+  const by = {};
+  const lines = cfg.items.map(it => {
+    const base = it.base === 'labor' ? labor
+      : it.base === 'direct' ? direct
+      : it.base === 'special' ? (direct + (by['간접노무비'] || 0) + (by['산업안전보건관리비'] || 0))
+      : 0;
+    const amount = base * (Number(it.pct) || 0) / 100;
+    by[it.name] = amount;
+    return { name: it.name, pct: Number(it.pct) || 0, baseKind: it.base, base, amount };
+  });
+  return { lines, total: lines.reduce((a, l) => a + l.amount, 0) };
 }
 
 /**

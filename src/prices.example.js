@@ -33,4 +33,16 @@ export const PRICES = {
   // 5) 기타 자재(프레임·지그·케이블·배관 등): 자동 수량규칙이 아직 없어 화면에서 직접 금액 입력.
   //    아래 값은 그 입력칸의 '초깃값'으로만 쓰입니다(프로젝트마다 달라 0 권장).
   etcDefault: { cost: 0, sell: 0 },
+
+  // 6) 간접비(표준품셈): 원가 기준으로 산출해 '견적'에만 가산. base = 'labor'(노무비 대비)/
+  //    'direct'(직접비 대비)/'special'(직접비+간접노무비+산업안전관리비). 요율(pct)은 연도별 조정.
+  //    생략(null)하면 간접비 미적용. 예:
+  // indirect: {
+  //   items: [
+  //     { name: '간접노무비', base: 'labor', pct: 4.86 },
+  //     { name: '산업안전보건관리비', base: 'direct', pct: 3.11 },
+  //     { name: '공과잡비', base: 'special', pct: 10.0 },
+  //   ],
+  // },
+  indirect: null,
 };

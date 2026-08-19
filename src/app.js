@@ -1,6 +1,6 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=88';
-import { MODELS } from './models.js?v=88';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=89';
+import { MODELS } from './models.js?v=89';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +9,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=88')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=89')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -404,19 +404,34 @@ function renderQuote() {
     </tr>`;
   }).join('');
   const totMg = q.totalSell > 0 ? (q.totalSell - q.totalCost) / q.totalSell * 100 : 0;
+  const ind = q.indirect;
+  // 간접비 상세 표(견적에만 가산). 기준(baseKind) 라벨 매핑.
+  const baseLabel = { labor: '노무비', direct: '직접비', special: '직접비+간접노무+안전' };
+  const indirectBlock = ind ? `
+    <div class="indirectWrap">
+      <div class="subhead">간접비 <span class="muted-note">— 표준품셈 기준(원가 기준 산출) · 견적에만 가산</span></div>
+      <table class="quoteTable"><thead><tr>
+        <th>항목</th><th>기준</th><th>요율</th><th>금액</th>
+      </tr></thead><tbody>
+        ${ind.lines.map(l => `<tr><td class="name">${esc(l.name)}</td><td>${baseLabel[l.baseKind] || '-'}</td><td>${fmt(l.pct, 3)}%</td><td>${fmt(l.amount)}</td></tr>`).join('')}
+      </tbody><tfoot><tr class="qtot"><td>간접비 합계</td><td></td><td></td><td>${fmt(ind.total)}</td></tr></tfoot></table>
+    </div>` : '';
   box.innerHTML = `
     <table id="quoteTable"><thead><tr>
       <th>품목</th><th>수량</th><th>원가단가</th><th>원가금액</th><th>견적단가</th><th>견적금액</th><th>마진</th>
     </tr></thead><tbody>${rows}</tbody>
     <tfoot><tr class="qtot">
-      <td>합계</td><td></td><td></td><td>${fmt(q.totalCost)}</td><td></td><td>${fmt(q.totalSell)}</td>
-      <td>${fmt(totMg, 1)}%</td>
-    </tr>
-    <tr class="qprofit"><td>마진액</td><td colspan="5" class="qprofitv">${fmt(q.totalSell - q.totalCost)}</td>
-      <td>${fmt(totMg, 1)}%</td></tr></tfoot></table>
+      <td>직접비 합계</td><td></td><td></td><td>${fmt(q.directCost)}</td><td></td><td>${fmt(q.directSell)}</td><td></td>
+    </tr></tfoot></table>
+    ${indirectBlock}
+    <table class="quoteTable grandTable"><tbody>
+      <tr class="qtot"><td>총 원가</td><td class="amt">${fmt(q.totalCost)}</td></tr>
+      <tr class="qtot"><td>총 견적 (직접비 + 간접비)</td><td class="amt">${fmt(q.totalSell)}</td></tr>
+      <tr class="qprofit"><td>마진액 · 마진율</td><td class="amt">${fmt(q.totalSell - q.totalCost)} · ${fmt(totMg, 1)}%</td></tr>
+    </tbody></table>
     <div class="quoteNote">
-      금액=공급가(VAT 별도). 패널은 예비 포함 수량 기준. ${q.incomplete ? '<b class="warnText">일부 품목은 단가 미설정(—)이라 합계에서 빠졌습니다.</b> ' : ''}
-      프레임·지그·케이블 등 기타 자재는 아래 칸에 직접 입력하세요(수량 산출규칙 미정).
+      금액=공급가(VAT 별도). 패널은 예비 포함 수량. 간접비는 원가 기준으로 산출해 견적에만 가산(요율은 가격표에서 조정). ${q.incomplete ? '<b class="warnText">일부 품목은 단가 미설정(—)이라 합계에서 빠졌습니다.</b> ' : ''}
+      프레임·지그·케이블 등 기타 자재는 아래 칸에 직접 입력하세요.
     </div>`;
 }
 
