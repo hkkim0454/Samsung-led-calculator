@@ -367,9 +367,11 @@ a:hover{color:var(--accent-2);text-decoration:underline}
 /* ---- Print ---- */
 @media print{
   @page{size:A4 portrait;margin:11mm}
-  /* 화면 전용 요소 숨김(장식·버튼·모델 라이브러리·미리보기). */
-  .bg-orbs,.toolbar,.editorCard,.seg,button,.previewCard{display:none!important}
+  /* 화면 전용 요소 숨김(장식·버튼·모델 라이브러리). 03 미리보기는 인쇄에 포함. */
+  .bg-orbs,.toolbar,.editorCard,.seg,button{display:none!important}
   body{background:#fff;color:#000}
+  /* 미리보기 그림은 페이지 안에 들어오도록 여유롭게. */
+  .previewStage{height:300px!important}
   .wrap{max-width:none;padding:0}
   /* 인쇄는 세로 A4 한 단으로. */
   .cols{display:block!important}
@@ -382,6 +384,8 @@ a:hover{color:var(--accent-2);text-decoration:underline}
   th,td{padding:3px 4px!important;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere}
   .quoteNote,.footnote,.hint{font-size:8px}
 }
+/* 인쇄 직전(beforeprint) 미리보기를 이 고정폭으로 다시 그려 A4 폭에 맞춘다(화면 폭과 무관하게 안 잘리도록). */
+body.printing .previewStage{width:640px!important;height:300px!important}
 
 /* ---- Product-line filter chips ---- */
 .lineFilter{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
