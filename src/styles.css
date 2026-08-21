@@ -429,3 +429,5 @@ a:hover{color:var(--accent-2);text-decoration:underline}
 /* Model row: keep actions on their own row so name+meta never truncate */
 .modelRow{grid-template-columns:auto 1fr;row-gap:9px}
 .modelRow .acts{grid-column:1 / -1;justify-content:flex-end}
+
+.verTag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:var(--r-pill);background:var(--field-fill);border:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--muted)}
