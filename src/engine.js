@@ -32,7 +32,7 @@ export const DEFAULTS = Object.freeze({
 });
 
 // 예비 캐비닛 비율(시리즈별, 올림): IFR·IEA·MMF 5% · MPF 7% (오너 지침 2026-08-19, IFR/IEA 5%로 재조정).
-export const SPARE_RATES = Object.freeze({ IF: 0.05, IE: 0.05, MM: 0.05, MP: 0.07 });
+export const SPARE_RATES = Object.freeze({ IF: 0.05, IFM: 0.05, IE: 0.05, MM: 0.05, MP: 0.07 });
 /** 모델 시리즈의 기본 예비율(소수). 미등록 시리즈는 DEFAULTS.spareRate로 대체. */
 export function spareRateForSeries(series) {
   return SPARE_RATES[series] ?? DEFAULTS.spareRate;
