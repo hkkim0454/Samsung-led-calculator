@@ -399,17 +399,21 @@ test('computeIndirect: enabled:false 기본 제외 + disabled 인자 우선', ()
   assert.ok(Math.abs(d2.total - 600) < 1e-6, `d2.total=${d2.total}`);
 });
 
-test('IF015R-M (IFR-M 신규): 스펙·저전력·CS4B Gbic 자동·예비 5%', () => {
+test('IF015R-M (IFR-M 신규): 스펙·기본 CS4F(동선, Gbic 없음)·광선택시 CS4B·예비 5%', () => {
   const M = MODELS.find(m => m.id === 'IF015RM');
   assert.ok(M, 'IF015R-M 모델 존재');
   assert.equal(M.series, 'IFM');
   assert.deepEqual({ p: M.pitch, w: M.cabW, h: M.cabH, rw: M.resW, rh: M.resH }, { p: 1.5, w: 960, h: 540, rw: 640, rh: 360 });
   assert.deepEqual({ max: M.maxPower, typ: M.typicalPower, wt: M.weight }, { max: 190, typ: 105, wt: 11.8 });
   assert.equal(M.brightnessReduced, 1000);
-  // CS4B 네이티브 컨트롤러 → 별도 체크 없이도 Gbic 자동 산출.
+  // 기본 컨트롤러 = SBB-CS4FPGS(동선 전송) → Gbic 불필요.
   const r = computeConfig(M, 0, 0, { mode: 'manual', cols: 8, rows: 6 }); // 5120x2160
-  assert.equal(r.controller, 'SBB-CS4BPGS');
-  assert.equal(r.gbic, 3); // ceil(5120/1920)*ceil(2160/2160)=3
+  assert.equal(r.controller, 'SBB-CS4FPGS');
+  assert.equal(r.gbic, null);
+  // '광전송(CS4B)으로 설계' 선택 시 → SBB-CS4B, Gbic 자동 산출.
+  const opt = computeConfig(M, 0, 0, { mode: 'manual', cols: 8, rows: 6, cs4b: true });
+  assert.equal(opt.controller, 'SBB-CS4B');
+  assert.equal(opt.gbic, 3); // ceil(5120/1920)*ceil(2160/2160)=3
   // 예비율 5%(IFM)
   assert.equal(computeConfig(M, 0, 0, { mode: 'manual', cols: 10, rows: 10 }).spares, 5);
 });

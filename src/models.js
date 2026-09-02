@@ -67,12 +67,13 @@ export const MODELS = [
     sbox: 'SBB-SNOWJMU', cabinetPart: 'LH040IFRCLS', dataStatus: 'derived' },
 
   // ---- IFR-M series (IFR 후속, 신규 운영) — MIP1010 다이오드로 저전력·고휘도·광시야각(170°). ----
-  //   기본 컨트롤러 SBB-CS4B(광전송, Gbic 자동 산출) / CS4F 호환. 삼성 IFR-M 스펙시트(2026) 기준.
+  //   기본 컨트롤러 SBB-CS4FPGS(CS4F, 동선 전송 → Gbic 불필요). '광전송으로 설계' 선택 시 SBB-CS4B(Gbic 자동).
+  //   삼성 IFR-M 스펙시트(2026) 기준.
   { id: 'IF015RM', name: 'IF015R-M', category: 'Indoor', series: 'IFM',
     pitch: 1.5, cabW: 960, cabH: 540, depth: 79.5, resW: 640, resH: 360,
     brightnessPeak: 1700, brightnessReduced: 1000, refreshHz: 3840, ovd_m: 5.2,
     weight: 11.8, maxPower: 190, typicalPower: 105, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH015IFRILS', dataStatus: 'verified' }, // 190W/105W, 1700/1000nit, MIP1010, CS4B/CS4F (기존 IFR 대비 저전력·고휘도)
+    sbox: 'SBB-CS4FPGS', cabinetPart: 'LH015IFRILS', dataStatus: 'verified' }, // 190W/105W, 1700/1000nit, MIP1010. 기본 CS4F(동선)/광선택시 CS4B (기존 IFR 대비 저전력·고휘도)
 
   // ---- IE series (indoor, cabinet 960 x 540) — IEA. 기본 컨트롤러 SBB-SNOWJMU(주 설계), 필요시 SBB-CS4B ----
   // IE015A CONFIRMED via full Samsung datasheet: 11.8kg, max 190W (367 W/m²), typ 105W (203 W/m²), 1000/500 nit.
