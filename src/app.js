@@ -1,8 +1,8 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=105';
-import { MODELS } from './models.js?v=105';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=105';
-import { listShared, uploadShared, deleteShared } from './share-remote.js?v=105';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=106';
+import { MODELS } from './models.js?v=106';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=106';
+import { listShared, uploadShared, deleteShared } from './share-remote.js?v=106';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -11,7 +11,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=105')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=106')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -685,10 +685,11 @@ function saveCurrentConfig() {
     const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
     if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
   }
-  // 불러온 구성을 수정한 경우: 덮어쓰기 저장 / 다른 이름으로 저장 선택.
-  if (currentConfigName && readConfigs().some(r => r.name === currentConfigName)) {
+  // 불러온 구성(로컬·공유함·링크)이 있으면: 덮어쓰기 저장 / 다른 이름으로 저장 선택.
+  //   공유함에서 불러온 구성은 로컬 목록에 없어도 이 선택을 제공한다(덮어쓰기 = 내 목록에 같은 이름으로 저장).
+  if (currentConfigName) {
     const overwrite = confirm(`수정한 내용을 저장합니다.\n\n[확인] '${currentConfigName}'에 그대로 덮어쓰기\n[취소] 다른 이름으로 저장`);
-    if (overwrite) { persistConfig(currentConfigName); alert(`'${currentConfigName}' 구성에 덮어썼습니다.`); return; }
+    if (overwrite) { persistConfig(currentConfigName); alert(`'${currentConfigName}' 구성에 저장했습니다.`); return; }
     suggested = `${currentConfigName} (수정본)`;   // 취소 → 새 이름 저장(기본 제안)
   }
   const name = (prompt('구성 이름을 입력하세요.', suggested) || '').trim();
