@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONFIG_VERSION, CONFIG_DEFAULTS, normalizeConfig, makeRecord, normalizeRecords } from '../src/config.js';
+import { CONFIG_VERSION, CONFIG_DEFAULTS, normalizeConfig, makeRecord, normalizeRecords,
+  EXPORT_APP, exportBundle, parseImport, uniqueName, mergeRecords } from '../src/config.js';
 
 test('정상 구성은 값이 그대로 왕복(roundtrip)된다', () => {
   const cfg = {
@@ -80,4 +81,54 @@ test('normalizeRecords: 배열 정리·정규화·최신순 정렬', () => {
 test('normalizeRecords: 배열 아닌 입력은 빈 배열', () => {
   assert.deepEqual(normalizeRecords(null), []);
   assert.deepEqual(normalizeRecords({}), []);
+});
+
+/* ─── 파일 내보내기/가져오기(공유) ─── */
+
+test('exportBundle→parseImport 왕복: 레코드 보존', () => {
+  const recs = [makeRecord('A', { spaceW: 1000 }, '2026-09-01T00:00:00.000Z'),
+                makeRecord('B', { spaceW: 2000 }, '2026-09-08T00:00:00.000Z')];
+  const bundle = exportBundle(recs);
+  assert.equal(bundle.app, EXPORT_APP);
+  assert.equal(bundle.v, CONFIG_VERSION);
+  const back = parseImport(bundle);
+  assert.equal(back.length, 2);
+  assert.deepEqual(back.map(r => r.name).sort(), ['A', 'B']);
+  assert.equal(back.find(r => r.name === 'A').data.spaceW, 1000);
+});
+
+test('parseImport: 여러 형식 관대하게 처리', () => {
+  // 단일 레코드
+  assert.equal(parseImport({ name: 'X', data: { spaceW: 1 } }).length, 1);
+  // 레코드 배열
+  assert.equal(parseImport([{ name: 'X', data: {} }, { name: 'Y', data: {} }]).length, 2);
+  // 원시 구성 객체(설정 키 보유)
+  const p = parseImport({ spaceW: 5000, mode: 'manual' });
+  assert.equal(p.length, 1);
+  assert.equal(p[0].data.spaceW, 5000);
+  assert.equal(p[0].data.mode, 'manual');
+  // 인식 불가
+  assert.deepEqual(parseImport(null), []);
+  assert.deepEqual(parseImport(42), []);
+  assert.deepEqual(parseImport({ hello: 'world' }), []);
+});
+
+test('uniqueName: 충돌 시 번호 부여', () => {
+  assert.equal(uniqueName('A', []), 'A');
+  assert.equal(uniqueName('A', ['A']), 'A (2)');
+  assert.equal(uniqueName('A', ['A', 'A (2)']), 'A (3)');
+});
+
+test('mergeRecords: 덮어쓰지 않고 이름 충돌은 개명', () => {
+  const existing = [makeRecord('공용', { spaceW: 100 }, '2026-09-01T00:00:00.000Z')];
+  const incoming = [makeRecord('공용', { spaceW: 200 }), makeRecord('신규', { spaceW: 300 })];
+  const { list, added, renamed } = mergeRecords(existing, incoming);
+  assert.equal(added, 2);
+  assert.equal(renamed, 1);              // '공용' 충돌 → 개명
+  assert.equal(list.length, 3);
+  const names = list.map(r => r.name).sort();
+  assert.deepEqual(names, ['공용', '공용 (2)', '신규']);
+  // 원본 '공용'(100)은 그대로 남고, 가져온 것은 '공용 (2)'(200)
+  assert.equal(list.find(r => r.name === '공용').data.spaceW, 100);
+  assert.equal(list.find(r => r.name === '공용 (2)').data.spaceW, 200);
 });

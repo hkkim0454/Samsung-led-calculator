@@ -90,3 +90,56 @@ export function normalizeRecords(list) {
     .map(x => makeRecord(x.name, x.data, typeof x.savedAt === 'string' ? x.savedAt : undefined))
     .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
 }
+
+// ─── 파일 내보내기/가져오기(공유) ───────────────────────────────────────────
+// 내보낸 파일임을 표시하는 앱 태그. 가져올 때 형식 확인·안내에 쓴다.
+export const EXPORT_APP = 'svt-led-config';
+
+// 구성 레코드들을 공유용 묶음(bundle) 객체로 만든다. 파일로 저장할 내용.
+export function exportBundle(records, exportedAt = new Date().toISOString()) {
+  return { app: EXPORT_APP, v: CONFIG_VERSION, kind: 'bundle', exportedAt, records: normalizeRecords(records) };
+}
+
+// 가져온(파싱된) 임의 객체를 구성 레코드 배열로 관대하게 변환한다.
+// 지원 형식: 묶음({records:[...]}), 레코드 배열, 단일 레코드({name,data}),
+//   data만 있는 객체, 원시 구성 객체(spaceW 등). 인식 불가 시 빈 배열.
+export function parseImport(raw) {
+  if (Array.isArray(raw)) return normalizeRecords(raw);
+  if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw.records)) return normalizeRecords(raw.records);
+    if (typeof raw.name === 'string') return [makeRecord(raw.name, raw.data ?? raw, typeof raw.savedAt === 'string' ? raw.savedAt : undefined)];
+    if (raw.data && typeof raw.data === 'object') return [makeRecord('가져온 구성', raw.data)];
+    // 원시 구성 객체로 보이면(설정 키가 하나라도 있으면) 단일 구성으로 취급.
+    const keys = Object.keys(CONFIG_DEFAULTS);
+    if (keys.some(k => k in raw)) return [makeRecord('가져온 구성', raw)];
+  }
+  return [];
+}
+
+// 이름 충돌을 피해 고유한 이름을 만든다: 'A' → 'A (2)' → 'A (3)' …
+export function uniqueName(name, existingNames) {
+  const taken = new Set(existingNames);
+  const base = String(name || '이름없음');
+  if (!taken.has(base)) return base;
+  for (let i = 2; i < 10000; i++) {
+    const cand = `${base} (${i})`;
+    if (!taken.has(cand)) return cand;
+  }
+  return `${base} (${Date.now()})`;
+}
+
+// 기존 목록에 가져온 레코드들을 합친다(덮어쓰지 않고 이름 충돌은 자동 개명).
+// 반환: { list: 합쳐진 목록(정리·정렬됨), added: 추가 수, renamed: 개명 수 }.
+export function mergeRecords(existing, incoming) {
+  const list = normalizeRecords(existing);
+  const names = list.map(r => r.name);
+  let added = 0, renamed = 0;
+  for (const rec of normalizeRecords(incoming)) {
+    const nm = uniqueName(rec.name, names);
+    if (nm !== rec.name) renamed++;
+    names.push(nm);
+    list.push({ ...rec, name: nm });
+    added++;
+  }
+  return { list: normalizeRecords(list), added, renamed };
+}
