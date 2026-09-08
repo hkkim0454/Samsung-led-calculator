@@ -1,7 +1,7 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=100';
-import { MODELS } from './models.js?v=100';
-import { normalizeConfig, makeRecord, normalizeRecords } from './config.js?v=100';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=101';
+import { MODELS } from './models.js?v=101';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=101';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -10,7 +10,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=100')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=101')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -689,10 +689,52 @@ function renderConfigList() {
       </div>
       <div style="display:flex;gap:6px;flex:0 0 auto">
         <button class="tiny primary" data-cfg-load="${esc(r.name)}">불러오기</button>
+        <button class="tiny ghost" data-cfg-export="${esc(r.name)}" title="이 구성을 파일로 내보내 공유">내보내기</button>
         <button class="tiny ghost" data-cfg-del="${esc(r.name)}">삭제</button>
       </div>
     </div>`;
   }).join('');
+}
+
+// ─── 구성 파일 내보내기/가져오기(공유) ───
+// 브라우저 파일 다운로드(내보내기). GitHub Pages 등 실제 사이트에서 정상 동작.
+function downloadJSON(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const safeFileName = s => String(s).replace(/[\\/:*?"<>|]+/g, '_').trim() || '구성';
+
+// 구성 하나를 파일로 내보낸다(공유용).
+function exportOneConfig(name) {
+  const rec = readConfigs().find(r => r.name === name);
+  if (!rec) return;
+  downloadJSON(`구성_${safeFileName(name)}.json`, exportBundle([rec]));
+}
+// 저장된 구성 전체를 한 파일로 내보낸다.
+function exportAllConfigs() {
+  const list = readConfigs();
+  if (!list.length) { alert('내보낼 저장된 구성이 없습니다.'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  downloadJSON(`구성모음_${today}.json`, exportBundle(list));
+}
+// 파일에서 구성을 가져와 내 목록에 합친다(덮어쓰지 않고 이름 충돌은 자동 개명).
+async function importConfigFile(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const incoming = parseImport(JSON.parse(text));
+    if (!incoming.length) throw new Error('구성 파일이 아닙니다(인식할 구성이 없음).');
+    const { list, added, renamed } = mergeRecords(readConfigs(), incoming);
+    writeConfigs(list);
+    renderConfigList();
+    alert(`구성 ${added}개를 가져왔습니다.` + (renamed ? `\n(이름이 겹친 ${renamed}개는 이름을 바꿔 함께 보관했습니다.)` : ''));
+  } catch (e) {
+    alert('구성 파일을 읽지 못했습니다. 내보내기로 만든 .json 파일이 맞는지 확인하세요.\n\n(' + e.message + ')');
+  }
 }
 $('#btnConfigSave')?.addEventListener('click', saveCurrentConfig);
 $('#btnConfigLoad')?.addEventListener('click', () => { renderConfigList(); cfgDlg?.showModal(); });
@@ -700,12 +742,14 @@ $('#cfgClose')?.addEventListener('click', () => cfgDlg.close());
 $('#cfgCancel')?.addEventListener('click', () => cfgDlg.close());
 $('#cfgList')?.addEventListener('click', e => {
   const loadBtn = e.target.closest('[data-cfg-load]');
+  const exportBtn = e.target.closest('[data-cfg-export]');
   const delBtn = e.target.closest('[data-cfg-del]');
   if (loadBtn) {
     const rec = readConfigs().find(r => r.name === loadBtn.dataset.cfgLoad);
     if (rec) { applyConfig(rec.data); cfgDlg.close(); }
     return;
   }
+  if (exportBtn) { exportOneConfig(exportBtn.dataset.cfgExport); return; }
   if (delBtn) {
     const name = delBtn.dataset.cfgDel;
     if (!confirm(`'${name}' 구성을 삭제할까요?`)) return;
@@ -713,6 +757,9 @@ $('#cfgList')?.addEventListener('click', e => {
     renderConfigList();
   }
 });
+$('#btnCfgExportAll')?.addEventListener('click', exportAllConfigs);
+$('#btnCfgImport')?.addEventListener('click', () => $('#cfgFile')?.click());
+$('#cfgFile')?.addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value = ''; importConfigFile(f); });
 
 window.addEventListener('resize', renderPreview);
 
