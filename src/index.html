@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=101"/>
+<link rel="stylesheet" href="./styles.css?v=102"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -159,7 +159,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v101</span>
+        <span class="verTag">화면 버전 v102</span>
       </div>
     </div>
   </div>
@@ -200,18 +200,13 @@
 <dialog id="cfgDlg">
   <div class="dlgHead"><h3>저장된 구성 불러오기</h3><button class="tiny ghost" id="cfgClose">닫기</button></div>
   <div class="dlgBody">
-    <div class="hint">이 브라우저에 저장한 구성 목록입니다. <b>불러오기</b>는 그때의 공간·배열·옵션·선택 모델을 그대로 복원, <b>내보내기</b>는 그 구성을 파일로 저장해 공유(상대는 아래 <b>파일 가져오기</b>로 불러옴)합니다. (가격표는 별도로 유지됩니다.)</div>
+    <div class="hint">이 브라우저에 저장한 구성 목록입니다. <b>불러오기</b>는 그때의 공간·배열·옵션·선택 모델을 그대로 복원합니다. <b>공유</b>를 누르면 링크가 복사되며, 상대가 그 링크를 열면 이 사이트에서 해당 구성을 바로 불러올 수 있습니다. (가격표는 별도로 유지됩니다.)</div>
     <div id="cfgList" style="margin-top:12px"></div>
-    <input type="file" id="cfgFile" accept=".json,application/json" hidden/>
   </div>
-  <div class="dlgFoot">
-    <button class="ghost" id="btnCfgImport">파일 가져오기</button>
-    <button class="ghost" id="btnCfgExportAll">전체 내보내기</button>
-    <button class="ghost" id="cfgCancel">닫기</button>
-  </div>
+  <div class="dlgFoot"><button class="ghost" id="cfgCancel">닫기</button></div>
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=101"></script>
+<script type="module" src="./app.js?v=102"></script>
 </body>
 </html>
