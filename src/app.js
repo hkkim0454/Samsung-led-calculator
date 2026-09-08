@@ -1,8 +1,8 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=104';
-import { MODELS } from './models.js?v=104';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=104';
-import { listShared, uploadShared, deleteShared } from './share-remote.js?v=104';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=105';
+import { MODELS } from './models.js?v=105';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=105';
+import { listShared, uploadShared, deleteShared } from './share-remote.js?v=105';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -11,7 +11,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=104')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=105')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -663,6 +663,20 @@ function configSummary(d) {
   return `${esc(model)} · ${fmt(c.spaceW)}×${fmt(c.spaceH)}mm · ${arr}`;
 }
 
+// 현재 화면에 불러와 있는 구성 이름(있으면 '덮어쓰기 저장'의 대상). 새로 만들면 null.
+let currentConfigName = null;
+
+// 이름으로 저장(같은 이름 있으면 덮어씀). 저장 후 그 이름을 '현재 구성'으로 기억한다.
+function persistConfig(name) {
+  const list = readConfigs();
+  const idx = list.findIndex(r => r.name === name);
+  const rec = makeRecord(name, gatherConfig());
+  if (idx >= 0) list[idx] = rec; else list.push(rec);
+  writeConfigs(normalizeRecords(list));
+  currentConfigName = name;
+  renderConfigList();
+}
+
 function saveCurrentConfig() {
   const m = models.find(x => x.id === selectedId);
   // 기본 이름 제안: 모델명_열X행 (예: IF015R_4X4). 배열 수량은 현재 설정으로 산출.
@@ -671,14 +685,17 @@ function saveCurrentConfig() {
     const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
     if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
   }
-  const name = (prompt('이 구성을 저장할 이름을 입력하세요.', suggested) || '').trim();
+  // 불러온 구성을 수정한 경우: 덮어쓰기 저장 / 다른 이름으로 저장 선택.
+  if (currentConfigName && readConfigs().some(r => r.name === currentConfigName)) {
+    const overwrite = confirm(`수정한 내용을 저장합니다.\n\n[확인] '${currentConfigName}'에 그대로 덮어쓰기\n[취소] 다른 이름으로 저장`);
+    if (overwrite) { persistConfig(currentConfigName); alert(`'${currentConfigName}' 구성에 덮어썼습니다.`); return; }
+    suggested = `${currentConfigName} (수정본)`;   // 취소 → 새 이름 저장(기본 제안)
+  }
+  const name = (prompt('구성 이름을 입력하세요.', suggested) || '').trim();
   if (!name) return;
-  const list = readConfigs();
-  const idx = list.findIndex(r => r.name === name);
-  if (idx >= 0 && !confirm(`이미 '${name}' 이름의 구성이 있습니다. 덮어쓸까요?`)) return;
-  const rec = makeRecord(name, gatherConfig());
-  if (idx >= 0) list[idx] = rec; else list.push(rec);
-  writeConfigs(normalizeRecords(list));
+  if (name !== currentConfigName && readConfigs().some(r => r.name === name)
+      && !confirm(`이미 '${name}' 이름의 구성이 있습니다. 덮어쓸까요?`)) return;
+  persistConfig(name);
   alert(`'${name}' 구성을 저장했습니다.`);
 }
 
@@ -749,6 +766,7 @@ function handleSharedLink() {
   const { list, added } = mergeRecords(readConfigs(), records);
   writeConfigs(list);
   applyConfig(records[0].data);       // 받은 구성을 바로 화면에 적용
+  currentConfigName = records[0].name;
   const extra = added > 1 ? ` (외 ${added - 1}개도 내 목록에 추가됨)` : '';
   alert(`공유된 구성 '${records[0].name}'을(를) 불러왔습니다.${extra}\n내 목록에도 저장되어 다음에 또 열 수 있습니다.`);
 }
@@ -762,7 +780,7 @@ $('#cfgList')?.addEventListener('click', e => {
   const delBtn = e.target.closest('[data-cfg-del]');
   if (loadBtn) {
     const rec = readConfigs().find(r => r.name === loadBtn.dataset.cfgLoad);
-    if (rec) { applyConfig(rec.data); cfgDlg.close(); }
+    if (rec) { applyConfig(rec.data); currentConfigName = rec.name; cfgDlg.close(); }
     return;
   }
   if (shareBtn) { shareConfig(shareBtn.dataset.cfgShare); return; }
@@ -775,19 +793,12 @@ $('#cfgList')?.addEventListener('click', e => {
 });
 
 /* ─── 회사 공유함 (Supabase) — 전 직원이 접속만 하면 보이는 공유 구성 목록 ───
-   팀 비밀번호(회사 공통)로 열리며, 각자 올리면 모두 실시간으로 본다. 비밀번호는 이 브라우저에만 저장. */
-const TEAM_KEY = 'svtled_team_code';
+   비밀번호 없이 '공유함' 버튼만 누르면 열린다. 접근은 아래 고정 팀코드로 자동 처리한다.
+   ※ 공유되는 데이터는 가격 없는 '배열 구성'뿐이라 별도 비밀번호 없이 사내 공용으로 쓴다. */
+const TEAM_CODE = 'seoulav-shared';    // 회사 공용 고정 코드(사용자 입력 없음)
 const NAME_KEY = 'svtled_display_name';
 let sharedRowsCache = [];
 
-function getTeamCode(forceNew) {
-  let c = forceNew ? '' : (localStorage.getItem(TEAM_KEY) || '');
-  if (!c) {
-    c = (prompt('회사 공유함 비밀번호를 입력하세요 (직원 공통):', '') || '').trim();
-    if (c) localStorage.setItem(TEAM_KEY, c);
-  }
-  return c;
-}
 function getDisplayName() {
   let n = localStorage.getItem(NAME_KEY) || '';
   if (!n) {
@@ -799,19 +810,17 @@ function getDisplayName() {
 
 const sharedDlg = $('#sharedDlg');
 async function openSharedLib() {
-  if (!getTeamCode()) return;            // 비밀번호 없으면 중단
   sharedDlg?.showModal();
   await renderSharedList();
 }
 async function renderSharedList() {
   const el = $('#sharedList'); if (!el) return;
   el.innerHTML = '<div class="previewEmpty">불러오는 중…</div>';
-  const code = localStorage.getItem(TEAM_KEY) || '';
   try {
-    const rows = await listShared(code);
+    const rows = await listShared(TEAM_CODE);
     sharedRowsCache = rows;
     if (!rows.length) {
-      el.innerHTML = '<div class="previewEmpty">공유함이 비어 있거나 비밀번호가 다릅니다.<br>아래 <b>현재 구성 올리기</b>로 첫 구성을 올리거나, <b>비밀번호 변경</b>으로 다시 입력해 보세요.</div>';
+      el.innerHTML = '<div class="previewEmpty">공유함이 비어 있습니다.<br>아래 <b>현재 구성 올리기</b>로 첫 구성을 올려보세요.</div>';
       return;
     }
     el.innerHTML = rows.map(r => {
@@ -830,15 +839,13 @@ async function renderSharedList() {
       </div>`;
     }).join('');
   } catch (e) {
-    el.innerHTML = `<div class="previewEmpty">공유함을 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결·비밀번호를 확인하세요.</div>`;
+    el.innerHTML = `<div class="previewEmpty">공유함을 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결을 확인하세요.</div>`;
   }
 }
 async function uploadCurrentToShared() {
-  const code = getTeamCode();
-  if (!code) return;
   const m = models.find(x => x.id === selectedId);
-  let suggested = m?.name || '구성';
-  if (m) {
+  let suggested = currentConfigName || m?.name || '구성';
+  if (!currentConfigName && m) {
     const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
     if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
   }
@@ -846,7 +853,7 @@ async function uploadCurrentToShared() {
   if (!name) return;
   const cfg = gatherConfig();
   try {
-    await uploadShared(code, { name, summary: configSummary(cfg), data: cfg, updated_by: getDisplayName() });
+    await uploadShared(TEAM_CODE, { name, summary: configSummary(cfg), data: cfg, updated_by: getDisplayName() });
     await renderSharedList();
     alert(`'${name}' 구성을 공유함에 올렸습니다. 전 직원이 볼 수 있습니다.`);
   } catch (e) {
@@ -858,19 +865,18 @@ $('#sharedClose')?.addEventListener('click', () => sharedDlg.close());
 $('#sharedCancel')?.addEventListener('click', () => sharedDlg.close());
 $('#btnSharedUpload')?.addEventListener('click', uploadCurrentToShared);
 $('#btnSharedRefresh')?.addEventListener('click', renderSharedList);
-$('#btnSharedPass')?.addEventListener('click', () => { getTeamCode(true); renderSharedList(); });
 $('#sharedList')?.addEventListener('click', async e => {
   const loadBtn = e.target.closest('[data-sh-load]');
   const delBtn = e.target.closest('[data-sh-del]');
   if (loadBtn) {
     const rec = sharedRowsCache.find(r => String(r.id) === loadBtn.dataset.shLoad);
-    if (rec) { applyConfig(rec.data); sharedDlg.close(); }
+    if (rec) { applyConfig(rec.data); currentConfigName = rec.name; sharedDlg.close(); }
     return;
   }
   if (delBtn) {
     const rec = sharedRowsCache.find(r => String(r.id) === delBtn.dataset.shDel);
     if (!rec || !confirm(`공유함에서 '${rec.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
-    try { await deleteShared(localStorage.getItem(TEAM_KEY) || '', rec.id); await renderSharedList(); }
+    try { await deleteShared(TEAM_CODE, rec.id); await renderSharedList(); }
     catch (err) { alert('삭제하지 못했습니다.\n' + err.message); }
   }
 });
