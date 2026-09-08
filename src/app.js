@@ -1,7 +1,7 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=102';
-import { MODELS } from './models.js?v=102';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=102';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=103';
+import { MODELS } from './models.js?v=103';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=103';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -10,7 +10,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=102')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=103')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -450,8 +450,8 @@ function renderQuote() {
     </tr></tfoot></table>
     ${indirectBlock}
     <table class="quoteTable grandTable"><tbody>
-      <tr class="qtot"><td>총 원가</td><td class="amt">${fmt(q.totalCost)}</td></tr>
-      <tr class="qtot"><td>총 견적 (직접비 + 간접비)</td><td class="amt">${fmt(q.totalSell)}</td></tr>
+      <tr class="qtot"><td class="costLbl">총 원가</td><td class="amt costAmt">${fmt(q.totalCost)}</td></tr>
+      <tr class="qtot"><td class="sellLbl">총 견적 (직접비 + 간접비)</td><td class="amt sellAmt">${fmt(q.totalSell)}</td></tr>
       <tr class="qprofit"><td>마진액 · 마진율</td><td class="amt">${fmt(q.totalSell - q.totalCost)} · ${fmt(totMg, 1)}%</td></tr>
     </tbody></table>
     <div class="quoteNote">

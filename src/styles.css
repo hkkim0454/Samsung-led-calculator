@@ -38,6 +38,7 @@
   --warn:#C7590A;
   --warn-tint:rgba(255,149,0,.16);
   --ok:#1E9E52;
+  --danger:#D70015;
 
   /* glass */
   --glass-fill:rgba(255,255,255,.62);
@@ -80,6 +81,7 @@
     --warn:#FF9F0A;
     --warn-tint:rgba(255,159,10,.18);
     --ok:#30D158;
+    --danger:#FF6B6B;
 
     --glass-fill:rgba(44,44,46,.58);
     --glass-fill-2:rgba(58,58,60,.5);
@@ -315,6 +317,10 @@ tr.nofit td{color:var(--muted)}
 .grandTable td{border-bottom:1px solid var(--line)}
 .grandTable td:first-child{font-weight:700;color:var(--ink)}
 .grandTable td.amt{text-align:right;font-family:var(--mono);font-weight:700;color:var(--ink)}
+/* 총 원가는 빨간색, 최종 견적가는 파란색 + 더 큰 글씨로 강조 */
+.grandTable td.costLbl, .grandTable td.amt.costAmt{color:var(--danger)}
+.grandTable td.sellLbl{color:var(--accent)}
+.grandTable td.amt.sellAmt{color:var(--accent);font-size:1.32em;line-height:1.15}
 .grandTable tr.qprofit td{background:var(--accent-tint)}
 .quoteTable tr.off td{color:var(--muted)}
 .quoteTable .indck{text-align:center;width:44px}
