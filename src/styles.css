@@ -441,3 +441,5 @@ body.printing .previewStage{width:640px!important;height:300px!important}
 .modelRow .acts{grid-column:1 / -1;justify-content:flex-end}
 
 .verTag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:var(--r-pill);background:var(--field-fill);border:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--muted)}
+/* 현재 불러온 구성 이름 배지(상단 도구줄). 없으면 hidden. */
+.cfgTag{align-self:center;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 11px;border-radius:var(--r-pill);background:var(--accent-tint);color:var(--accent);font-size:12px;font-weight:600}
