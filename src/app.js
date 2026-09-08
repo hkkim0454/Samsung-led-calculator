@@ -1,8 +1,8 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=106';
-import { MODELS } from './models.js?v=106';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=106';
-import { listShared, uploadShared, deleteShared } from './share-remote.js?v=106';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=107';
+import { MODELS } from './models.js?v=107';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=107';
+import { listShared, uploadShared, deleteShared } from './share-remote.js?v=107';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -11,7 +11,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=106')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=107')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -665,6 +665,12 @@ function configSummary(d) {
 
 // 현재 화면에 불러와 있는 구성 이름(있으면 '덮어쓰기 저장'의 대상). 새로 만들면 null.
 let currentConfigName = null;
+// 현재 구성 이름을 지정하고 상단 배지에 표시(없으면 숨김).
+function setCurrentConfig(name) {
+  currentConfigName = name || null;
+  const el = $('#currentCfgTag');
+  if (el) { el.hidden = !currentConfigName; el.textContent = currentConfigName ? `📄 현재 구성: ${currentConfigName}` : ''; }
+}
 
 // 이름으로 저장(같은 이름 있으면 덮어씀). 저장 후 그 이름을 '현재 구성'으로 기억한다.
 function persistConfig(name) {
@@ -673,7 +679,7 @@ function persistConfig(name) {
   const rec = makeRecord(name, gatherConfig());
   if (idx >= 0) list[idx] = rec; else list.push(rec);
   writeConfigs(normalizeRecords(list));
-  currentConfigName = name;
+  setCurrentConfig(name);
   renderConfigList();
 }
 
@@ -767,7 +773,7 @@ function handleSharedLink() {
   const { list, added } = mergeRecords(readConfigs(), records);
   writeConfigs(list);
   applyConfig(records[0].data);       // 받은 구성을 바로 화면에 적용
-  currentConfigName = records[0].name;
+  setCurrentConfig(records[0].name);
   const extra = added > 1 ? ` (외 ${added - 1}개도 내 목록에 추가됨)` : '';
   alert(`공유된 구성 '${records[0].name}'을(를) 불러왔습니다.${extra}\n내 목록에도 저장되어 다음에 또 열 수 있습니다.`);
 }
@@ -781,7 +787,7 @@ $('#cfgList')?.addEventListener('click', e => {
   const delBtn = e.target.closest('[data-cfg-del]');
   if (loadBtn) {
     const rec = readConfigs().find(r => r.name === loadBtn.dataset.cfgLoad);
-    if (rec) { applyConfig(rec.data); currentConfigName = rec.name; cfgDlg.close(); }
+    if (rec) { applyConfig(rec.data); setCurrentConfig(rec.name); cfgDlg.close(); }
     return;
   }
   if (shareBtn) { shareConfig(shareBtn.dataset.cfgShare); return; }
@@ -871,7 +877,7 @@ $('#sharedList')?.addEventListener('click', async e => {
   const delBtn = e.target.closest('[data-sh-del]');
   if (loadBtn) {
     const rec = sharedRowsCache.find(r => String(r.id) === loadBtn.dataset.shLoad);
-    if (rec) { applyConfig(rec.data); currentConfigName = rec.name; sharedDlg.close(); }
+    if (rec) { applyConfig(rec.data); setCurrentConfig(rec.name); sharedDlg.close(); }
     return;
   }
   if (delBtn) {
