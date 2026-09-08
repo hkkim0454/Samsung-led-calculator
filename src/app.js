@@ -1,6 +1,7 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=99';
-import { MODELS } from './models.js?v=99';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=100';
+import { MODELS } from './models.js?v=100';
+import { normalizeConfig, makeRecord, normalizeRecords } from './config.js?v=100';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -9,7 +10,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=99')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=100')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -595,6 +596,122 @@ $('#loadCancel').addEventListener('click', () => loadDlg.close());
 $('#loadList').addEventListener('click', e => {
   const el = e.target.closest('[data-load]'); if (!el) return;
   loadModel(el.dataset.load);
+});
+
+/* ─── 구성(설정) 저장/불러오기 — 이 브라우저에 이름 붙여 저장(localStorage) ───
+   화면의 모든 입력·선택(공간·배열·옵션·선택 모델 등)을 한 건으로 저장했다가 그대로 복원한다.
+   가격표(prices.local.js)와 가격은 여기에 포함하지 않는다(별도 저장). 규격은 config.js. */
+const CONFIG_KEY = 'svtled_configs_v1';
+function readConfigs() { try { return normalizeRecords(JSON.parse(localStorage.getItem(CONFIG_KEY) || '[]')); } catch { return []; } }
+function writeConfigs(list) { try { localStorage.setItem(CONFIG_KEY, JSON.stringify(list)); } catch (e) { alert('구성을 저장하지 못했습니다(브라우저 저장공간 문제).\n' + e.message); } }
+
+// 현재 화면의 모든 입력·선택을 하나의 구성 객체로 모은다.
+function gatherConfig() {
+  const m = models.find(x => x.id === selectedId) || null;
+  return {
+    spaceW: num($('#spaceW').value), spaceH: num($('#spaceH').value),
+    mode, manCols: num($('#manCols').value), manRows: num($('#manRows').value),
+    redundancy: $('#redundancy').checked, cs4b: userCS4B, gbicFB: $('#gbicFB').checked,
+    highWork: $('#highWork')?.checked ?? false,
+    spareRate: $('#spareRate').value, spareEdited,
+    sboxSpare: num($('#sboxSpare').value),
+    signalMode, selectedId,
+    selectedModel: m ? structuredClone(m) : null,
+    etcCost: num($('#etcCost')?.value), etcSell: num($('#etcSell')?.value),
+    visibleLines: [...visibleLines],
+    indirectDisabled: indirectDisabled ? [...indirectDisabled] : null,
+  };
+}
+
+// 저장된 구성 하나를 화면에 복원한다.
+function applyConfig(raw) {
+  const c = normalizeConfig(raw);
+  // 직접 추가한 커스텀 모델 복원: 현재 목록에 없고 스냅샷이 있으면 목록에 되살린다.
+  if (c.selectedId && !models.some(m => m.id === c.selectedId) && c.selectedModel) {
+    models.push({ ...c.selectedModel, _show: true });
+  }
+  $('#spaceW').value = c.spaceW; $('#spaceH').value = c.spaceH;
+  $('#manCols').value = c.manCols; $('#manRows').value = c.manRows;
+  $('#sboxSpare').value = c.sboxSpare;
+  $('#spareRate').value = c.spareRate;
+  if ($('#etcCost')) $('#etcCost').value = c.etcCost;
+  if ($('#etcSell')) $('#etcSell').value = c.etcSell;
+  $('#redundancy').checked = c.redundancy;
+  $('#gbicFB').checked = c.gbicFB;
+  if ($('#highWork')) $('#highWork').checked = c.highWork;
+  $('#useCS4B').checked = c.cs4b;
+  userCS4B = c.cs4b;
+  spareEdited = c.spareEdited;
+  mode = c.mode;
+  signalMode = c.signalMode;
+  if (Array.isArray(c.visibleLines)) visibleLines = new Set(c.visibleLines);
+  if (Array.isArray(c.indirectDisabled)) indirectDisabled = new Set(c.indirectDisabled);
+  if (c.selectedId && models.some(m => m.id === c.selectedId)) selectedId = c.selectedId;
+  spareModelId = selectedId; // 모델 전환 자동복귀가 복원된 예비율을 지우지 않도록 맞춰둔다.
+  $('#fitMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  $('#manualBox').hidden = mode !== 'manual';
+  $('#signalMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sig === signalMode));
+  renderAll();
+}
+
+// 목록 표시용 짧은 요약: 모델 · 공간 · 배열.
+function configSummary(d) {
+  const c = normalizeConfig(d);
+  const model = c.selectedModel?.name || c.selectedId || '—';
+  const arr = c.mode === 'manual' ? `${c.manCols}×${c.manRows}` : '자동';
+  return `${esc(model)} · ${fmt(c.spaceW)}×${fmt(c.spaceH)}mm · ${arr}`;
+}
+
+function saveCurrentConfig() {
+  const base = models.find(x => x.id === selectedId)?.name || '구성';
+  const name = (prompt('이 구성을 저장할 이름을 입력하세요.', `${base} ${new Date().toLocaleDateString('ko-KR')}`) || '').trim();
+  if (!name) return;
+  const list = readConfigs();
+  const idx = list.findIndex(r => r.name === name);
+  if (idx >= 0 && !confirm(`이미 '${name}' 이름의 구성이 있습니다. 덮어쓸까요?`)) return;
+  const rec = makeRecord(name, gatherConfig());
+  if (idx >= 0) list[idx] = rec; else list.push(rec);
+  writeConfigs(normalizeRecords(list));
+  alert(`'${name}' 구성을 저장했습니다.`);
+}
+
+const cfgDlg = $('#cfgDlg');
+function renderConfigList() {
+  const el = $('#cfgList'); if (!el) return;
+  const list = readConfigs();
+  if (!list.length) { el.innerHTML = '<div class="previewEmpty">저장된 구성이 없습니다. 먼저 <b>‘구성 저장’</b>으로 현재 설정을 저장하세요.</div>'; return; }
+  el.innerHTML = list.map(r => {
+    const when = new Date(r.savedAt).toLocaleString('ko-KR');
+    return `<div class="cfgRow" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0">
+      <div style="min-width:0">
+        <div class="mname">${esc(r.name)}</div>
+        <div class="hint">${configSummary(r.data)} · ${esc(when)}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex:0 0 auto">
+        <button class="tiny primary" data-cfg-load="${esc(r.name)}">불러오기</button>
+        <button class="tiny ghost" data-cfg-del="${esc(r.name)}">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+$('#btnConfigSave')?.addEventListener('click', saveCurrentConfig);
+$('#btnConfigLoad')?.addEventListener('click', () => { renderConfigList(); cfgDlg?.showModal(); });
+$('#cfgClose')?.addEventListener('click', () => cfgDlg.close());
+$('#cfgCancel')?.addEventListener('click', () => cfgDlg.close());
+$('#cfgList')?.addEventListener('click', e => {
+  const loadBtn = e.target.closest('[data-cfg-load]');
+  const delBtn = e.target.closest('[data-cfg-del]');
+  if (loadBtn) {
+    const rec = readConfigs().find(r => r.name === loadBtn.dataset.cfgLoad);
+    if (rec) { applyConfig(rec.data); cfgDlg.close(); }
+    return;
+  }
+  if (delBtn) {
+    const name = delBtn.dataset.cfgDel;
+    if (!confirm(`'${name}' 구성을 삭제할까요?`)) return;
+    writeConfigs(readConfigs().filter(r => r.name !== name));
+    renderConfigList();
+  }
 });
 
 window.addEventListener('resize', renderPreview);

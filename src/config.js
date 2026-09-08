@@ -1,0 +1,92 @@
+// config.js — '구성(설정) 저장/불러오기'의 데이터 규격 + 검증/이관 로직 (순수 함수, DOM 없음).
+// ─────────────────────────────────────────────────────────────────────────────
+// 화면의 입력값(공간·배열·옵션·선택 모델 등)을 하나의 '구성' 객체로 다루기 위한 스키마.
+// app.js 는 화면값을 이 규격의 평범한 객체로 모아 저장하고, 불러올 때 normalizeConfig()로
+// 통과시켜 안전하게 복원한다(누락 항목은 기본값, 잘못된 타입은 무시). 계산은 하지 않는다.
+// 가격표(prices.local.js)와 가격 데이터는 구성에 포함하지 않는다(별도 저장).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 저장 포맷 버전. 스키마가 바뀌면 올리고, 필요 시 migrate()에서 옛 버전을 이관한다.
+export const CONFIG_VERSION = 1;
+
+// 항목이 없을 때 채우는 기본값(초기 화면 상태와 동일한 성격의 값).
+export const CONFIG_DEFAULTS = Object.freeze({
+  spaceW: 4000,
+  spaceH: 2300,
+  mode: 'fill',          // 'fill'(자동 채움) | 'manual'(직접 지정)
+  manCols: 0,
+  manRows: 0,
+  redundancy: false,     // SBOX 이중화
+  cs4b: false,           // 사용자 선택 CS4B(광전송). MMF는 화면에서 항상 강제됨
+  gbicFB: false,         // Gbic 포워드/백워드(광 이중화)
+  highWork: false,       // 고소작업 할증
+  spareRate: '',         // 예비율 입력칸 문자열. ''(빈칸) = 자동(시리즈 기본율)
+  spareEdited: false,    // 사용자가 예비율을 직접 입력했는지
+  sboxSpare: 1,          // 예비 SBOX 수량
+  signalMode: 'off',     // 'off' | 'fhd' | 'uhd' | 'both'
+  selectedId: null,      // 선택한 모델 id
+  selectedModel: null,   // 선택 모델 스냅샷(직접 추가한 커스텀 모델도 복원되도록)
+  etcCost: 0,            // 기타 자재 원가
+  etcSell: 0,            // 기타 자재 견적
+  visibleLines: null,    // 라인 필터(문자열 배열). null = 현재 상태 유지
+  indirectDisabled: null,// 꺼진 간접비 항목명(배열). null = 가격표 기준 초기화 유지
+});
+
+const VALID_MODES = new Set(['fill', 'manual']);
+const VALID_SIGNALS = new Set(['off', 'fhd', 'uhd', 'both']);
+
+const asBool = (v, d) => (typeof v === 'boolean' ? v : d);
+const asStr = (v, d) => (typeof v === 'string' ? v : d);
+const asNum = (v, d) => {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v);
+  return d;
+};
+const asStrArray = (v, d) => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : d);
+
+// 잘못됐거나 오래된 저장 데이터를 현재 스키마의 안전한 구성 객체로 변환한다.
+// - object 가 아니면 전부 기본값.
+// - 각 항목은 타입이 맞을 때만 쓰고, 아니면 기본값으로 채운다.
+// - 알 수 없는 항목은 버린다(결과에 포함하지 않음).
+export function normalizeConfig(raw) {
+  const r = (raw && typeof raw === 'object') ? raw : {};
+  const D = CONFIG_DEFAULTS;
+  const mode = VALID_MODES.has(r.mode) ? r.mode : D.mode;
+  const signalMode = VALID_SIGNALS.has(r.signalMode) ? r.signalMode : D.signalMode;
+  const selectedModel = (r.selectedModel && typeof r.selectedModel === 'object') ? r.selectedModel : D.selectedModel;
+  return {
+    spaceW: asNum(r.spaceW, D.spaceW),
+    spaceH: asNum(r.spaceH, D.spaceH),
+    mode,
+    manCols: asNum(r.manCols, D.manCols),
+    manRows: asNum(r.manRows, D.manRows),
+    redundancy: asBool(r.redundancy, D.redundancy),
+    cs4b: asBool(r.cs4b, D.cs4b),
+    gbicFB: asBool(r.gbicFB, D.gbicFB),
+    highWork: asBool(r.highWork, D.highWork),
+    spareRate: asStr(r.spareRate, D.spareRate),
+    spareEdited: asBool(r.spareEdited, D.spareEdited),
+    sboxSpare: asNum(r.sboxSpare, D.sboxSpare),
+    signalMode,
+    selectedId: (typeof r.selectedId === 'string' ? r.selectedId : D.selectedId),
+    selectedModel,
+    etcCost: asNum(r.etcCost, D.etcCost),
+    etcSell: asNum(r.etcSell, D.etcSell),
+    visibleLines: asStrArray(r.visibleLines, D.visibleLines),
+    indirectDisabled: asStrArray(r.indirectDisabled, D.indirectDisabled),
+  };
+}
+
+// 저장 항목(레코드) 한 건을 감싼다: { v, name, savedAt, data }.
+export function makeRecord(name, config, savedAt = new Date().toISOString()) {
+  return { v: CONFIG_VERSION, name: String(name || '이름없음'), savedAt, data: normalizeConfig(config) };
+}
+
+// 저장 목록(배열)을 안전하게 정리한다: 배열이 아니면 [], 각 레코드는 정규화, 최신 저장 우선 정렬.
+export function normalizeRecords(list) {
+  const arr = Array.isArray(list) ? list : [];
+  return arr
+    .filter(x => x && typeof x === 'object' && typeof x.name === 'string')
+    .map(x => makeRecord(x.name, x.data, typeof x.savedAt === 'string' ? x.savedAt : undefined))
+    .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+}
