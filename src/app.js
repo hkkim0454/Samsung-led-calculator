@@ -1,7 +1,7 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=101';
-import { MODELS } from './models.js?v=101';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=101';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=102';
+import { MODELS } from './models.js?v=102';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=102';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -10,7 +10,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=101')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=102')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -663,8 +663,14 @@ function configSummary(d) {
 }
 
 function saveCurrentConfig() {
-  const base = models.find(x => x.id === selectedId)?.name || '구성';
-  const name = (prompt('이 구성을 저장할 이름을 입력하세요.', `${base} ${new Date().toLocaleDateString('ko-KR')}`) || '').trim();
+  const m = models.find(x => x.id === selectedId);
+  // 기본 이름 제안: 모델명_열X행 (예: IF015R_4X4). 배열 수량은 현재 설정으로 산출.
+  let suggested = m?.name || '구성';
+  if (m) {
+    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
+    if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
+  }
+  const name = (prompt('이 구성을 저장할 이름을 입력하세요.', suggested) || '').trim();
   if (!name) return;
   const list = readConfigs();
   const idx = list.findIndex(r => r.name === name);
@@ -689,52 +695,61 @@ function renderConfigList() {
       </div>
       <div style="display:flex;gap:6px;flex:0 0 auto">
         <button class="tiny primary" data-cfg-load="${esc(r.name)}">불러오기</button>
-        <button class="tiny ghost" data-cfg-export="${esc(r.name)}" title="이 구성을 파일로 내보내 공유">내보내기</button>
+        <button class="tiny ghost" data-cfg-share="${esc(r.name)}" title="공유 링크를 만들어 복사(상대는 링크를 열어 바로 불러옴)">공유</button>
         <button class="tiny ghost" data-cfg-del="${esc(r.name)}">삭제</button>
       </div>
     </div>`;
   }).join('');
 }
 
-// ─── 구성 파일 내보내기/가져오기(공유) ───
-// 브라우저 파일 다운로드(내보내기). GitHub Pages 등 실제 사이트에서 정상 동작.
-function downloadJSON(filename, obj) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+// ─── 구성 링크로 공유 ───
+//   '공유'를 누르면 그 구성을 담은 링크를 만들어 복사한다. 상대가 링크를 열면(이 사이트로 접속)
+//   그 구성이 자동으로 불러와지고 내 목록에도 저장된다. 데이터는 URL의 # 뒤(해시)에 담아
+//   서버로 전송되지 않는다. 가격 정보는 구성에 포함되지 않으므로 링크에도 없다.
+// 유니코드(한글) 안전 base64url 인코딩/디코딩.
+function b64urlEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-const safeFileName = s => String(s).replace(/[\\/:*?"<>|]+/g, '_').trim() || '구성';
-
-// 구성 하나를 파일로 내보낸다(공유용).
-function exportOneConfig(name) {
+function b64urlDecode(s) {
+  const b = s.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+// 구성 레코드들로 공유 링크(현재 사이트 주소 + #share=...)를 만든다.
+function buildShareLink(records) {
+  const payload = JSON.stringify(exportBundle(records));
+  return location.origin + location.pathname + '#share=' + b64urlEncode(payload);
+}
+// 구성 하나를 공유: 링크 생성 → 클립보드 복사(막히면 직접 복사 안내).
+async function shareConfig(name) {
   const rec = readConfigs().find(r => r.name === name);
   if (!rec) return;
-  downloadJSON(`구성_${safeFileName(name)}.json`, exportBundle([rec]));
-}
-// 저장된 구성 전체를 한 파일로 내보낸다.
-function exportAllConfigs() {
-  const list = readConfigs();
-  if (!list.length) { alert('내보낼 저장된 구성이 없습니다.'); return; }
-  const today = new Date().toISOString().slice(0, 10);
-  downloadJSON(`구성모음_${today}.json`, exportBundle(list));
-}
-// 파일에서 구성을 가져와 내 목록에 합친다(덮어쓰지 않고 이름 충돌은 자동 개명).
-async function importConfigFile(file) {
-  if (!file) return;
+  const link = buildShareLink([rec]);
   try {
-    const text = await file.text();
-    const incoming = parseImport(JSON.parse(text));
-    if (!incoming.length) throw new Error('구성 파일이 아닙니다(인식할 구성이 없음).');
-    const { list, added, renamed } = mergeRecords(readConfigs(), incoming);
-    writeConfigs(list);
-    renderConfigList();
-    alert(`구성 ${added}개를 가져왔습니다.` + (renamed ? `\n(이름이 겹친 ${renamed}개는 이름을 바꿔 함께 보관했습니다.)` : ''));
-  } catch (e) {
-    alert('구성 파일을 읽지 못했습니다. 내보내기로 만든 .json 파일이 맞는지 확인하세요.\n\n(' + e.message + ')');
+    await navigator.clipboard.writeText(link);
+    alert('공유 링크가 복사되었습니다.\n카톡·메일에 붙여넣어 보내면, 상대가 링크를 열어 이 구성을 바로 불러올 수 있습니다.');
+  } catch {
+    prompt('아래 링크를 복사(Ctrl+C)해 전달하세요:', link);
   }
+}
+// 페이지 진입 시 #share= 링크를 처리: 공유 구성을 내 목록에 합치고 바로 불러온다.
+function handleSharedLink() {
+  const m = /[#&]share=([^&]+)/.exec(location.hash || '');
+  if (!m) return;
+  // 링크는 한 번만 처리하고 주소에서 지운다(새로고침 시 반복 방지).
+  history.replaceState(null, '', location.origin + location.pathname + location.search);
+  let records = [];
+  try { records = parseImport(JSON.parse(b64urlDecode(m[1]))); } catch { records = []; }
+  if (!records.length) { alert('공유 링크를 읽지 못했습니다. 링크가 중간에 잘렸을 수 있어요. 다시 받아 열어보세요.'); return; }
+  const { list, added } = mergeRecords(readConfigs(), records);
+  writeConfigs(list);
+  applyConfig(records[0].data);       // 받은 구성을 바로 화면에 적용
+  const extra = added > 1 ? ` (외 ${added - 1}개도 내 목록에 추가됨)` : '';
+  alert(`공유된 구성 '${records[0].name}'을(를) 불러왔습니다.${extra}\n내 목록에도 저장되어 다음에 또 열 수 있습니다.`);
 }
 $('#btnConfigSave')?.addEventListener('click', saveCurrentConfig);
 $('#btnConfigLoad')?.addEventListener('click', () => { renderConfigList(); cfgDlg?.showModal(); });
@@ -742,14 +757,14 @@ $('#cfgClose')?.addEventListener('click', () => cfgDlg.close());
 $('#cfgCancel')?.addEventListener('click', () => cfgDlg.close());
 $('#cfgList')?.addEventListener('click', e => {
   const loadBtn = e.target.closest('[data-cfg-load]');
-  const exportBtn = e.target.closest('[data-cfg-export]');
+  const shareBtn = e.target.closest('[data-cfg-share]');
   const delBtn = e.target.closest('[data-cfg-del]');
   if (loadBtn) {
     const rec = readConfigs().find(r => r.name === loadBtn.dataset.cfgLoad);
     if (rec) { applyConfig(rec.data); cfgDlg.close(); }
     return;
   }
-  if (exportBtn) { exportOneConfig(exportBtn.dataset.cfgExport); return; }
+  if (shareBtn) { shareConfig(shareBtn.dataset.cfgShare); return; }
   if (delBtn) {
     const name = delBtn.dataset.cfgDel;
     if (!confirm(`'${name}' 구성을 삭제할까요?`)) return;
@@ -757,9 +772,6 @@ $('#cfgList')?.addEventListener('click', e => {
     renderConfigList();
   }
 });
-$('#btnCfgExportAll')?.addEventListener('click', exportAllConfigs);
-$('#btnCfgImport')?.addEventListener('click', () => $('#cfgFile')?.click());
-$('#cfgFile')?.addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value = ''; importConfigFile(f); });
 
 window.addEventListener('resize', renderPreview);
 
@@ -769,3 +781,4 @@ window.addEventListener('beforeprint', () => { document.body.classList.add('prin
 window.addEventListener('afterprint', () => { document.body.classList.remove('printing'); renderPreview(); });
 
 renderAll();
+handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성을 불러온다.
