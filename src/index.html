@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=103"/>
+<link rel="stylesheet" href="./styles.css?v=104"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -40,6 +40,7 @@
     <div class="toolbar">
       <button class="ghost" id="btnConfigSave">구성 저장</button>
       <button class="ghost" id="btnConfigLoad">구성 불러오기</button>
+      <button class="ghost" id="btnSharedLib">공유함</button>
       <button class="ghost" onclick="window.print()">인쇄 / PDF</button>
     </div>
   </header>
@@ -159,7 +160,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v103</span>
+        <span class="verTag">화면 버전 v104</span>
       </div>
     </div>
   </div>
@@ -206,7 +207,21 @@
   <div class="dlgFoot"><button class="ghost" id="cfgCancel">닫기</button></div>
 </dialog>
 
+<dialog id="sharedDlg">
+  <div class="dlgHead"><h3>회사 공유함</h3><button class="tiny ghost" id="sharedClose">닫기</button></div>
+  <div class="dlgBody">
+    <div class="hint">회사 공통 비밀번호로 열리는 <b>공유 구성 목록</b>입니다. 누가 올리든 전 직원이 접속하면 바로 보입니다. <b>불러오기</b>로 화면에 적용, <b>현재 구성 올리기</b>로 지금 화면 설정을 공유합니다. (가격표는 공유되지 않습니다.)</div>
+    <div id="sharedList" style="margin-top:12px"></div>
+  </div>
+  <div class="dlgFoot">
+    <button class="primary" id="btnSharedUpload">현재 구성 올리기</button>
+    <button class="ghost" id="btnSharedRefresh">새로고침</button>
+    <button class="ghost" id="btnSharedPass">비밀번호 변경</button>
+    <button class="ghost" id="sharedCancel">닫기</button>
+  </div>
+</dialog>
+
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=103"></script>
+<script type="module" src="./app.js?v=104"></script>
 </body>
 </html>
