@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=112';
-import { MODELS } from './models.js?v=112';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=112';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase } from './share-remote.js?v=112';
-import { parseCasesText, normalizeDate } from './cases.js?v=112';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=113';
+import { MODELS } from './models.js?v=113';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=113';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase } from './share-remote.js?v=113';
+import { parseCasesText, normalizeDate } from './cases.js?v=113';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=112')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=113')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -835,12 +835,20 @@ $('#cfgList')?.addEventListener('click', e => {
   }
 });
 
-/* ─── 회사 공유함 (Supabase) — 전 직원이 접속만 하면 보이는 공유 구성 목록 ───
-   비밀번호 없이 '공유함' 버튼만 누르면 열린다. 접근은 아래 고정 팀코드로 자동 처리한다.
-   ※ 공유되는 데이터는 가격 없는 '배열 구성'뿐이라 별도 비밀번호 없이 사내 공용으로 쓴다. */
-const TEAM_CODE = 'seoulav-shared';    // 회사 공용 고정 코드(사용자 입력 없음)
+/* ─── 회사 공유함 (Supabase) — 공유함 비밀번호로 잠금(설치 사례와 동일 방식) ───
+   비밀번호는 서버(RLS)에만 있고 앱엔 없다. 사용자가 입력한 값만 x-team-code 헤더로 전달.
+   틀리면 못 들어오고, 조회 성공(1건 이상)했을 때만 비번을 저장(검증)한다. */
+const SHARE_KEY = 'svtled_share_code';
 const NAME_KEY = 'svtled_display_name';
 let sharedRowsCache = [];
+let shareCode = '';    // 공유함 비밀번호(세션). 검증되면 localStorage에도 저장.
+
+// 공유함 비번을 확보(대소문자 구분). 저장은 renderSharedList가 조회 성공 시에만 한다.
+function ensureShareCode(forceNew) {
+  if (!forceNew && !shareCode) shareCode = localStorage.getItem(SHARE_KEY) || '';
+  if (forceNew || !shareCode) shareCode = (prompt('공유함 비밀번호를 입력하세요 (대소문자 구분):', '') || '').trim();
+  return shareCode;
+}
 
 function getDisplayName() {
   let n = localStorage.getItem(NAME_KEY) || '';
@@ -853,6 +861,7 @@ function getDisplayName() {
 
 const sharedDlg = $('#sharedDlg');
 async function openSharedLib() {
+  if (!ensureShareCode()) return;
   sharedDlg?.showModal();
   await renderSharedList();
 }
@@ -860,12 +869,19 @@ async function renderSharedList() {
   const el = $('#sharedList'); if (!el) return;
   el.innerHTML = '<div class="previewEmpty">불러오는 중…</div>';
   try {
-    const rows = await listShared(TEAM_CODE);
-    sharedRowsCache = rows;
+    const rows = await listShared(shareCode);
     if (!rows.length) {
-      el.innerHTML = '<div class="previewEmpty">공유함이 비어 있습니다.<br>아래 <b>현재 구성 올리기</b>로 첫 구성을 올려보세요.</div>';
+      // 비었거나 비번 틀림 → 저장하지 않고 다시 입력 유도(맞는 비번이면 첫 구성 올리기 가능).
+      localStorage.removeItem(SHARE_KEY);
+      sharedRowsCache = [];
+      el.innerHTML = '<div class="previewEmpty">🔒 <b>비밀번호가 다르거나</b> 공유함이 비어 있습니다.<br>'
+        + '맞는 비번이면 아래 <b>현재 구성 올리기</b>로 첫 구성을 올리세요.<br>'
+        + '<button class="tiny primary" id="btnShareRetryPass" style="margin-top:8px">비밀번호 다시 입력</button></div>';
+      $('#btnShareRetryPass')?.addEventListener('click', () => { if (ensureShareCode(true)) renderSharedList(); });
       return;
     }
+    localStorage.setItem(SHARE_KEY, shareCode);   // 조회 성공 → 검증된 비번 저장
+    sharedRowsCache = rows;
     el.innerHTML = rows.map(r => {
       const when = r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : '';
       const who = r.updated_by ? esc(r.updated_by) + ' · ' : '';
@@ -896,7 +912,7 @@ async function uploadCurrentToShared() {
   if (!name) return;
   const cfg = gatherConfig();
   try {
-    await uploadShared(TEAM_CODE, { name, summary: configSummary(cfg), data: cfg, updated_by: getDisplayName() });
+    await uploadShared(shareCode, { name, summary: configSummary(cfg), data: cfg, updated_by: getDisplayName() });
     await renderSharedList();
     alert(`'${name}' 구성을 공유함에 올렸습니다. 전 직원이 볼 수 있습니다.`);
   } catch (e) {
@@ -908,6 +924,7 @@ $('#sharedClose')?.addEventListener('click', () => sharedDlg.close());
 $('#sharedCancel')?.addEventListener('click', () => sharedDlg.close());
 $('#btnSharedUpload')?.addEventListener('click', uploadCurrentToShared);
 $('#btnSharedRefresh')?.addEventListener('click', renderSharedList);
+$('#btnSharedPass')?.addEventListener('click', () => { if (ensureShareCode(true)) renderSharedList(); });
 $('#sharedList')?.addEventListener('click', async e => {
   const loadBtn = e.target.closest('[data-sh-load]');
   const delBtn = e.target.closest('[data-sh-del]');
@@ -919,7 +936,7 @@ $('#sharedList')?.addEventListener('click', async e => {
   if (delBtn) {
     const rec = sharedRowsCache.find(r => String(r.id) === delBtn.dataset.shDel);
     if (!rec || !confirm(`공유함에서 '${rec.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
-    try { await deleteShared(TEAM_CODE, rec.id); await renderSharedList(); }
+    try { await deleteShared(shareCode, rec.id); await renderSharedList(); }
     catch (err) { alert('삭제하지 못했습니다.\n' + err.message); }
   }
 });
