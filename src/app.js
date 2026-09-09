@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=127';
-import { MODELS } from './models.js?v=127';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=127';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=127';
-import { parseCasesText, normalizeDate } from './cases.js?v=127';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=128';
+import { MODELS } from './models.js?v=128';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=128';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=128';
+import { parseCasesText, normalizeDate } from './cases.js?v=128';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=127')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=128')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -273,21 +273,26 @@ function renderPreview() {
 
   stage.innerHTML = '';
 
-  // human silhouette (~1.7 m) for scale
+  // 콘텐츠 박스(공간 ∪ 신호 발자국)를 스테이지 중앙에 배치. 공간(벽)의 바닥 레벨을 먼저 구한다.
+  const contentPxW = contentW * scale, contentPxH = contentH * scale;
+  const sceneLeft = (stage.clientWidth - contentPxW) / 2;
+  const sceneTop = (stage.clientHeight - contentPxH) / 2;
+  const floorY = sceneTop + spH;   // 공간(벽) 바닥 = 사람이 서는 바닥 레벨
+
+  // human silhouette (~1.7 m) for scale — 바닥 레벨 위에 서게 배치.
   const figH = Math.max(46, Math.min(spH * 1.02, 1700 * scale));
   const fig = document.createElement('div');
   fig.className = 'pvFigure'; fig.style.height = figH + 'px';
+  fig.style.bottom = 'auto'; fig.style.top = (floorY - figH) + 'px';
   fig.innerHTML = '<svg viewBox="0 0 40 100" preserveAspectRatio="xMidYMax meet"><circle cx="20" cy="13" r="11"/><rect x="5" y="27" width="30" height="73" rx="15"/></svg>';
   stage.appendChild(fig);
 
   // installation space (white bezel/frame), LED wall centered inside.
-  // 콘텐츠 박스(공간 ∪ 신호 발자국)를 스테이지 중앙에 배치. 공간은 콘텐츠 박스 좌상단에 둔다.
-  const contentPxW = contentW * scale, contentPxH = contentH * scale;
   const scene = document.createElement('div');
   scene.className = 'pvScene'; scene.style.width = spW + 'px'; scene.style.height = spH + 'px';
   scene.style.transform = 'none';
-  scene.style.left = ((stage.clientWidth - contentPxW) / 2) + 'px';
-  scene.style.top = ((stage.clientHeight - contentPxH) / 2) + 'px';
+  scene.style.left = sceneLeft + 'px';
+  scene.style.top = sceneTop + 'px';
   const wall = document.createElement('div');
   wall.className = 'pvWall';
   wall.style.left = offX + 'px'; wall.style.top = offY + 'px';
@@ -319,7 +324,7 @@ function renderPreview() {
       scene.appendChild(d);
     };
     band(0, offY, `위 ${fmt(Math.round(topGapMM))}mm`);                       // LED 위 남는 공간
-    band(offY + arH, spH - (offY + arH), `바닥 ${fmt(Math.round(baseH))}mm`);   // LED 아래(바닥 여백)
+    band(offY + arH, spH - (offY + arH), `LED 하단 높이 ${fmt(Math.round(baseH))}mm`);   // LED 아래(바닥에서 LED까지)
   }
 
   // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 각 영역(타일)마다 좌상단에 라벨(HD/UHD).
@@ -407,6 +412,8 @@ function renderReadout() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   updateVSplit(r, sH);
+  // 화면(Screen) 배열은 항상 표시: 자동 채움·LED 크기 지정 모드에선 계산된 열·행을 입력칸에 반영한다.
+  if (mode !== 'manual') { const mc = $('#manCols'), mr = $('#manRows'); if (mc) mc.value = r.cols || 0; if (mr) mr.value = r.rows || 0; }
   const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
   // 소수 1자리까지 표기하되 .0이면 정수로(예: 32.0→"32", 21.33→"21.3"). 화면비 x:9·가로 N개에 사용.
   const trim1 = n => (isFinite(n) ? n.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) : '—');
@@ -564,18 +571,16 @@ function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); re
 
 /* events */
 ['spaceW', 'spaceH', 'sboxSpare', 'baseHeight', 'ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', renderAll));
-// 배열 직접 지정 모드에서 열·행을 입력하면 설치 공간을 그 배열 크기 + 가장자리 여유로 자동 채운다.
-//   가로 = 열 × 캐비닛폭 + 좌우 각 100mm, 세로 = 행 × 캐비닛높이 + 상하 각 100mm.
-const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변)
-function syncSpaceToManualArray() {
-  if (mode !== 'manual') return;
-  const m = models.find(x => x.id === selectedId); if (!m) return;
-  const cols = Math.max(0, Math.floor(num($('#manCols').value)));
-  const rows = Math.max(0, Math.floor(num($('#manRows').value)));
-  if (cols > 0) $('#spaceW').value = Math.round(cols * m.cabW + 2 * EDGE_MARGIN);
-  if (rows > 0) $('#spaceH').value = Math.round(rows * m.cabH + 2 * EDGE_MARGIN);
-}
-['manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', () => { syncSpaceToManualArray(); renderAll(); }));
+const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
+// 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).
+['manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', () => {
+  if (mode !== 'manual') {
+    mode = 'manual';
+    $('#fitMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.mode === 'manual'));
+    $('#ledBox').hidden = true;
+  }
+  renderAll();
+}));
 // 예비율 칸: 값을 지우면 자동 모드로 복귀(환산 % 다시 표시), 숫자를 넣으면 그 값이 우선.
 $('#spareRate').addEventListener('input', () => { spareEdited = $('#spareRate').value !== ''; renderAll(); });
 $('#redundancy').addEventListener('change', renderAll);
@@ -607,13 +612,10 @@ $('#fitMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-mode]'); if (!b) return;
   mode = b.dataset.mode;
   $('#fitMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  $('#manualBox').hidden = mode !== 'manual';
+  $('#manualBox').hidden = false;   // 화면(Screen) 배열은 항상 표시 — 자동/LED크기 모드에선 계산값을 보여준다.
   $('#ledBox').hidden = mode !== 'ledsize';
   const m = models.find(x => x.id === selectedId);
-  if (mode === 'manual' && m) {
-    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill' });
-    $('#manCols').value = r.cols; $('#manRows').value = r.rows;
-  }
+  // '배열 직접 지정'으로 바꿀 때는 지금 화면에 보이던 열·행(직전 모드의 계산 결과)을 그대로 쓴다 → 덮어쓰지 않음.
   // 'LED 크기 지정' 첫 진입 시, 현재 자동 채움 LED 크기를 기본값으로 채워 시작점을 준다.
   if (mode === 'ledsize' && m && !(num($('#ledW').value) > 0) && !(num($('#ledH').value) > 0)) {
     const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
@@ -768,7 +770,7 @@ function applyConfig(raw) {
   if (c.selectedId && models.some(m => m.id === c.selectedId)) selectedId = c.selectedId;
   spareModelId = selectedId; // 모델 전환 자동복귀가 복원된 예비율을 지우지 않도록 맞춰둔다.
   $('#fitMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
-  $('#manualBox').hidden = mode !== 'manual';
+  $('#manualBox').hidden = false;
   $('#ledBox').hidden = mode !== 'ledsize';
   $('#signalMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sig === signalMode));
   renderAll();
