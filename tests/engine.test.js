@@ -62,6 +62,29 @@ test('수동 배열에서는 baseHeight가 행 수를 바꾸지 않는다', () =
   assert.equal(r.rows, 6);   // 수동은 사용자가 지정한 행 그대로
 });
 
+test('ledsize 모드: 벽면과 별도로 지정한 LED 크기 안에 배열을 채운다', () => {
+  // 벽면 11000×3500, LED 3200×1800. cabW=806.4·cabH=453.6 → 3×3.
+  const r = computeConfig(MP012F, 11000, 3500, { mode: 'ledsize', ledW: 3200, ledH: 1800 });
+  assert.equal(r.cols, 3);
+  assert.equal(r.rows, 3);
+  assert.equal(r.actualW, 3 * 806.4);
+  assert.equal(r.actualH, 3 * 453.6);
+  assert.equal(r.deadW, 11000 - 3 * 806.4);   // 벽면 대비 좌우 남는 공간
+});
+
+test('ledsize 모드는 벽면 가로폭과 무관하게 LED 크기로만 배열한다', () => {
+  const a = computeConfig(MP012F, 11000, 3500, { mode: 'ledsize', ledW: 3200, ledH: 1800 });
+  const b = computeConfig(MP012F, 4000, 3500, { mode: 'ledsize', ledW: 3200, ledH: 1800 });
+  assert.equal(a.cols, b.cols);
+  assert.equal(a.rows, b.rows);
+});
+
+test('ledsize 모드는 baseHeight를 LED 세로에서 빼지 않는다(위치용)', () => {
+  const noBase = computeConfig(MP012F, 11000, 3500, { mode: 'ledsize', ledW: 3200, ledH: 1800 });
+  const withBase = computeConfig(MP012F, 11000, 3500, { mode: 'ledsize', ledW: 3200, ledH: 1800, baseHeight: 500 });
+  assert.equal(withBase.rows, noBase.rows);   // LED 세로는 명시값이라 그대로
+});
+
 test('null weight propagates as null (no fake numbers)', () => {
   // IF040R: 전력은 IFR 브로셔로 채웠지만 무게는 신뢰 가능한 실측이 없어 null 유지.
   const IF040R = MODELS.find(m => m.id === 'IF040R');
