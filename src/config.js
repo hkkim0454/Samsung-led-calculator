@@ -13,7 +13,10 @@ export const CONFIG_VERSION = 1;
 export const CONFIG_DEFAULTS = Object.freeze({
   spaceW: 4000,
   spaceH: 2300,
-  mode: 'fill',          // 'fill'(자동 채움) | 'manual'(직접 지정)
+  baseHeight: 0,         // 바닥에서 LED 아래까지(mm)
+  ledW: 0,               // 'LED 크기 지정' 모드의 LED 가로(mm)
+  ledH: 0,               // 'LED 크기 지정' 모드의 LED 세로(mm)
+  mode: 'fill',          // 'fill'(자동 채움) | 'ledsize'(LED 크기 지정) | 'manual'(직접 지정)
   manCols: 0,
   manRows: 0,
   redundancy: false,     // SBOX 이중화
@@ -32,7 +35,7 @@ export const CONFIG_DEFAULTS = Object.freeze({
   indirectDisabled: null,// 꺼진 간접비 항목명(배열). null = 가격표 기준 초기화 유지
 });
 
-const VALID_MODES = new Set(['fill', 'manual']);
+const VALID_MODES = new Set(['fill', 'ledsize', 'manual']);
 const VALID_SIGNALS = new Set(['off', 'fhd', 'uhd', 'both']);
 
 const asBool = (v, d) => (typeof v === 'boolean' ? v : d);
@@ -57,6 +60,9 @@ export function normalizeConfig(raw) {
   return {
     spaceW: asNum(r.spaceW, D.spaceW),
     spaceH: asNum(r.spaceH, D.spaceH),
+    baseHeight: asNum(r.baseHeight, D.baseHeight),
+    ledW: asNum(r.ledW, D.ledW),
+    ledH: asNum(r.ledH, D.ledH),
     mode,
     manCols: asNum(r.manCols, D.manCols),
     manRows: asNum(r.manRows, D.manRows),

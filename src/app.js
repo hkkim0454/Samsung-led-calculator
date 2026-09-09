@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=125';
-import { MODELS } from './models.js?v=125';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=125';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=125';
-import { parseCasesText, normalizeDate } from './cases.js?v=125';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=126';
+import { MODELS } from './models.js?v=126';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=126';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=126';
+import { parseCasesText, normalizeDate } from './cases.js?v=126';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=125')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=126')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -190,9 +190,10 @@ function opts() {
   const spareRate = spareRateOpt();
   const sboxSpares = sboxSparesOpt();
   const baseHeight = num($('#baseHeight')?.value);   // 바닥에서 LED 아래까지(mm) — 자동 채움 시 rows 축소
-  return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight }
-    : { mode: 'fill', redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight };
+  const common = { redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight };
+  if (mode === 'manual') return { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), ...common };
+  if (mode === 'ledsize') return { mode: 'ledsize', ledW: num($('#ledW')?.value), ledH: num($('#ledH')?.value), ...common };
+  return { mode: 'fill', ...common };
 }
 
 function renderModelList() {
@@ -347,9 +348,20 @@ function renderPreview() {
   // 여백 알약은 화면상 실제로 보이는 간격이 있을 때만 표시(간격≈0이면 치수 알약과 겹치므로 생략).
   // 여백 수치는 04 산출 스펙의 '여백' 안내에도 표기됨.  방 모드(하단 높이)에선 세로 여백은 밴드로 대체.
   const GAP_MIN = 16; // px
+  // 좌우 여백(공간감): LED가 벽면보다 좁으면 양쪽 여백을 위쪽에 함께 표시.
+  const rightGap = spW - offX - arW;
   if (r.marginW > 1 && offX > GAP_MIN) pill('sm', meters(r.marginW), `left:${offX / 2}px;top:-26px;transform:translateX(-50%)`);
+  if (r.marginW > 1 && rightGap > GAP_MIN) pill('sm', meters(r.marginW), `left:${offX + arW + rightGap / 2}px;top:-26px;transform:translateX(-50%)`);
+  // 위/아래 여백: 방 모드(하단 높이)에선 밴드로 표시하므로 여기선 생략. 그 외엔 위·아래 대칭 표시.
+  const botGap = spH - offY - arH;
   if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  if (!fitsBase && r.marginH > 1 && botGap > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY + arH + botGap / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
+
+  // 바닥 기준선(공간감): 벽면 하단에 옅은 바닥 선을 살짝 넓게 그린다.
+  const floor = document.createElement('div');
+  floor.style.cssText = `position:absolute;left:-10px;top:${spH}px;width:${spW + 20}px;height:0;border-top:2px solid rgba(128,128,128,.4);pointer-events:none`;
+  scene.appendChild(floor);
 
   stage.appendChild(scene);
 }
@@ -540,7 +552,7 @@ function renderQuote() {
 function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
-['spaceW', 'spaceH', 'sboxSpare', 'baseHeight'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+['spaceW', 'spaceH', 'sboxSpare', 'baseHeight', 'ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', renderAll));
 // 배열 직접 지정 모드에서 열·행을 입력하면 설치 공간을 그 배열 크기 + 가장자리 여유로 자동 채운다.
 //   가로 = 열 × 캐비닛폭 + 좌우 각 100mm, 세로 = 행 × 캐비닛높이 + 상하 각 100mm.
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변)
@@ -585,10 +597,17 @@ $('#fitMode').addEventListener('click', e => {
   mode = b.dataset.mode;
   $('#fitMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   $('#manualBox').hidden = mode !== 'manual';
-  if (mode === 'manual') {
-    const m = models.find(x => x.id === selectedId);
+  $('#ledBox').hidden = mode !== 'ledsize';
+  const m = models.find(x => x.id === selectedId);
+  if (mode === 'manual' && m) {
     const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill' });
     $('#manCols').value = r.cols; $('#manRows').value = r.rows;
+  }
+  // 'LED 크기 지정' 첫 진입 시, 현재 자동 채움 LED 크기를 기본값으로 채워 시작점을 준다.
+  if (mode === 'ledsize' && m && !(num($('#ledW').value) > 0) && !(num($('#ledH').value) > 0)) {
+    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
+    if (r.actualW > 0) $('#ledW').value = Math.round(r.actualW);
+    if (r.actualH > 0) $('#ledH').value = Math.round(r.actualH);
   }
   renderAll();
 });
@@ -697,6 +716,7 @@ function gatherConfig() {
   const m = models.find(x => x.id === selectedId) || null;
   return {
     spaceW: num($('#spaceW').value), spaceH: num($('#spaceH').value),
+    baseHeight: num($('#baseHeight').value), ledW: num($('#ledW').value), ledH: num($('#ledH').value),
     mode, manCols: num($('#manCols').value), manRows: num($('#manRows').value),
     redundancy: $('#redundancy').checked, cs4b: userCS4B, gbicFB: $('#gbicFB').checked,
     highWork: $('#highWork')?.checked ?? false,
@@ -718,6 +738,7 @@ function applyConfig(raw) {
     models.push({ ...c.selectedModel, _show: true });
   }
   $('#spaceW').value = c.spaceW; $('#spaceH').value = c.spaceH;
+  $('#baseHeight').value = c.baseHeight; $('#ledW').value = c.ledW; $('#ledH').value = c.ledH;
   $('#manCols').value = c.manCols; $('#manRows').value = c.manRows;
   $('#sboxSpare').value = c.sboxSpare;
   $('#spareRate').value = c.spareRate;
@@ -737,6 +758,7 @@ function applyConfig(raw) {
   spareModelId = selectedId; // 모델 전환 자동복귀가 복원된 예비율을 지우지 않도록 맞춰둔다.
   $('#fitMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
   $('#manualBox').hidden = mode !== 'manual';
+  $('#ledBox').hidden = mode !== 'ledsize';
   $('#signalMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sig === signalMode));
   renderAll();
 }
