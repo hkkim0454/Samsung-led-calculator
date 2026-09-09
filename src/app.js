@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=116';
-import { MODELS } from './models.js?v=116';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=116';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=116';
-import { parseCasesText, normalizeDate } from './cases.js?v=116';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=117';
+import { MODELS } from './models.js?v=117';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=117';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=117';
+import { parseCasesText, normalizeDate } from './cases.js?v=117';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=116')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=117')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -1020,10 +1020,15 @@ async function renderCaseList() {
     el.innerHTML = rows.map(c => {
       const match = (sameModel(c) && c.cols === cur.cols && c.rows === cur.rows)
         ? ' <span class="chk">지금 배열과 일치</span>' : '';
-      const meta = [c.site, c.install_date, `${esc(c.model_name || '—')} ${c.cols || '?'}×${c.rows || '?'}`]
-        .filter(Boolean).map(esc).join(' · ') + caseResolution(c) + (c.memo ? ` · ${esc(c.memo)}` : '');
+      // 표기 순서: 모델명 · 캐비넷(열×행) · 건명(설치장소). 건명이 없으면 사례명으로 대체.
+      const modelDisp = esc((findModelByName(c.model_name)?.name) || c.model_name || '—');
+      const arr = `${c.cols || '?'}×${c.rows || '?'}`;
+      const proj = esc(c.site || c.name || '');
+      const title = `${modelDisp} ${arr}${proj ? ` · ${proj}` : ''}`;
+      const resTxt = caseResolution(c).replace(/^ · /, '');
+      const meta = [c.install_date, resTxt, c.memo].filter(Boolean).map(esc).join(' · ') || '&nbsp;';
       return `<div class="cfgRow" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0">
-        <div style="min-width:0"><div class="mname">${esc(c.name)}${match}</div><div class="hint">${meta}</div></div>
+        <div style="min-width:0"><div class="mname">${title}${match}</div><div class="hint">${meta}</div></div>
         <div style="display:flex;gap:6px;flex:0 0 auto">
           <button class="tiny primary" data-case-load="${esc(String(c.id))}">불러오기</button>
           <button class="tiny" data-case-edit="${esc(String(c.id))}">수정</button>
@@ -1035,6 +1040,27 @@ async function renderCaseList() {
     el.innerHTML = `<div class="previewEmpty">설치 사례를 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결·보기 비밀번호를 확인하세요.</div>`;
   }
 }
+// ── 중복 사례 판정 ──────────────────────────────────────────────
+// 사례명이 같거나, (설치장소가 있고) 설치장소·모델·배열이 모두 같으면 중복으로 본다.
+// 표기가 달라도(MMF015·MM015F) 같은 모델로 묶이게 실제 모델 id로 비교. 대소문자·앞뒤공백 무시.
+const caseNameKey = c => String(c.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const caseModelId = c => String(findModelByName(c.model_name)?.id || c.model_name || '').trim().toLowerCase();
+function isDupCase(c, existing) {
+  const nk = caseNameKey(c);
+  const site = String(c.site || '').trim().toLowerCase();
+  const model = caseModelId(c), arr = `${c.cols || ''}x${c.rows || ''}`;
+  return (existing || []).some(e => {
+    if (nk && caseNameKey(e) === nk) return true;               // 사례명 동일
+    if (!site) return false;                                     // 장소 없으면 이름으로만 판정
+    return String(e.site || '').trim().toLowerCase() === site
+      && caseModelId(e) === model && `${e.cols || ''}x${e.rows || ''}` === arr;
+  });
+}
+// 서버의 최신 목록을 가져와 중복 검사에 쓴다(실패하면 화면 캐시로 대체).
+async function existingCasesForDupCheck() {
+  try { return await listCases(caseViewCode); } catch { return caseRowsCache; }
+}
+
 // 현재 구성을 단건 사례로 등록.
 async function registerCurrentCase() {
   const admin = getCaseAdminCode(); if (!admin) return;
@@ -1050,6 +1076,11 @@ async function registerCurrentCase() {
     space_w: num($('#spaceW').value) || null, space_h: num($('#spaceH').value) || null,
     data: gatherConfig(), created_by: localStorage.getItem(NAME_KEY) || null,
   };
+  // 중복 검사 — 같은 사례가 이미 있으면 등록하지 않고 팝업으로 알린다.
+  if (isDupCase(rec, await existingCasesForDupCheck())) {
+    alert(`이미 같은 설치 사례가 있습니다.\n(사례명이 같거나 · 설치장소·모델·배열이 동일)\n\n중복이라 등록하지 않았습니다.`);
+    return;
+  }
   try { await addCases(admin, [rec]); await renderCaseList(); alert(`'${name}' 사례를 등록했습니다.`); }
   catch (e) { alert('사례 등록에 실패했습니다.\n' + e.message); }
 }
@@ -1077,7 +1108,7 @@ async function registerParsedCases(parsed, { clearPaste } = {}) {
   const admin = getCaseAdminCode(); if (!admin) return;
   const createdBy = localStorage.getItem(NAME_KEY) || null;
   const unknown = [];
-  const rows = parsed.map(c => {
+  const mapped = parsed.map(c => {
     const m = findModelByName(c.model_name);   // 여러 표기(MMF015·MM015F 등) 인식
     if (c.model_name && !m) unknown.push(c.model_name);
     const space_w = (m && c.cols) ? Math.round(c.cols * m.cabW + 2 * EDGE_MARGIN) : null;
@@ -1086,13 +1117,23 @@ async function registerParsedCases(parsed, { clearPaste } = {}) {
     return { name: c.name, site: c.site || null, install_date: c.install_date, memo: c.memo || null,
       model_name: m ? m.name : (c.model_name || null), cols: c.cols, rows: c.rows, space_w, space_h, data, created_by: createdBy };
   });
+  // 중복 제거 — 기존 목록과 겹치거나, 이번 묶음 안에서 서로 겹치는 건은 제외한다.
+  const existing = await existingCasesForDupCheck();
+  const seen = [], dups = [];
+  const rows = mapped.filter(r => {
+    if (isDupCase(r, existing) || isDupCase(r, seen)) { dups.push(r.name); return false; }
+    seen.push(r); return true;
+  });
+  const dupList = [...new Set(dups)];
+  const dupMsg = dupList.length ? `\n\n⚠️ 이미 있는(중복) ${dups.length}건은 제외했습니다:\n- ${dupList.slice(0, 10).join('\n- ')}${dupList.length > 10 ? '\n  …외 ' + (dupList.length - 10) + '건' : ''}` : '';
+  if (!rows.length) { alert(`추가할 새 사례가 없습니다. 모두 이미 등록된 중복입니다.${dupMsg}`); return; }
   const warn = unknown.length ? `\n\n⚠️ 인식 못한 모델명: ${[...new Set(unknown)].join(', ')}\n(그대로 등록하면 불러올 때 모델이 안 잡힙니다. 취소하고 모델명을 확인하는 걸 권장합니다.)` : '';
-  if (!confirm(`${rows.length}건의 설치 사례를 등록할까요?${warn}`)) return;
+  if (!confirm(`${rows.length}건의 설치 사례를 등록할까요?${warn}${dupMsg}`)) return;
   try {
     await addCases(admin, rows);
     if (clearPaste && $('#casePaste')) $('#casePaste').value = '';
     await renderCaseList();
-    alert(`${rows.length}건을 등록했습니다.`);
+    alert(`${rows.length}건을 등록했습니다.${dupList.length ? ` (중복 ${dups.length}건 제외)` : ''}`);
   } catch (e) { alert('일괄 등록에 실패했습니다.\n' + e.message); }
 }
 // 엑셀 붙여넣기(탭) 일괄 등록.
