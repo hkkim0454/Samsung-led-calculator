@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=120';
-import { MODELS } from './models.js?v=120';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=120';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=120';
-import { parseCasesText, normalizeDate } from './cases.js?v=120';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=121';
+import { MODELS } from './models.js?v=121';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=121';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=121';
+import { parseCasesText, normalizeDate } from './cases.js?v=121';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=120')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=121')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -850,14 +850,14 @@ let shareCode = '';    // 공유함 비밀번호(세션). 검증되면 localStor
 // 공유함 비번을 확보(대소문자 구분). 저장은 renderSharedList가 조회 성공 시에만 한다.
 function ensureShareCode(forceNew) {
   if (!forceNew && !shareCode) shareCode = localStorage.getItem(SHARE_KEY) || '';
-  if (forceNew || !shareCode) shareCode = (prompt('공유함 비밀번호를 입력하세요 (대소문자 구분):', '') || '').trim();
+  if (forceNew || !shareCode) shareCode = (prompt('설계 프로젝트 비밀번호를 입력하세요 (대소문자 구분):', '') || '').trim();
   return shareCode;
 }
 
 function getDisplayName() {
   let n = localStorage.getItem(NAME_KEY) || '';
   if (!n) {
-    n = (prompt('공유함에 표시할 이름(올린 사람)을 입력하세요:', '') || '').trim();
+    n = (prompt('설계 프로젝트에 표시할 이름(올린 사람)을 입력하세요:', '') || '').trim();
     if (n) localStorage.setItem(NAME_KEY, n);
   }
   return n;
@@ -878,7 +878,7 @@ async function renderSharedList() {
       // 비었거나 비번 틀림 → 저장하지 않고 다시 입력 유도(맞는 비번이면 첫 구성 올리기 가능).
       localStorage.removeItem(SHARE_KEY);
       sharedRowsCache = [];
-      el.innerHTML = '<div class="previewEmpty">🔒 <b>비밀번호가 다르거나</b> 공유함이 비어 있습니다.<br>'
+      el.innerHTML = '<div class="previewEmpty">🔒 <b>비밀번호가 다르거나</b> 설계 프로젝트가 비어 있습니다.<br>'
         + '맞는 비번이면 아래 <b>현재 구성 올리기</b>로 첫 구성을 올리세요.<br>'
         + '<button class="tiny primary" id="btnShareRetryPass" style="margin-top:8px">비밀번호 다시 입력</button></div>';
       $('#btnShareRetryPass')?.addEventListener('click', () => { if (ensureShareCode(true)) renderSharedList(); });
@@ -902,7 +902,7 @@ async function renderSharedList() {
       </div>`;
     }).join('');
   } catch (e) {
-    el.innerHTML = `<div class="previewEmpty">공유함을 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결을 확인하세요.</div>`;
+    el.innerHTML = `<div class="previewEmpty">설계 프로젝트를 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결을 확인하세요.</div>`;
   }
 }
 async function uploadCurrentToShared() {
@@ -912,15 +912,15 @@ async function uploadCurrentToShared() {
     const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
     if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
   }
-  const name = (prompt('공유함에 올릴 이름:', suggested) || '').trim();
+  const name = (prompt('설계 프로젝트에 올릴 이름:', suggested) || '').trim();
   if (!name) return;
   const cfg = gatherConfig();
   try {
     await uploadShared(shareCode, { name, summary: configSummary(cfg), data: cfg, updated_by: getDisplayName() });
     await renderSharedList();
-    alert(`'${name}' 구성을 공유함에 올렸습니다. 전 직원이 볼 수 있습니다.`);
+    alert(`'${name}' 구성을 설계 프로젝트에 올렸습니다. 전 직원이 볼 수 있습니다.`);
   } catch (e) {
-    alert('공유함에 올리지 못했습니다.\n' + e.message);
+    alert('설계 프로젝트에 올리지 못했습니다.\n' + e.message);
   }
 }
 $('#btnSharedLib')?.addEventListener('click', openSharedLib);
@@ -939,7 +939,7 @@ $('#sharedList')?.addEventListener('click', async e => {
   }
   if (delBtn) {
     const rec = sharedRowsCache.find(r => String(r.id) === delBtn.dataset.shDel);
-    if (!rec || !confirm(`공유함에서 '${rec.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
+    if (!rec || !confirm(`설계 프로젝트에서 '${rec.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
     try { await deleteShared(shareCode, rec.id); await renderSharedList(); }
     catch (err) { alert('삭제하지 못했습니다.\n' + err.message); }
   }
