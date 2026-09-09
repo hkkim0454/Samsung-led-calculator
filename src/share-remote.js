@@ -87,13 +87,17 @@ export async function addCases(adminCode, rows) {
 }
 
 // 설치 사례 삭제(등록 비번 필요, id 기준).
-export async function deleteCase(adminCode, id) {
+//   return=representation 으로 실제 삭제된 행을 돌려받아, 관리자 비번이 틀려 RLS가 조용히
+//   0건 처리(204)한 경우를 감지한다. 삭제행이 view 정책을 통과해 돌아오도록 보기 비번도 함께 보낸다.
+export async function deleteCase(adminCode, id, viewCode) {
   const f = api(); if (!f) throw new Error('fetch 사용 불가');
   const res = await f(`${SUPABASE_URL}/rest/v1/${CASES}?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    headers: caseHeaders({ admin: adminCode }),
+    headers: caseHeaders({ admin: adminCode, view: viewCode }, { Prefer: 'return=representation' }),
   });
-  if (res.status === 401 || res.status === 403) throw new Error('등록 비밀번호가 틀렸거나 권한이 없습니다.');
+  if (res.status === 401 || res.status === 403) throw new Error('등록(관리자) 비밀번호가 틀렸거나 권한이 없습니다.');
   if (!res.ok) throw new Error(`삭제 실패 (HTTP ${res.status})`);
+  const rows = await res.json().catch(() => []);
+  if (!Array.isArray(rows) || rows.length === 0) throw new Error('삭제되지 않았습니다. 등록(관리자) 비밀번호가 맞는지 확인하세요.');
   return true;
 }
