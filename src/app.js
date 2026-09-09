@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=119';
-import { MODELS } from './models.js?v=119';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=119';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=119';
-import { parseCasesText, normalizeDate } from './cases.js?v=119';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=120';
+import { MODELS } from './models.js?v=120';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=120';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=120';
+import { parseCasesText, normalizeDate } from './cases.js?v=120';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=119')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=120')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -61,8 +61,12 @@ const SALES_LINES = ['IF', 'IFM', 'IE', 'MM', 'MP'];
 const lineRank = s => { const i = SALES_LINES.indexOf(s); return i < 0 ? SALES_LINES.length : i; };
 const defaultModels = () => structuredClone(MODELS).sort((a, b) => lineRank(a.series) - lineRank(b.series));
 
+// 앞으로 기본 선택 모델 = IFR-M(IF015R-M). 목록에 없으면 첫 모델로 대체.
+const DEFAULT_MODEL_ID = 'IF015RM';
+const pickDefaultId = list => (list.find(m => m.id === DEFAULT_MODEL_ID)?.id) ?? list[0]?.id ?? null;
+
 let models = defaultModels();
-let selectedId = models[0].id;
+let selectedId = pickDefaultId(models);
 let mode = 'fill';
 let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
@@ -567,7 +571,7 @@ $('#cmpBody').addEventListener('click', e => {
 });
 $('#btnAddModel').addEventListener('click', () => openEdit(null));
 $('#btnResetModels').addEventListener('click', () => {
-  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = defaultModels(); selectedId = models[0].id; visibleLines = new Set(SALES_LINES); renderAll(); }
+  if (confirm('모든 모델을 기본값으로 되돌립니다. 계속할까요?')) { models = defaultModels(); selectedId = pickDefaultId(models); visibleLines = new Set(SALES_LINES); renderAll(); }
 });
 
 const dlg = $('#dlg');
