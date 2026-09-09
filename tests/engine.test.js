@@ -39,6 +39,29 @@ test('does not fit when space smaller than one cabinet', () => {
   assert.equal(f.cols * f.rows, 0);
 });
 
+test('baseHeight(하단 높이)는 세로 공간에서 빠져 자동 채움 행 수를 줄인다', () => {
+  // MP012F cabH=453.6, 세로 3400 → 기본 7행. 하단 높이 1000 → 남는 2400 → floor(2400/453.6)=5행.
+  const base0 = computeConfig(MP012F, 6000, 3400, { mode: 'fill' });
+  assert.equal(base0.rows, 7);              // baseHeight 미지정 = 기존과 동일(회귀 방지)
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'fill', baseHeight: 1000 });
+  assert.equal(r.cols, 7);                  // 가로는 영향 없음
+  assert.equal(r.rows, 5);                  // 세로만 축소
+  assert.equal(r.actualH, 5 * 453.6);
+  assert.equal(r.deadH, 2400 - 5 * 453.6);  // 남는 세로 = (세로−하단높이) − LED세로
+  assert.equal(r.baseHeight, 1000);
+});
+
+test('baseHeight가 너무 크면(남는 세로 < 캐비닛 1개) 안 들어간다', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'fill', baseHeight: 3200 });
+  assert.equal(r.fits, false);
+  assert.equal(r.rows, 0);
+});
+
+test('수동 배열에서는 baseHeight가 행 수를 바꾸지 않는다', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, baseHeight: 1000 });
+  assert.equal(r.rows, 6);   // 수동은 사용자가 지정한 행 그대로
+});
+
 test('null weight propagates as null (no fake numbers)', () => {
   // IF040R: 전력은 IFR 브로셔로 채웠지만 무게는 신뢰 가능한 실측이 없어 null 유지.
   const IF040R = MODELS.find(m => m.id === 'IF040R');

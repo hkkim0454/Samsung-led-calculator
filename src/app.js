@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=123';
-import { MODELS } from './models.js?v=123';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=123';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=123';
-import { parseCasesText, normalizeDate } from './cases.js?v=123';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=124';
+import { MODELS } from './models.js?v=124';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=124';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=124';
+import { parseCasesText, normalizeDate } from './cases.js?v=124';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=123')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=124')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -189,9 +189,10 @@ function opts() {
   const gbicFB = $('#gbicFB')?.checked ?? false;
   const spareRate = spareRateOpt();
   const sboxSpares = sboxSparesOpt();
+  const baseHeight = num($('#baseHeight')?.value);   // 바닥에서 LED 아래까지(mm) — 자동 채움 시 rows 축소
   return mode === 'manual'
-    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, gbicFB, spareRate, sboxSpares }
-    : { mode: 'fill', redundancy, cs4b, gbicFB, spareRate, sboxSpares };
+    ? { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight }
+    : { mode: 'fill', redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight };
 }
 
 function renderModelList() {
@@ -261,7 +262,12 @@ function renderPreview() {
   const contentW = Math.max(sW, r.marginW + sigFootW), contentH = Math.max(sH, r.marginH + sigFootH);
   const scale = Math.min(stageW / contentW, stageH / contentH);
   const spW = sW * scale, spH = sH * scale, arW = r.actualW * scale, arH = r.actualH * scale;
-  const offX = r.marginW * scale, offY = r.marginH * scale;
+  const offX = r.marginW * scale;
+  // 하단 높이(바닥에서 LED 아래까지)가 지정되고 공간 안에 들어가면, LED를 바닥에서 baseH 띄워 배치(방처럼).
+  const baseH = num($('#baseHeight').value);
+  const fitsBase = baseH > 0 && (baseH + r.actualH) <= sH + 1;
+  const topGapMM = fitsBase ? (sH - baseH - r.actualH) : 0;
+  const offY = fitsBase ? topGapMM * scale : r.marginH * scale;
   const meters = mm => (mm / 1000).toLocaleString('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m';
 
   stage.innerHTML = '';
@@ -299,6 +305,22 @@ function renderPreview() {
   }
   scene.appendChild(wall);
 
+  // 방 컨텍스트(1단계): 하단 높이 지정 시 LED를 바닥에서 baseH 띄워 배치하고(offY로 반영),
+  //   위/아래 남는 공간을 점선 밴드로 표시한다. LED·사람 외 다른 AV 장비는 표시하지 않는다.
+  if (fitsBase) {
+    const band = (topPx, hPx, label) => {
+      if (hPx < 3) return;
+      const d = document.createElement('div');
+      d.style.cssText = `position:absolute;left:${offX}px;top:${topPx}px;width:${arW}px;height:${hPx}px;`
+        + 'display:flex;align-items:center;justify-content:center;box-sizing:border-box;'
+        + 'border:1px dashed rgba(128,128,128,.45);border-radius:6px;pointer-events:none';
+      if (hPx >= 16) d.innerHTML = `<span style="font-size:11px;padding:1px 6px;border-radius:6px;background:rgba(128,128,128,.14)">${label}</span>`;
+      scene.appendChild(d);
+    };
+    band(0, offY, `위 ${fmt(Math.round(topGapMM))}mm`);                       // LED 위 남는 공간
+    band(offY + arH, spH - (offY + arH), `바닥 ${fmt(Math.round(baseH))}mm`);   // LED 아래(바닥 여백)
+  }
+
   // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 각 영역(타일)마다 좌상단에 라벨(HD/UHD).
   // HD를 먼저, UHD를 위에 얹어(둘다 모드에서 겹치는 좌상단은 UHD가 위에 보이게).
   for (const L of sigLayers) {
@@ -321,12 +343,12 @@ function renderPreview() {
   // dimension pills
   const pill = (cls, txt, css) => { const d = document.createElement('div'); d.className = 'pvPill ' + cls; d.textContent = txt; d.style.cssText = css; scene.appendChild(d); };
   pill('big', meters(r.actualW), `left:${offX + arW / 2}px;top:-30px;transform:translateX(-50%)`);
-  pill('big vert', meters(r.actualH), `top:${spH / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  pill('big vert', meters(r.actualH), `top:${offY + arH / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   // 여백 알약은 화면상 실제로 보이는 간격이 있을 때만 표시(간격≈0이면 치수 알약과 겹치므로 생략).
-  // 여백 수치는 04 산출 스펙의 '여백' 안내에도 표기됨.
+  // 여백 수치는 04 산출 스펙의 '여백' 안내에도 표기됨.  방 모드(하단 높이)에선 세로 여백은 밴드로 대체.
   const GAP_MIN = 16; // px
   if (r.marginW > 1 && offX > GAP_MIN) pill('sm', meters(r.marginW), `left:${offX / 2}px;top:-26px;transform:translateX(-50%)`);
-  if (r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
 
   stage.appendChild(scene);
@@ -337,17 +359,22 @@ function renderPreview() {
 function updateVSplit(r, sH) {
   const el = $('#vSplitInfo'); if (!el) return;
   const baseH = num($('#baseHeight').value);
-  const ledH = (r && r.fits) ? (r.actualH || 0) : 0;
-  if (!(baseH > 0) || !ledH) { el.hidden = true; el.innerHTML = ''; return; }
-  const top = sH - baseH - ledH;
-  const mm = v => fmt(Math.round(v)) + 'mm';
+  if (!(baseH > 0)) { el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
-  if (top < -1) {
+  const mm = v => fmt(Math.round(v)) + 'mm';
+  const ledH = (r && r.fits) ? (r.actualH || 0) : 0;
+  if (!ledH) {   // 하단 높이가 너무 높아 남는 세로 공간에 캐비닛이 한 줄도 안 들어감
     el.style.color = 'var(--danger)';
-    el.innerHTML = `⚠️ 바닥 여백(${mm(baseH)}) + LED 세로(${mm(ledH)})가 세로 공간(${mm(sH)})을 <b>${mm(-top)}</b> 넘습니다. 하단 높이를 줄이거나 세로 공간을 키우세요.`;
+    el.innerHTML = `⚠️ 하단 높이(${mm(baseH)})가 너무 높아 이 세로 공간에 LED가 들어가지 않습니다.`;
+    return;
+  }
+  const top = sH - baseH - ledH;
+  if (top < -1) {   // 수동 배열에서 행 수를 크게 지정한 경우(자동 채움에선 발생하지 않음)
+    el.style.color = 'var(--danger)';
+    el.innerHTML = `⚠️ 바닥 여백(${mm(baseH)}) + LED 세로(${mm(ledH)})가 세로 공간(${mm(sH)})을 <b>${mm(-top)}</b> 넘습니다. 행 수나 하단 높이를 줄이세요.`;
   } else {
     el.style.color = '';
-    el.innerHTML = `바닥 여백 <b>${mm(baseH)}</b> · LED 세로 <b>${mm(ledH)}</b> · 위 남는 높이 <b>${mm(top)}</b>`;
+    el.innerHTML = `바닥 여백 <b>${mm(baseH)}</b> · LED 세로 <b>${mm(ledH)}</b> · 위 남는 높이 <b>${mm(top)}</b> <span style="opacity:.7">(자동 채움 시 행 수 자동 조정)</span>`;
   }
 }
 function renderReadout() {

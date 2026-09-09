@@ -111,7 +111,11 @@ export function fitCabinets(model, spaceW, spaceH, opts = {}) {
 /** Full spec readout for a given model + space + options. */
 export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const pf = opts.powerFactor ?? DEFAULTS.powerFactor;
-  const { cols, rows, fits } = fitCabinets(model, spaceW, spaceH, opts);
+  // 하단 높이(바닥에서 LED 아래까지, mm): 세로 공간에서 이만큼 빼고 남는 높이에 캐비닛을 채운다.
+  //   baseHeight=0(기본)이면 기존과 동일. 자동 채움일 때 rows가 그만큼 줄어든다(수동 배열은 영향 없음).
+  const baseHeight = Math.max(0, opts.baseHeight || 0);
+  const effH = Math.max(0, spaceH - baseHeight);
+  const { cols, rows, fits } = fitCabinets(model, spaceW, effH, opts);
   const total = cols * rows;
   // 예비 캐비닛 — 시리즈 규칙(MMF 5%·MPF 7% 비율, IFR/IEA 3×3당 1대) 또는 사용자 지정 비율(opts.spareRate).
   const spares = spareCount(model.series, total, opts);
@@ -162,7 +166,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     : 0;
 
   const deadW = Math.max(0, spaceW - actualW);
-  const deadH = Math.max(0, spaceH - actualH);
+  const deadH = Math.max(0, effH - actualH);   // 남는 세로 = (세로 − 하단 높이) − LED 세로
 
   // BDM 시청거리(m): %EH 2.5% → 세로×5(권장), %EH 3% → 세로×6(최대).
   const bdm25M = bdmFarViewerM(actualH, 2.5);
@@ -175,7 +179,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy,
-    deadW, deadH,
+    deadW, deadH, baseHeight, effH,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
     // "최대"(운영 최대) 밝기. 모델에 reduced 값이 있으면 그 값, 없으면 peak 값을 최대로 사용한다.
