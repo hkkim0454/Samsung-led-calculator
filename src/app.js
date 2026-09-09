@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=114';
-import { MODELS } from './models.js?v=114';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=114';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase } from './share-remote.js?v=114';
-import { parseCasesText, normalizeDate } from './cases.js?v=114';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=115';
+import { MODELS } from './models.js?v=115';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=115';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=115';
+import { parseCasesText, normalizeDate } from './cases.js?v=115';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=114')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=115')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -1022,6 +1022,7 @@ async function renderCaseList() {
         <div style="min-width:0"><div class="mname">${esc(c.name)}${match}</div><div class="hint">${meta}</div></div>
         <div style="display:flex;gap:6px;flex:0 0 auto">
           <button class="tiny primary" data-case-load="${esc(String(c.id))}">불러오기</button>
+          <button class="tiny" data-case-edit="${esc(String(c.id))}">수정</button>
           <button class="tiny ghost" data-case-del="${esc(String(c.id))}">삭제</button>
         </div>
       </div>`;
@@ -1047,6 +1048,24 @@ async function registerCurrentCase() {
   };
   try { await addCases(admin, [rec]); await renderCaseList(); alert(`'${name}' 사례를 등록했습니다.`); }
   catch (e) { alert('사례 등록에 실패했습니다.\n' + e.message); }
+}
+// 기존 사례 수정. 사례명·장소·날짜·메모를 고치고, 원하면 모델·배열도 현재 화면 구성으로 교체.
+async function editCase(c) {
+  const admin = getCaseAdminCode(); if (!admin) return;
+  const name = (prompt('사례명:', c.name || '') || '').trim(); if (!name) return;
+  const site = (prompt('설치장소/고객 (선택):', c.site || '') || '').trim();
+  const install_date = normalizeDate(prompt('설치일 YYYY-MM-DD (선택):', c.install_date || '') || '');
+  const memo = (prompt('메모 (선택):', c.memo || '') || '').trim();
+  const patch = { name, site: site || null, install_date, memo: memo || null };
+  // 모델·배열이 틀린 경우 현재 화면 구성으로 통째 교체(선택).
+  const { m, cols, rows } = currentModelArray();
+  if (m && confirm(`모델·배열을 지금 화면 구성(${m.name} ${cols}×${rows})으로 교체할까요?\n[확인] 모델·배열까지 교체   [취소] 사례명·장소·날짜·메모만 수정`)) {
+    patch.model_name = m.name; patch.cols = cols; patch.rows = rows;
+    patch.space_w = num($('#spaceW').value) || null; patch.space_h = num($('#spaceH').value) || null;
+    patch.data = gatherConfig();
+  }
+  try { await updateCase(admin, c.id, patch, caseViewCode); await renderCaseList(); alert(`'${name}' 사례를 수정했습니다.`); }
+  catch (e) { localStorage.removeItem(CASE_ADMIN_KEY); alert('수정하지 못했습니다.\n' + e.message + '\n\n(등록 비밀번호를 다시 입력받겠습니다.)'); }
 }
 // 파싱된 사례들을 모델 해석·공간/스냅샷 보강 후 서버에 일괄 등록(등록 비번 필요).
 async function registerParsedCases(parsed, { clearPaste } = {}) {
@@ -1095,10 +1114,16 @@ $('#btnCaseCsv')?.addEventListener('click', () => $('#caseCsvFile')?.click());
 $('#caseCsvFile')?.addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value = ''; importCasesCsv(f); });
 $('#caseList')?.addEventListener('click', async e => {
   const loadBtn = e.target.closest('[data-case-load]');
+  const editBtn = e.target.closest('[data-case-edit]');
   const delBtn = e.target.closest('[data-case-del]');
   if (loadBtn) {
     const c = caseRowsCache.find(r => String(r.id) === loadBtn.dataset.caseLoad);
     if (c) { applyConfig(caseToConfig(c)); setCurrentConfig(c.name); casesDlg.close(); }
+    return;
+  }
+  if (editBtn) {
+    const c = caseRowsCache.find(r => String(r.id) === editBtn.dataset.caseEdit);
+    if (c) await editCase(c);
     return;
   }
   if (delBtn) {

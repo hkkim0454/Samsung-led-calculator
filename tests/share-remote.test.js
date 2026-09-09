@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SUPABASE_URL, SUPABASE_KEY, listShared, uploadShared, deleteShared } from '../src/share-remote.js';
+import { SUPABASE_URL, SUPABASE_KEY, listShared, uploadShared, deleteShared, updateCase } from '../src/share-remote.js';
 
 // globalThis.fetch 를 가로채 요청(URL/method/headers/body)을 기록하는 헬퍼.
 function stubFetch(response) {
@@ -56,4 +56,28 @@ test('deleteShared: id=eq 필터로 DELETE', async () => {
 test('HTTP 오류는 예외로 전달', async () => {
   stubFetch({ ok: false, status: 401 });
   await assert.rejects(() => listShared('x'), /HTTP 401/);
+});
+
+test('updateCase: id=eq PATCH + admin/view 헤더·수정된 행 반환', async () => {
+  const calls = stubFetch({ body: [{ id: 'c-1', name: '수정됨' }] });
+  const row = await updateCase('admin-pw', 'c-1', { name: '수정됨', memo: null }, 'view-pw');
+  assert.equal(row.name, '수정됨');
+  const { url, opts } = calls[0];
+  assert.equal(url, `${SUPABASE_URL}/rest/v1/install_cases?id=eq.c-1`);
+  assert.equal(opts.method, 'PATCH');
+  assert.equal(opts.headers['x-admin-code'], 'admin-pw');
+  assert.equal(opts.headers['x-view-code'], 'view-pw');   // 보기 정책 통과용
+  assert.equal(opts.headers['Prefer'], 'return=representation');
+  const body = JSON.parse(opts.body);
+  assert.equal(body.name, '수정됨');
+});
+
+test('updateCase: 0건 반환(비번 틀림)이면 예외', async () => {
+  stubFetch({ body: [] });   // RLS가 조용히 0건 처리
+  await assert.rejects(() => updateCase('wrong', 'c-1', { name: 'x' }, 'view'), /수정되지 않았습니다/);
+});
+
+test('updateCase: 403이면 권한 예외', async () => {
+  stubFetch({ ok: false, status: 403 });
+  await assert.rejects(() => updateCase('x', 'c-1', {}, 'v'), /비밀번호가 틀렸거나/);
 });
