@@ -1,8 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=109';
-import { MODELS } from './models.js?v=109';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=109';
-import { listShared, uploadShared, deleteShared } from './share-remote.js?v=109';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=110';
+import { MODELS } from './models.js?v=110';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=110';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase } from './share-remote.js?v=110';
+import { parseCasesTSV, normalizeDate } from './cases.js?v=110';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -11,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=109')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=110')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -896,6 +897,144 @@ $('#sharedList')?.addEventListener('click', async e => {
     const rec = sharedRowsCache.find(r => String(r.id) === delBtn.dataset.shDel);
     if (!rec || !confirm(`공유함에서 '${rec.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
     try { await deleteShared(TEAM_CODE, rec.id); await renderSharedList(); }
+    catch (err) { alert('삭제하지 못했습니다.\n' + err.message); }
+  }
+});
+
+/* ─── 설치 사례집 (install_cases) — 보기 비번으로 열람, 등록/삭제는 관리자 비번 ───
+   과거 실제 설치 건을 모아두고, 지금 고른 모델·배열과 맞는 사례를 먼저 보여준다. */
+const CASE_VIEW_KEY = 'svtled_case_view';
+const CASE_ADMIN_KEY = 'svtled_case_admin';
+let caseRowsCache = [];
+
+function getCaseViewCode(forceNew) {
+  let c = forceNew ? '' : (localStorage.getItem(CASE_VIEW_KEY) || '');
+  if (!c) { c = (prompt('설치 사례 보기 비밀번호를 입력하세요:', '') || '').trim(); if (c) localStorage.setItem(CASE_VIEW_KEY, c); }
+  return c;
+}
+function getCaseAdminCode(forceNew) {
+  let c = forceNew ? '' : (localStorage.getItem(CASE_ADMIN_KEY) || '');
+  if (!c) { c = (prompt('설치 사례 등록(관리자) 비밀번호를 입력하세요:', '') || '').trim(); if (c) localStorage.setItem(CASE_ADMIN_KEY, c); }
+  return c;
+}
+
+// 현재 화면의 선택 모델·배열(열/행)을 구한다(사례 매칭·등록용).
+function currentModelArray() {
+  const m = models.find(x => x.id === selectedId);
+  if (!m) return { m: null, cols: 0, rows: 0 };
+  const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
+  return { m, cols: r.cols || 0, rows: r.rows || 0 };
+}
+// 사례의 해상도 표기(모델+배열로 자동 계산). 모델을 못 찾으면 빈 문자열.
+function caseResolution(c) {
+  const m = models.find(x => x.name === c.model_name);
+  if (!m || !c.cols || !c.rows || m.resW == null || m.resH == null) return '';
+  return ` · ${fmt(m.resW * c.cols)}×${fmt(m.resH * c.rows)}px`;
+}
+// 사례 → 화면 적용용 구성. data 스냅샷이 있으면 그대로, 없으면 모델·배열로 합성.
+function caseToConfig(c) {
+  if (c.data && typeof c.data === 'object') return c.data;
+  const m = models.find(x => x.name === c.model_name);
+  const cfg = { mode: 'manual', manCols: c.cols || 0, manRows: c.rows || 0, spaceW: c.space_w || 0, spaceH: c.space_h || 0 };
+  if (m) { cfg.selectedId = m.id; cfg.selectedModel = { ...m }; }
+  return cfg;
+}
+
+const casesDlg = $('#casesDlg');
+async function openCases() {
+  if (!getCaseViewCode()) return;
+  casesDlg?.showModal();
+  await renderCaseList();
+}
+async function renderCaseList() {
+  const el = $('#caseList'); if (!el) return;
+  el.innerHTML = '<div class="previewEmpty">불러오는 중…</div>';
+  try {
+    const rows = await listCases(localStorage.getItem(CASE_VIEW_KEY) || '');
+    // 현재 모델·배열과 일치할수록 위로 정렬.
+    const cur = currentModelArray();
+    const score = c => (c.model_name === cur.m?.name ? 2 : 0) + (c.cols === cur.cols && c.rows === cur.rows ? 1 : 0);
+    rows.sort((a, b) => score(b) - score(a) || String(b.created_at).localeCompare(String(a.created_at)));
+    caseRowsCache = rows;
+    if (!rows.length) {
+      el.innerHTML = '<div class="previewEmpty">등록된 설치 사례가 없거나 보기 비밀번호가 다릅니다.<br>아래 <b>사례 등록</b>으로 추가하거나, <b>보기 비번 변경</b>으로 다시 입력해 보세요.</div>';
+      return;
+    }
+    el.innerHTML = rows.map(c => {
+      const match = (c.model_name === cur.m?.name && c.cols === cur.cols && c.rows === cur.rows)
+        ? ' <span class="chk">지금 배열과 일치</span>' : '';
+      const meta = [c.site, c.install_date, `${esc(c.model_name || '—')} ${c.cols || '?'}×${c.rows || '?'}`]
+        .filter(Boolean).map(esc).join(' · ') + caseResolution(c) + (c.memo ? ` · ${esc(c.memo)}` : '');
+      return `<div class="cfgRow" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0">
+        <div style="min-width:0"><div class="mname">${esc(c.name)}${match}</div><div class="hint">${meta}</div></div>
+        <div style="display:flex;gap:6px;flex:0 0 auto">
+          <button class="tiny primary" data-case-load="${esc(String(c.id))}">불러오기</button>
+          <button class="tiny ghost" data-case-del="${esc(String(c.id))}">삭제</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="previewEmpty">설치 사례를 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결·보기 비밀번호를 확인하세요.</div>`;
+  }
+}
+// 현재 구성을 단건 사례로 등록.
+async function registerCurrentCase() {
+  const admin = getCaseAdminCode(); if (!admin) return;
+  const { m, cols, rows } = currentModelArray();
+  if (!m) { alert('모델을 먼저 선택하세요.'); return; }
+  const name = (prompt('사례명:', `${m.name} ${cols}×${rows}`) || '').trim(); if (!name) return;
+  const site = (prompt('설치장소/고객 (선택):', '') || '').trim();
+  const install_date = normalizeDate(prompt('설치일 YYYY-MM-DD (선택):', '') || '');
+  const memo = (prompt('메모 (선택):', '') || '').trim();
+  const rec = {
+    name, site: site || null, install_date, memo: memo || null,
+    model_name: m.name, cols, rows,
+    space_w: num($('#spaceW').value) || null, space_h: num($('#spaceH').value) || null,
+    data: gatherConfig(), created_by: localStorage.getItem(NAME_KEY) || null,
+  };
+  try { await addCases(admin, [rec]); await renderCaseList(); alert(`'${name}' 사례를 등록했습니다.`); }
+  catch (e) { alert('사례 등록에 실패했습니다.\n' + e.message); }
+}
+// 엑셀 붙여넣기(TSV) 일괄 등록.
+async function bulkRegisterCases() {
+  const text = $('#casePaste')?.value || '';
+  const parsed = parseCasesTSV(text);
+  if (!parsed.length) { alert('붙여넣은 내용에서 사례를 찾지 못했습니다.\n(설치장소 · 설치일 · 모델 · 열 · 행 · 메모 순)'); return; }
+  const admin = getCaseAdminCode(); if (!admin) return;
+  const createdBy = localStorage.getItem(NAME_KEY) || null;
+  const rows = parsed.map(c => {
+    const m = models.find(x => x.name === c.model_name);
+    const space_w = (m && c.cols) ? Math.round(c.cols * m.cabW + 2 * EDGE_MARGIN) : null;
+    const space_h = (m && c.rows) ? Math.round(c.rows * m.cabH + 2 * EDGE_MARGIN) : null;
+    const data = m ? { mode: 'manual', manCols: c.cols, manRows: c.rows, spaceW: space_w, spaceH: space_h, selectedId: m.id, selectedModel: { ...m } } : null;
+    return { name: c.name, site: c.site || null, install_date: c.install_date, memo: c.memo || null,
+      model_name: c.model_name || null, cols: c.cols, rows: c.rows, space_w, space_h, data, created_by: createdBy };
+  });
+  if (!confirm(`${rows.length}건의 설치 사례를 등록할까요?`)) return;
+  try { await addCases(admin, rows); if ($('#casePaste')) $('#casePaste').value = ''; await renderCaseList(); alert(`${rows.length}건을 등록했습니다.`); }
+  catch (e) { alert('일괄 등록에 실패했습니다.\n' + e.message); }
+}
+$('#btnCases')?.addEventListener('click', openCases);
+$('#casesClose')?.addEventListener('click', () => casesDlg.close());
+$('#casesCancel')?.addEventListener('click', () => casesDlg.close());
+$('#btnCaseRefresh')?.addEventListener('click', renderCaseList);
+$('#btnCaseViewPass')?.addEventListener('click', () => { getCaseViewCode(true); renderCaseList(); });
+$('#btnCaseAddCurrent')?.addEventListener('click', registerCurrentCase);
+$('#btnCaseBulk')?.addEventListener('click', bulkRegisterCases);
+$('#caseList')?.addEventListener('click', async e => {
+  const loadBtn = e.target.closest('[data-case-load]');
+  const delBtn = e.target.closest('[data-case-del]');
+  if (loadBtn) {
+    const c = caseRowsCache.find(r => String(r.id) === loadBtn.dataset.caseLoad);
+    if (c) { applyConfig(caseToConfig(c)); setCurrentConfig(c.name); casesDlg.close(); }
+    return;
+  }
+  if (delBtn) {
+    const c = caseRowsCache.find(r => String(r.id) === delBtn.dataset.caseDel);
+    if (!c) return;
+    const admin = getCaseAdminCode(); if (!admin) return;
+    if (!confirm(`설치 사례 '${c.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
+    try { await deleteCase(admin, c.id); await renderCaseList(); }
     catch (err) { alert('삭제하지 못했습니다.\n' + err.message); }
   }
 });
