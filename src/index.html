@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=110"/>
+<link rel="stylesheet" href="./styles.css?v=111"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -162,7 +162,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v110</span>
+        <span class="verTag">화면 버전 v111</span>
       </div>
     </div>
   </div>
@@ -233,7 +233,12 @@
         <button class="tiny primary" id="btnCaseAddCurrent">현재 구성을 사례로 등록</button>
         <div class="hint" style="margin-top:12px">엑셀에서 <b>설치장소 · 설치일 · 모델 · 열 · 행 · 메모</b> 순서로 복사해 아래에 붙여넣고 일괄 등록:</div>
         <textarea id="casePaste" rows="4" placeholder="예)  롯데타워 로비 ⇥ 2026-03-15 ⇥ IF015R ⇥ 8 ⇥ 5 ⇥ 고소작업 포함" style="width:100%;margin-top:6px;font-family:var(--mono);font-size:12px;padding:8px;border-radius:8px"></textarea>
-        <button class="tiny primary" id="btnCaseBulk" style="margin-top:6px">붙여넣은 내용 일괄 등록</button>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <button class="tiny primary" id="btnCaseBulk">붙여넣은 내용 일괄 등록</button>
+          <button class="tiny ghost" id="btnCaseCsv">CSV 파일로 등록</button>
+        </div>
+        <input type="file" id="caseCsvFile" accept=".csv,text/csv" hidden/>
+        <div class="hint" style="margin-top:8px">CSV는 엑셀 <b>다른 이름으로 저장 → ‘CSV UTF-8(쉼표로 분리)’</b> 형식으로 저장하세요(한글 안 깨짐). 열 순서는 붙여넣기와 동일합니다.</div>
       </div>
     </details>
   </div>
@@ -245,6 +250,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=110"></script>
+<script type="module" src="./app.js?v=111"></script>
 </body>
 </html>
