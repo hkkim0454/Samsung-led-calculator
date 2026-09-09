@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=122';
-import { MODELS } from './models.js?v=122';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=122';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=122';
-import { parseCasesText, normalizeDate } from './cases.js?v=122';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=123';
+import { MODELS } from './models.js?v=123';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=123';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=123';
+import { parseCasesText, normalizeDate } from './cases.js?v=123';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=122')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=123')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -332,12 +332,31 @@ function renderPreview() {
   stage.appendChild(scene);
 }
 
+// 하단 높이(바닥에서 LED 아래까지)를 입력하면 세로 구성(바닥 여백·LED 세로·위 남는 높이)을 표시.
+//   위 남는 높이 = 세로 공간 − 하단 높이 − LED 세로. 음수면(공간 초과) 경고를 빨간색으로 보여준다.
+function updateVSplit(r, sH) {
+  const el = $('#vSplitInfo'); if (!el) return;
+  const baseH = num($('#baseHeight').value);
+  const ledH = (r && r.fits) ? (r.actualH || 0) : 0;
+  if (!(baseH > 0) || !ledH) { el.hidden = true; el.innerHTML = ''; return; }
+  const top = sH - baseH - ledH;
+  const mm = v => fmt(Math.round(v)) + 'mm';
+  el.hidden = false;
+  if (top < -1) {
+    el.style.color = 'var(--danger)';
+    el.innerHTML = `⚠️ 바닥 여백(${mm(baseH)}) + LED 세로(${mm(ledH)})가 세로 공간(${mm(sH)})을 <b>${mm(-top)}</b> 넘습니다. 하단 높이를 줄이거나 세로 공간을 키우세요.`;
+  } else {
+    el.style.color = '';
+    el.innerHTML = `바닥 여백 <b>${mm(baseH)}</b> · LED 세로 <b>${mm(ledH)}</b> · 위 남는 높이 <b>${mm(top)}</b>`;
+  }
+}
 function renderReadout() {
   const m = models.find(x => x.id === selectedId);
   const box = $('#readout'), nt = $('#notices'); nt.innerHTML = '';
-  if (!m) { box.innerHTML = ''; return; }
+  if (!m) { box.innerHTML = ''; const vs = $('#vSplitInfo'); if (vs) vs.hidden = true; return; }
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
+  updateVSplit(r, sH);
   const aspect = r.actualH > 0 ? r.actualW / r.actualH : 0;
   // 소수 1자리까지 표기하되 .0이면 정수로(예: 32.0→"32", 21.33→"21.3"). 화면비 x:9·가로 N개에 사용.
   const trim1 = n => (isFinite(n) ? n.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) : '—');
@@ -494,7 +513,7 @@ function renderQuote() {
 function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
-['spaceW', 'spaceH', 'sboxSpare'].forEach(id => $('#' + id).addEventListener('input', renderAll));
+['spaceW', 'spaceH', 'sboxSpare', 'baseHeight'].forEach(id => $('#' + id).addEventListener('input', renderAll));
 // 배열 직접 지정 모드에서 열·행을 입력하면 설치 공간을 그 배열 크기 + 가장자리 여유로 자동 채운다.
 //   가로 = 열 × 캐비닛폭 + 좌우 각 100mm, 세로 = 행 × 캐비닛높이 + 상하 각 100mm.
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변)
