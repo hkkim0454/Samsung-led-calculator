@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=127"/>
+<link rel="stylesheet" href="./styles.css?v=128"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -52,7 +52,7 @@
     <div class="col-left">
       <div class="card">
         <h2><span class="idx">01</span> 설치 공간</h2>
-        <div class="lab" style="margin-bottom:4px">① LED 설치 벽면 공간 (가로 × 세로, mm)</div>
+        <div class="lab" style="margin-bottom:4px">① 벽면(Wall) — 가로 W × 세로 H (mm)</div>
         <div class="two">
           <label class="field"><span class="lab">가로 W (mm)</span><input type="number" id="spaceW" value="4000" min="500" step="500"/></label>
           <label class="field"><span class="lab">세로 H (mm)</span><input type="number" id="spaceH" value="2300" min="500" step="500"/></label>
@@ -64,21 +64,21 @@
           <div class="hint" id="vSplitInfo" hidden></div>
         </label>
         <label class="field">
-          <span class="lab">③ LED 캐비닛 배열 (가로 × 세로)</span>
+          <span class="lab">③ 화면(Screen) — LED 배열 (가로 열 × 세로 행)</span>
           <div class="seg" id="fitMode">
             <button data-mode="fill" class="on">자동 채움</button>
             <button data-mode="ledsize">LED 크기 지정</button>
             <button data-mode="manual">배열 직접 지정</button>
           </div>
-          <div class="hint"><b>자동 채움</b> = 벽면(하단 높이 제외)에 들어가는 최대 수량. <b>LED 크기 지정</b> = 벽면과 별도로 LED 가로·세로(mm)를 넣으면 그 안에 맞게 배열 산출. <b>배열 직접 지정</b> = 가로(열)·세로(행)를 직접 입력. (삼성 Fit-to-wall 세로 규칙 확정 전 — SPEC Q1)</div>
+          <div class="hint">아래 <b>가로(열)·세로(행)</b>이 곧 화면 크기입니다(항상 표시). <b>자동 채움</b>=벽면(하단 높이 제외)에 최대 수량으로 채움. <b>LED 크기 지정</b>=LED 가로·세로(mm)로 산출. <b>배열 직접 지정</b>=열·행을 직접 입력(벽면은 그대로, 여백은 미리보기에 표시).</div>
         </label>
         <div class="two" id="ledBox" hidden>
           <label class="field"><span class="lab">LED 가로 (mm)</span><input type="number" id="ledW" value="0" min="0" step="100"/></label>
           <label class="field"><span class="lab">LED 세로 (mm)</span><input type="number" id="ledH" value="0" min="0" step="100"/></label>
         </div>
-        <div class="two" id="manualBox" hidden>
-          <label class="field"><span class="lab">가로 (열, columns)</span><input type="number" id="manCols" value="0" min="0"/></label>
-          <label class="field"><span class="lab">세로 (행, rows)</span><input type="number" id="manRows" value="0" min="0"/></label>
+        <div class="two" id="manualBox">
+          <label class="field"><span class="lab">가로 (열, Columns)</span><input type="number" id="manCols" value="0" min="0"/></label>
+          <label class="field"><span class="lab">세로 (행, Rows)</span><input type="number" id="manRows" value="0" min="0"/></label>
         </div>
         <label class="checkline">
           <input type="checkbox" id="redundancy"/>
@@ -175,7 +175,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v127</span>
+        <span class="verTag">화면 버전 v128</span>
       </div>
     </div>
   </div>
@@ -269,6 +269,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=127"></script>
+<script type="module" src="./app.js?v=128"></script>
 </body>
 </html>
