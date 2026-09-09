@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=126';
-import { MODELS } from './models.js?v=126';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=126';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=126';
-import { parseCasesText, normalizeDate } from './cases.js?v=126';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=127';
+import { MODELS } from './models.js?v=127';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=127';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=127';
+import { parseCasesText, normalizeDate } from './cases.js?v=127';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=126')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=127')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -362,6 +362,17 @@ function renderPreview() {
   const floor = document.createElement('div');
   floor.style.cssText = `position:absolute;left:-10px;top:${spH}px;width:${spW + 20}px;height:0;border-top:2px solid rgba(128,128,128,.4);pointer-events:none`;
   scene.appendChild(floor);
+
+  // 눈높이 가이드선(바닥 기준): 앉은 눈높이 1.2m·선 눈높이 1.6m 참고선. 벽 높이 안에 들 때만 표시.
+  for (const g of [{ mm: 1200, label: '앉은 눈높이 1.2m' }, { mm: 1600, label: '선 눈높이 1.6m' }]) {
+    if (g.mm > sH) continue;
+    const gy = spH - g.mm * scale;
+    if (gy < 0 || gy > spH) continue;
+    const line = document.createElement('div');
+    line.style.cssText = `position:absolute;left:0;top:${gy}px;width:${spW}px;height:0;border-top:1px dashed rgba(74,110,224,.65);pointer-events:none`;
+    line.innerHTML = `<span style="position:absolute;left:4px;top:-9px;font-size:10px;color:rgba(74,110,224,.95);background:rgba(127,127,127,.14);padding:0 4px;border-radius:4px;white-space:nowrap">${g.label}</span>`;
+    scene.appendChild(line);
+  }
 
   stage.appendChild(scene);
 }
