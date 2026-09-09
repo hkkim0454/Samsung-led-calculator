@@ -1,8 +1,8 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=108';
-import { MODELS } from './models.js?v=108';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=108';
-import { listShared, uploadShared, deleteShared } from './share-remote.js?v=108';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=109';
+import { MODELS } from './models.js?v=109';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=109';
+import { listShared, uploadShared, deleteShared } from './share-remote.js?v=109';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -11,7 +11,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=108')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=109')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -467,15 +467,16 @@ function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); re
 
 /* events */
 ['spaceW', 'spaceH', 'sboxSpare'].forEach(id => $('#' + id).addEventListener('input', renderAll));
-// 배열 직접 지정 모드에서 열·행을 입력하면 설치 공간을 그 배열 크기에 맞춰 자동 채운다
-// (가로 = 열 × 캐비닛폭, 세로 = 행 × 캐비닛높이 → 여백 0).
+// 배열 직접 지정 모드에서 열·행을 입력하면 설치 공간을 그 배열 크기 + 가장자리 여유로 자동 채운다.
+//   가로 = 열 × 캐비닛폭 + 좌우 각 100mm, 세로 = 행 × 캐비닛높이 + 상하 각 100mm.
+const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변)
 function syncSpaceToManualArray() {
   if (mode !== 'manual') return;
   const m = models.find(x => x.id === selectedId); if (!m) return;
   const cols = Math.max(0, Math.floor(num($('#manCols').value)));
   const rows = Math.max(0, Math.floor(num($('#manRows').value)));
-  if (cols > 0) $('#spaceW').value = Math.round(cols * m.cabW);
-  if (rows > 0) $('#spaceH').value = Math.round(rows * m.cabH);
+  if (cols > 0) $('#spaceW').value = Math.round(cols * m.cabW + 2 * EDGE_MARGIN);
+  if (rows > 0) $('#spaceH').value = Math.round(rows * m.cabH + 2 * EDGE_MARGIN);
 }
 ['manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', () => { syncSpaceToManualArray(); renderAll(); }));
 // 예비율 칸: 값을 지우면 자동 모드로 복귀(환산 % 다시 표시), 숫자를 넣으면 그 값이 우선.
