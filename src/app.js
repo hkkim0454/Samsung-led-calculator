@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=121';
-import { MODELS } from './models.js?v=121';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=121';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=121';
-import { parseCasesText, normalizeDate } from './cases.js?v=121';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=122';
+import { MODELS } from './models.js?v=122';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=122';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=122';
+import { parseCasesText, normalizeDate } from './cases.js?v=122';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=121')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=122')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -950,6 +950,8 @@ $('#sharedList')?.addEventListener('click', async e => {
 const CASE_VIEW_KEY = 'svtled_case_view';
 const CASE_ADMIN_KEY = 'svtled_case_admin';
 let caseRowsCache = [];
+let caseSearch = '';     // 설치 사례 검색어(건명·장소·모델·메모).
+let caseYear = 'all';    // 연도 필터('all' | 'YYYY' | '미지정').
 let caseViewCode = '';   // 현재 세션 보기 비번. 검증(사례 조회 성공) 시에만 localStorage에 저장한다.
 
 // 보기 비번을 확보한다(대소문자 구분). 저장된 값을 쓰거나, 없으면/forceNew면 입력받는다.
@@ -1008,41 +1010,71 @@ async function renderCaseList() {
       el.innerHTML = '<div class="previewEmpty">🔒 <b>비밀번호가 다르거나</b> 아직 등록된 사례가 없습니다.<br>'
         + '<button class="tiny primary" id="btnCaseRetryPass" style="margin-top:8px">비밀번호 다시 입력</button></div>';
       $('#btnCaseRetryPass')?.addEventListener('click', () => { if (ensureCaseViewCode(true)) renderCaseList(); });
+      const yf = $('#caseYearFilter'); if (yf) yf.innerHTML = '';
       return;
     }
     localStorage.setItem(CASE_VIEW_KEY, caseViewCode);   // 조회 성공 → 검증된 비번으로 저장
     // 같은 모델끼리 모이도록 '모델명' 기준으로 정렬(같은 모델 안에서는 배열 작은 순 → 최신순).
     // 표기가 달라도(MMF015·MM015F 등) 같은 모델로 묶이게 실제 모델명으로 정렬한다.
-    const cur = currentModelArray();
-    const sameModel = c => cur.m && findModelByName(c.model_name)?.id === cur.m.id;
     const modelKey = c => (findModelByName(c.model_name)?.name || c.model_name || 'zzz');
     rows.sort((a, b) =>
       modelKey(a).localeCompare(modelKey(b), 'ko') ||
       (a.cols || 0) - (b.cols || 0) || (a.rows || 0) - (b.rows || 0) ||
       String(b.created_at).localeCompare(String(a.created_at)));
     caseRowsCache = rows;
-    el.innerHTML = rows.map(c => {
-      const match = (sameModel(c) && c.cols === cur.cols && c.rows === cur.rows)
-        ? ' <span class="chk">지금 배열과 일치</span>' : '';
-      // 표기 순서: 모델명 · 캐비넷(열×행) · 건명(설치장소). 건명이 없으면 사례명으로 대체.
-      const modelDisp = esc((findModelByName(c.model_name)?.name) || c.model_name || '—');
-      const arr = `${c.cols || '?'}×${c.rows || '?'}`;
-      const proj = esc(c.site || c.name || '');
-      const title = `${modelDisp} ${arr}${proj ? ` · ${proj}` : ''}`;
-      const resTxt = caseResolution(c).replace(/^ · /, '');
-      const meta = [c.install_date, resTxt, c.memo].filter(Boolean).map(esc).join(' · ') || '&nbsp;';
-      return `<div class="cfgRow" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0">
-        <div style="min-width:0"><div class="mname">${title}${match}</div><div class="hint">${meta}</div></div>
-        <div style="display:flex;gap:6px;flex:0 0 auto">
-          <button class="tiny primary" data-case-load="${esc(String(c.id))}">불러오기</button>
-          <button class="tiny" data-case-edit="${esc(String(c.id))}">수정</button>
-          <button class="tiny ghost" data-case-del="${esc(String(c.id))}">삭제</button>
-        </div>
-      </div>`;
-    }).join('');
+    renderCaseYearChips();
+    renderCaseRows();
   } catch (e) {
     el.innerHTML = `<div class="previewEmpty">설치 사례를 불러오지 못했습니다.<br>(${esc(e.message)})<br>인터넷 연결·보기 비밀번호를 확인하세요.</div>`;
   }
+}
+// 설치일에서 연도(YYYY) 추출. 날짜가 없으면 '미지정'.
+function caseYearOf(c) { const m = /^(\d{4})/.exec(String(c.install_date || '')); return m ? m[1] : '미지정'; }
+// 검색어 일치(건명·장소·모델명·메모·배열). 빈 검색어는 항상 통과.
+function caseMatchesSearch(c, q) {
+  if (!q) return true;
+  const model = findModelByName(c.model_name)?.name || c.model_name || '';
+  return [c.name, c.site, c.memo, model, `${c.cols}×${c.rows}`]
+    .some(x => String(x || '').toLowerCase().includes(q));
+}
+// 연도 필터 칩(전체 + 데이터에 있는 연도, 최신순 + 미지정).
+function renderCaseYearChips() {
+  const el = $('#caseYearFilter'); if (!el) return;
+  const years = [...new Set(caseRowsCache.map(caseYearOf))];
+  const known = years.filter(y => y !== '미지정').sort((a, b) => b.localeCompare(a));
+  const ordered = [...known, ...(years.includes('미지정') ? ['미지정'] : [])];
+  if (caseYear !== 'all' && !ordered.includes(caseYear)) caseYear = 'all';   // 사라진 연도면 전체로
+  const chip = (val, label) => `<button class="tiny ${caseYear === val ? 'primary' : 'ghost'}" data-case-year="${esc(val)}">${esc(label)}</button>`;
+  el.innerHTML = chip('all', '전체') + ordered.map(y => chip(y, y === '미지정' ? '미지정' : y + '년')).join('');
+}
+// 캐시된 사례를 검색·연도로 걸러 목록을 그린다(서버 재조회 없음).
+function renderCaseRows() {
+  const el = $('#caseList'); if (!el) return;
+  const q = caseSearch.trim().toLowerCase();
+  const cur = currentModelArray();
+  const sameModel = c => cur.m && findModelByName(c.model_name)?.id === cur.m.id;
+  const list = caseRowsCache.filter(c =>
+    (caseYear === 'all' || caseYearOf(c) === caseYear) && caseMatchesSearch(c, q));
+  if (!list.length) { el.innerHTML = '<div class="previewEmpty">조건에 맞는 사례가 없습니다.</div>'; return; }
+  el.innerHTML = list.map(c => {
+    const match = (sameModel(c) && c.cols === cur.cols && c.rows === cur.rows)
+      ? ' <span class="chk">지금 배열과 일치</span>' : '';
+    // 표기 순서: 모델명 · 캐비넷(열×행) · 건명(설치장소). 건명이 없으면 사례명으로 대체.
+    const modelDisp = esc((findModelByName(c.model_name)?.name) || c.model_name || '—');
+    const arr = `${c.cols || '?'}×${c.rows || '?'}`;
+    const proj = esc(c.site || c.name || '');
+    const title = `${modelDisp} ${arr}${proj ? ` · ${proj}` : ''}`;
+    const resTxt = caseResolution(c).replace(/^ · /, '');
+    const meta = [c.install_date, resTxt, c.memo].filter(Boolean).map(esc).join(' · ') || '&nbsp;';
+    return `<div class="cfgRow" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0">
+      <div style="min-width:0"><div class="mname">${title}${match}</div><div class="hint">${meta}</div></div>
+      <div style="display:flex;gap:6px;flex:0 0 auto">
+        <button class="tiny primary" data-case-load="${esc(String(c.id))}">불러오기</button>
+        <button class="tiny" data-case-edit="${esc(String(c.id))}">수정</button>
+        <button class="tiny ghost" data-case-del="${esc(String(c.id))}">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 // ── 중복 사례 판정 ──────────────────────────────────────────────
 // 중복 기준: 설치장소 · 모델 · 배열(열×행)이 모두 같으면 중복으로 본다(오너 결정).
@@ -1151,6 +1183,13 @@ $('#casesClose')?.addEventListener('click', () => casesDlg.close());
 $('#casesCancel')?.addEventListener('click', () => casesDlg.close());
 $('#btnCaseRefresh')?.addEventListener('click', renderCaseList);
 $('#btnCaseViewPass')?.addEventListener('click', () => { if (ensureCaseViewCode(true)) renderCaseList(); });
+// 검색어 입력 → 목록만 다시 필터(서버 재조회 없음).
+$('#caseSearch')?.addEventListener('input', e => { caseSearch = e.target.value || ''; renderCaseRows(); });
+// 연도 칩 클릭 → 그 연도로 필터.
+$('#caseYearFilter')?.addEventListener('click', e => {
+  const b = e.target.closest('[data-case-year]'); if (!b) return;
+  caseYear = b.dataset.caseYear; renderCaseYearChips(); renderCaseRows();
+});
 $('#btnCaseAddCurrent')?.addEventListener('click', registerCurrentCase);
 $('#btnCaseBulk')?.addEventListener('click', bulkRegisterCases);
 $('#btnCaseCsv')?.addEventListener('click', () => $('#caseCsvFile')?.click());
