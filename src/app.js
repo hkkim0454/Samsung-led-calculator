@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=115';
-import { MODELS } from './models.js?v=115';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=115';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=115';
-import { parseCasesText, normalizeDate } from './cases.js?v=115';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=116';
+import { MODELS } from './models.js?v=116';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=116';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=116';
+import { parseCasesText, normalizeDate } from './cases.js?v=116';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=115')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=116')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -1007,11 +1007,15 @@ async function renderCaseList() {
       return;
     }
     localStorage.setItem(CASE_VIEW_KEY, caseViewCode);   // 조회 성공 → 검증된 비번으로 저장
-    // 현재 모델·배열과 일치할수록 위로 정렬.
+    // 같은 모델끼리 모이도록 '모델명' 기준으로 정렬(같은 모델 안에서는 배열 작은 순 → 최신순).
+    // 표기가 달라도(MMF015·MM015F 등) 같은 모델로 묶이게 실제 모델명으로 정렬한다.
     const cur = currentModelArray();
     const sameModel = c => cur.m && findModelByName(c.model_name)?.id === cur.m.id;
-    const score = c => (sameModel(c) ? 2 : 0) + (c.cols === cur.cols && c.rows === cur.rows ? 1 : 0);
-    rows.sort((a, b) => score(b) - score(a) || String(b.created_at).localeCompare(String(a.created_at)));
+    const modelKey = c => (findModelByName(c.model_name)?.name || c.model_name || 'zzz');
+    rows.sort((a, b) =>
+      modelKey(a).localeCompare(modelKey(b), 'ko') ||
+      (a.cols || 0) - (b.cols || 0) || (a.rows || 0) - (b.rows || 0) ||
+      String(b.created_at).localeCompare(String(a.created_at)));
     caseRowsCache = rows;
     el.innerHTML = rows.map(c => {
       const match = (sameModel(c) && c.cols === cur.cols && c.rows === cur.rows)
