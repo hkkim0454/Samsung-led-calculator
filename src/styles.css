@@ -442,4 +442,4 @@ body.printing .previewStage{width:640px!important;height:300px!important}
 
 .verTag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:var(--r-pill);background:var(--field-fill);border:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--muted)}
 /* 현재 불러온 구성 이름 배지(상단 도구줄). 버튼 아래 줄로 내려 전체 이름을 보여준다. */
-.cfgTag{flex-basis:100%;white-space:normal;overflow-wrap:anywhere;text-align:right;padding:6px 12px;border-radius:12px;background:var(--accent-tint);color:var(--accent);font-size:12px;font-weight:600;line-height:1.4}
+.cfgTag{flex-basis:100%;white-space:normal;overflow-wrap:anywhere;text-align:left;padding:6px 12px;border-radius:12px;background:var(--accent-tint);color:var(--accent);font-size:12px;font-weight:600;line-height:1.4}
