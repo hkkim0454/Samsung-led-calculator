@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=117';
-import { MODELS } from './models.js?v=117';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=117';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=117';
-import { parseCasesText, normalizeDate } from './cases.js?v=117';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=118';
+import { MODELS } from './models.js?v=118';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=118';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=118';
+import { parseCasesText, normalizeDate } from './cases.js?v=118';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=117')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=118')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -1041,20 +1041,14 @@ async function renderCaseList() {
   }
 }
 // ── 중복 사례 판정 ──────────────────────────────────────────────
-// 사례명이 같거나, (설치장소가 있고) 설치장소·모델·배열이 모두 같으면 중복으로 본다.
+// 중복 기준: 설치장소 · 모델 · 배열(열×행)이 모두 같으면 중복으로 본다(오너 결정).
 // 표기가 달라도(MMF015·MM015F) 같은 모델로 묶이게 실제 모델 id로 비교. 대소문자·앞뒤공백 무시.
-const caseNameKey = c => String(c.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
 const caseModelId = c => String(findModelByName(c.model_name)?.id || c.model_name || '').trim().toLowerCase();
+const caseSiteKey = c => String(c.site || '').trim().toLowerCase();
 function isDupCase(c, existing) {
-  const nk = caseNameKey(c);
-  const site = String(c.site || '').trim().toLowerCase();
-  const model = caseModelId(c), arr = `${c.cols || ''}x${c.rows || ''}`;
-  return (existing || []).some(e => {
-    if (nk && caseNameKey(e) === nk) return true;               // 사례명 동일
-    if (!site) return false;                                     // 장소 없으면 이름으로만 판정
-    return String(e.site || '').trim().toLowerCase() === site
-      && caseModelId(e) === model && `${e.cols || ''}x${e.rows || ''}` === arr;
-  });
+  const site = caseSiteKey(c), model = caseModelId(c), arr = `${c.cols || ''}x${c.rows || ''}`;
+  return (existing || []).some(e =>
+    caseSiteKey(e) === site && caseModelId(e) === model && `${e.cols || ''}x${e.rows || ''}` === arr);
 }
 // 서버의 최신 목록을 가져와 중복 검사에 쓴다(실패하면 화면 캐시로 대체).
 async function existingCasesForDupCheck() {
@@ -1078,7 +1072,7 @@ async function registerCurrentCase() {
   };
   // 중복 검사 — 같은 사례가 이미 있으면 등록하지 않고 팝업으로 알린다.
   if (isDupCase(rec, await existingCasesForDupCheck())) {
-    alert(`이미 같은 설치 사례가 있습니다.\n(사례명이 같거나 · 설치장소·모델·배열이 동일)\n\n중복이라 등록하지 않았습니다.`);
+    alert(`이미 같은 설치 사례가 있습니다.\n(설치장소·모델·배열이 모두 동일)\n\n중복이라 등록하지 않았습니다.`);
     return;
   }
   try { await addCases(admin, [rec]); await renderCaseList(); alert(`'${name}' 사례를 등록했습니다.`); }
