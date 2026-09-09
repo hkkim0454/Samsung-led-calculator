@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=120"/>
+<link rel="stylesheet" href="./styles.css?v=121"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -40,7 +40,7 @@
     <div class="toolbar">
       <button class="ghost" id="btnConfigSave">구성 저장</button>
       <button class="ghost" id="btnConfigLoad">구성 불러오기</button>
-      <button class="ghost" id="btnSharedLib">공유함</button>
+      <button class="ghost" id="btnSharedLib">설계 프로젝트</button>
       <button class="ghost" id="btnCases">설치 사례</button>
       <button class="ghost" onclick="window.print()">인쇄 / PDF</button>
       <span class="tbBreak" aria-hidden="true"></span>
@@ -163,7 +163,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v120</span>
+        <span class="verTag">화면 버전 v121</span>
       </div>
     </div>
   </div>
@@ -211,9 +211,9 @@
 </dialog>
 
 <dialog id="sharedDlg">
-  <div class="dlgHead"><h3>회사 공유함</h3><button class="tiny ghost" id="sharedClose">닫기</button></div>
+  <div class="dlgHead"><h3>설계 프로젝트</h3><button class="tiny ghost" id="sharedClose">닫기</button></div>
   <div class="dlgBody">
-    <div class="hint"><b>회사 공유 구성 목록</b>입니다(공유함 비밀번호 필요). 비번을 아는 직원이 접속하면 보입니다. <b>불러오기</b>로 화면에 적용, <b>현재 구성 올리기</b>로 지금 화면 설정을 공유합니다. (가격표는 공유되지 않습니다.)</div>
+    <div class="hint"><b>회사 공용 설계 프로젝트 목록</b>입니다(설계 프로젝트 비밀번호 필요). 비번을 아는 직원이 접속하면 보입니다. <b>불러오기</b>로 화면에 적용, <b>현재 구성 올리기</b>로 지금 화면 설정을 공유합니다. (가격표는 공유되지 않습니다.)</div>
     <div id="sharedList" style="margin-top:12px"></div>
   </div>
   <div class="dlgFoot">
@@ -252,6 +252,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=120"></script>
+<script type="module" src="./app.js?v=121"></script>
 </body>
 </html>
