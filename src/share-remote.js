@@ -101,3 +101,20 @@ export async function deleteCase(adminCode, id, viewCode) {
   if (!Array.isArray(rows) || rows.length === 0) throw new Error('삭제되지 않았습니다. 등록(관리자) 비밀번호가 맞는지 확인하세요.');
   return true;
 }
+
+// 설치 사례 수정(등록 비번 필요, id 기준). patch: 바꿀 필드만 담은 객체.
+//   삭제와 같은 이유로 return=representation + 보기 비번을 함께 보내, 비번이 틀려 RLS가 조용히
+//   0건 처리한 경우를 감지한다(0건이면 예외). 반환: 수정된 레코드.
+export async function updateCase(adminCode, id, patch, viewCode) {
+  const f = api(); if (!f) throw new Error('fetch 사용 불가');
+  const res = await f(`${SUPABASE_URL}/rest/v1/${CASES}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: caseHeaders({ admin: adminCode, view: viewCode }, { 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+    body: JSON.stringify(patch || {}),
+  });
+  if (res.status === 401 || res.status === 403) throw new Error('등록(관리자) 비밀번호가 틀렸거나 권한이 없습니다.');
+  if (!res.ok) throw new Error(`수정 실패 (HTTP ${res.status})`);
+  const rows = await res.json().catch(() => []);
+  if (!Array.isArray(rows) || rows.length === 0) throw new Error('수정되지 않았습니다. 등록(관리자) 비밀번호가 맞는지 확인하세요.');
+  return rows[0];
+}
