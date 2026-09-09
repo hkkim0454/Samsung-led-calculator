@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=111';
-import { MODELS } from './models.js?v=111';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=111';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase } from './share-remote.js?v=111';
-import { parseCasesText, normalizeDate } from './cases.js?v=111';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=112';
+import { MODELS } from './models.js?v=112';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=112';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase } from './share-remote.js?v=112';
+import { parseCasesText, normalizeDate } from './cases.js?v=112';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=111')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=112')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -929,11 +929,14 @@ $('#sharedList')?.addEventListener('click', async e => {
 const CASE_VIEW_KEY = 'svtled_case_view';
 const CASE_ADMIN_KEY = 'svtled_case_admin';
 let caseRowsCache = [];
+let caseViewCode = '';   // 현재 세션 보기 비번. 검증(사례 조회 성공) 시에만 localStorage에 저장한다.
 
-function getCaseViewCode(forceNew) {
-  let c = forceNew ? '' : (localStorage.getItem(CASE_VIEW_KEY) || '');
-  if (!c) { c = (prompt('설치 사례 보기 비밀번호를 입력하세요:', '') || '').trim(); if (c) localStorage.setItem(CASE_VIEW_KEY, c); }
-  return c;
+// 보기 비번을 확보한다(대소문자 구분). 저장된 값을 쓰거나, 없으면/forceNew면 입력받는다.
+// 저장은 여기서 하지 않고, renderCaseList가 조회에 성공(사례 1건 이상)했을 때만 저장한다.
+function ensureCaseViewCode(forceNew) {
+  if (!forceNew && !caseViewCode) caseViewCode = localStorage.getItem(CASE_VIEW_KEY) || '';
+  if (forceNew || !caseViewCode) caseViewCode = (prompt('설치 사례 보기 비밀번호를 입력하세요 (대소문자 구분):', '') || '').trim();
+  return caseViewCode;
 }
 function getCaseAdminCode(forceNew) {
   let c = forceNew ? '' : (localStorage.getItem(CASE_ADMIN_KEY) || '');
@@ -968,7 +971,7 @@ function caseToConfig(c) {
 
 const casesDlg = $('#casesDlg');
 async function openCases() {
-  if (!getCaseViewCode()) return;
+  if (!ensureCaseViewCode()) return;
   casesDlg?.showModal();
   await renderCaseList();
 }
@@ -976,17 +979,23 @@ async function renderCaseList() {
   const el = $('#caseList'); if (!el) return;
   el.innerHTML = '<div class="previewEmpty">불러오는 중…</div>';
   try {
-    const rows = await listCases(localStorage.getItem(CASE_VIEW_KEY) || '');
+    const rows = await listCases(caseViewCode);
+    if (!rows.length) {
+      // 비었거나 비번 틀림 → 저장하지 않고(틀린 비번을 기억하지 않도록) 다시 입력 유도.
+      localStorage.removeItem(CASE_VIEW_KEY);
+      caseRowsCache = [];
+      el.innerHTML = '<div class="previewEmpty">🔒 <b>비밀번호가 다르거나</b> 아직 등록된 사례가 없습니다.<br>'
+        + '<button class="tiny primary" id="btnCaseRetryPass" style="margin-top:8px">비밀번호 다시 입력</button></div>';
+      $('#btnCaseRetryPass')?.addEventListener('click', () => { if (ensureCaseViewCode(true)) renderCaseList(); });
+      return;
+    }
+    localStorage.setItem(CASE_VIEW_KEY, caseViewCode);   // 조회 성공 → 검증된 비번으로 저장
     // 현재 모델·배열과 일치할수록 위로 정렬.
     const cur = currentModelArray();
     const sameModel = c => cur.m && findModelByName(c.model_name)?.id === cur.m.id;
     const score = c => (sameModel(c) ? 2 : 0) + (c.cols === cur.cols && c.rows === cur.rows ? 1 : 0);
     rows.sort((a, b) => score(b) - score(a) || String(b.created_at).localeCompare(String(a.created_at)));
     caseRowsCache = rows;
-    if (!rows.length) {
-      el.innerHTML = '<div class="previewEmpty">등록된 설치 사례가 없거나 보기 비밀번호가 다릅니다.<br>아래 <b>사례 등록</b>으로 추가하거나, <b>보기 비번 변경</b>으로 다시 입력해 보세요.</div>';
-      return;
-    }
     el.innerHTML = rows.map(c => {
       const match = (sameModel(c) && c.cols === cur.cols && c.rows === cur.rows)
         ? ' <span class="chk">지금 배열과 일치</span>' : '';
@@ -1062,7 +1071,7 @@ $('#btnCases')?.addEventListener('click', openCases);
 $('#casesClose')?.addEventListener('click', () => casesDlg.close());
 $('#casesCancel')?.addEventListener('click', () => casesDlg.close());
 $('#btnCaseRefresh')?.addEventListener('click', renderCaseList);
-$('#btnCaseViewPass')?.addEventListener('click', () => { getCaseViewCode(true); renderCaseList(); });
+$('#btnCaseViewPass')?.addEventListener('click', () => { if (ensureCaseViewCode(true)) renderCaseList(); });
 $('#btnCaseAddCurrent')?.addEventListener('click', registerCurrentCase);
 $('#btnCaseBulk')?.addEventListener('click', bulkRegisterCases);
 $('#btnCaseCsv')?.addEventListener('click', () => $('#caseCsvFile')?.click());
@@ -1080,7 +1089,7 @@ $('#caseList')?.addEventListener('click', async e => {
     if (!c) return;
     const admin = getCaseAdminCode(); if (!admin) return;
     if (!confirm(`설치 사례 '${c.name}'을(를) 삭제할까요? (모든 직원에게서 사라집니다)`)) return;
-    try { await deleteCase(admin, c.id, localStorage.getItem(CASE_VIEW_KEY) || ''); await renderCaseList(); }
+    try { await deleteCase(admin, c.id, caseViewCode); await renderCaseList(); }
     catch (err) { localStorage.removeItem(CASE_ADMIN_KEY); alert('삭제하지 못했습니다.\n' + err.message + '\n\n(등록 비밀번호를 다시 입력받겠습니다.)'); }
   }
 });
