@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=141';
-import { MODELS } from './models.js?v=141';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=141';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=141';
-import { parseCasesText, normalizeDate } from './cases.js?v=141';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=142';
+import { MODELS } from './models.js?v=142';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=142';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=142';
+import { parseCasesText, normalizeDate } from './cases.js?v=142';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=141')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=142')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -404,8 +404,9 @@ function renderPreview() {
 
   // dimension pills
   const pill = (cls, txt, css) => { const d = document.createElement('div'); d.className = 'pvPill ' + cls; d.textContent = txt; d.style.cssText = css; scene.appendChild(d); };
-  pill('big', meters(r.actualW), `left:${offX + arW / 2}px;top:-30px;transform:translateX(-50%)`);
-  pill('big vert', meters(r.actualH), `top:${offY + arH / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  // LED 크기(가로·세로)는 캐비닛에 바짝 붙여 표기(가로=LED 위, 세로=LED 오른쪽). 벽·여백 치수는 바깥쪽.
+  pill('big', meters(r.actualW), `left:${offX + arW / 2}px;top:${offY - 6}px;transform:translate(-50%,-100%)`);
+  pill('big vert', meters(r.actualH), `top:${offY + arH / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
   // 여백 알약은 화면상 실제로 보이는 간격이 있을 때만 표시(간격≈0이면 치수 알약과 겹치므로 생략).
   // 여백 수치는 04 산출 스펙의 '여백' 안내에도 표기됨.  방 모드(하단 높이)에선 세로 여백은 밴드로 대체.
   const GAP_MIN = 16; // px
