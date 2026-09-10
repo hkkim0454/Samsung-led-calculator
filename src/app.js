@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=149';
-import { MODELS } from './models.js?v=149';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=149';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=149';
-import { parseCasesText, normalizeDate } from './cases.js?v=149';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=150';
+import { MODELS } from './models.js?v=150';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=150';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=150';
+import { parseCasesText, normalizeDate } from './cases.js?v=150';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=149')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=150')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -409,8 +409,8 @@ function renderPreview() {
   if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   if (!fitsBase && r.marginH > 1 && botGap > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY + arH + botGap / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   // 방 모드(하단 높이): 위 공간·하단 높이를 LED 오른쪽에 세로 치수로 표기(캐비닛 크기 옆, 위→LED→하단 세로 열).
-  if (fitsBase && offY > GAP_MIN) pill('sm vert', `위 ${fmt(Math.round(topGapMM))}mm`, `top:${offY / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
-  if (fitsBase && botGap > GAP_MIN) pill('sm vert', `하단 ${fmt(Math.round(baseH))}mm`, `top:${offY + arH + botGap / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
+  if (fitsBase && offY > GAP_MIN) pill('sm vert', `${fmt(Math.round(topGapMM))}mm`, `top:${offY / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
+  if (fitsBase && botGap > GAP_MIN) pill('sm vert', `${fmt(Math.round(baseH))}mm`, `top:${offY + arH + botGap / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
   // 캐비닛 수: 방 모드(하단 높이 밴드)에선 밴드 라벨과 겹치므로 LED 안쪽 하단에 얹고,
   //   그 외에는 예전처럼 LED 아래에 표기한다.
   if (fitsBase) pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX + arW / 2}px;top:${offY + arH - 8}px;transform:translate(-50%,-100%)`);
