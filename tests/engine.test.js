@@ -57,12 +57,12 @@ test('baseHeight가 너무 크면(남는 세로 < 캐비닛 1개) 안 들어간�
   assert.equal(r.rows, 0);
 });
 
-test('구조틀 여백: 시리즈별 각 변 mm (IFR·IFR-M·IEA 30 · MPF 50)', () => {
+test('구조틀 여백: 시리즈별 각 변 mm (IFR·IFR-M·IEA 30 · MMF·MPF 50)', () => {
   assert.equal(frameClearanceMm('IF'), 30);
   assert.equal(frameClearanceMm('IFM'), 30);
   assert.equal(frameClearanceMm('IE'), 30);
   assert.equal(frameClearanceMm('MP'), 50);
-  assert.equal(frameClearanceMm('MM'), 30);   // MMF (오너 확인 2026-09-10)
+  assert.equal(frameClearanceMm('MM'), 50);   // MMF (오너 확인 2026-09-10)
 });
 
 test('자동 채움은 구조틀 여백을 빼고 캐비닛 수를 계산한다', () => {
