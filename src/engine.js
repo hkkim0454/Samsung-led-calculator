@@ -34,9 +34,8 @@ export const DEFAULTS = Object.freeze({
 // 예비 캐비닛 비율(시리즈별, 올림): IFR·IEA·MMF 5% · MPF 7% (오너 지침 2026-08-19, IFR/IEA 5%로 재조정).
 export const SPARE_RATES = Object.freeze({ IF: 0.05, IFM: 0.05, IE: 0.05, MM: 0.05, MP: 0.07 });
 
-// LED 구조틀 여백(좌우상하 각 변, mm): IFR·IFR-M·IEA 30mm · MPF 50mm (오너 지침 2026-09-10).
+// LED 구조틀 여백(좌우상하 각 변, mm): IFR·IFR-M·IEA·MMF 30mm · MPF 50mm (오너 확인 2026-09-10).
 //   구조물을 세울 때 필요한 가장자리 여유. 자동 채움 시 이 값을 빼고 캐비닛 수를 계산한다.
-//   MMF(MM)는 아직 미지정 — 잠정 30mm(오너 확인 필요).
 export const FRAME_CLEARANCE = Object.freeze({ IF: 30, IFM: 30, IE: 30, MM: 30, MP: 50 });
 /** 시리즈별 구조틀 여백(각 변 mm). 미등록 시리즈는 30mm. */
 export function frameClearanceMm(series) {

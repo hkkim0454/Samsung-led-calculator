@@ -263,7 +263,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
   box-shadow:none;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .pvPill.vert{writing-mode:vertical-rl}
 .pvPill.count{background:var(--accent);color:#fff;box-shadow:0 3px 10px -2px var(--accent)}
-.pvFigure{position:absolute;left:18px;bottom:24px;aspect-ratio:40/100;opacity:.26;pointer-events:none}
+.pvFigure{position:absolute;left:18px;bottom:24px;aspect-ratio:62/170;opacity:.3;pointer-events:none}
 .pvFigure svg{height:100%;width:auto;display:block;fill:var(--ink)}
 
 /* ---- Readout metrics (grouped list) ---- */

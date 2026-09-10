@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=130';
-import { MODELS } from './models.js?v=130';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=130';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=130';
-import { parseCasesText, normalizeDate } from './cases.js?v=130';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=131';
+import { MODELS } from './models.js?v=131';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=131';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=131';
+import { parseCasesText, normalizeDate } from './cases.js?v=131';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=130')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=131')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -281,12 +281,19 @@ function renderPreview() {
   const sceneTop = (stage.clientHeight - contentPxH) / 2;
   const floorY = sceneTop + spH;   // 공간(벽) 바닥 = 사람이 서는 바닥 레벨
 
-  // human silhouette (~1.7 m) for scale — 바닥 레벨 위에 서게 배치.
+  // 사람 실루엣(한국 성인 남성 평균 키 ≈ 170cm) — 바닥 레벨 위에 서게 배치. viewBox 세로=170 → 1.7m.
   const figH = Math.max(46, Math.min(spH * 1.02, 1700 * scale));
   const fig = document.createElement('div');
   fig.className = 'pvFigure'; fig.style.height = figH + 'px';
   fig.style.bottom = 'auto'; fig.style.top = (floorY - figH) + 'px';
-  fig.innerHTML = '<svg viewBox="0 0 40 100" preserveAspectRatio="xMidYMax meet"><circle cx="20" cy="13" r="11"/><rect x="5" y="27" width="30" height="73" rx="15"/></svg>';
+  fig.innerHTML = '<svg viewBox="0 0 62 170" preserveAspectRatio="xMidYMax meet">'
+    + '<circle cx="31" cy="12" r="11.5"/>'                       // 머리
+    + '<path d="M19,32 Q31,25 43,32 L40,92 Q31,98 22,92 Z"/>'     // 어깨~몸통~허리
+    + '<rect x="15" y="32" width="7" height="54" rx="3.5"/>'     // 왼팔
+    + '<rect x="40" y="32" width="7" height="54" rx="3.5"/>'     // 오른팔
+    + '<rect x="22.5" y="90" width="8" height="80" rx="4"/>'     // 왼다리
+    + '<rect x="31.5" y="90" width="8" height="80" rx="4"/>'     // 오른다리
+    + '</svg>';
   stage.appendChild(fig);
 
   // installation space (white bezel/frame), LED wall centered inside.
