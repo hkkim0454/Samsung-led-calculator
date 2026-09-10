@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=164';
-import { MODELS } from './models.js?v=164';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=164';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=164';
-import { parseCasesText, normalizeDate } from './cases.js?v=164';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=165';
+import { MODELS } from './models.js?v=165';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=165';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=165';
+import { parseCasesText, normalizeDate } from './cases.js?v=165';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=164')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=165')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -269,14 +269,17 @@ function renderPreview() {
   let colN = ''; if (r.cols <= 30) for (let c = 0; c < r.cols; c++) colN += `<span>${c + 1}</span>`;
   let rowN = ''; if (r.rows <= 20) for (let ri = 0; ri < r.rows; ri++) rowN += `<span>${ri + 1}</span>`;
 
-  // 신호 오버레이(패널 기준 %)
+  // 신호 오버레이(FHD/UHD): LED(패널) 좌상단을 기준으로 '실제 신호 크기'로 그린다.
+  //   신호 영역이 LED보다 크면 LED를 넘어 벽 공간까지 확장돼 보인다(벽 안에서 잘림). 벽 % 좌표로 계산.
   let sigHTML = '';
+  const panelTopW = 100 - pb - ph;   // 패널 상단(벽 상단 기준 %)
   for (const L of sigLayers) {
     const nC = Math.ceil(r.resW / L.bw), nR = Math.ceil(r.resH / L.bh);
-    const tw = L.bw / r.resW * 100, th = L.bh / r.resH * 100;
+    const twW = (L.bw / r.resW) * pw;   // 타일 가로(벽 %)
+    const thW = (L.bh / r.resH) * ph;   // 타일 세로(벽 %)
     for (let rr = 0; rr < nR; rr++) for (let cc = 0; cc < nC; cc++) {
       const tag = (cc === 0 && rr === 0) ? `<span class="rsSigTag">${L.label}</span>` : '';
-      sigHTML += `<div class="rsSig ${L.cls}" style="left:${cc * tw}%;top:${rr * th}%;width:${tw}%;height:${th}%">${tag}</div>`;
+      sigHTML += `<div class="rsSig ${L.cls}" style="left:${pl + cc * twW}%;top:${panelTopW + rr * thW}%;width:${twW}%;height:${thW}%">${tag}</div>`;
     }
   }
 
@@ -310,9 +313,9 @@ function renderPreview() {
       <div class="rsFigLbl" style="left:2.2%;bottom:3%">키 170 cm</div>
       <div class="rsPanel" style="left:${pl}%;width:${pw}%;bottom:${pb}%;height:${ph}%">
         <div class="rsGrid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr)">${cells}</div>
-        ${sigHTML}
         <div class="rsGlow"></div><div class="rsHi"></div>
       </div>
+      <div class="rsSigWrap">${sigHTML}</div>
       <div class="rsColN" style="left:${pl}%;width:${pw}%;top:0;height:${topGap}%;grid-template-columns:repeat(${r.cols},1fr)">${colN}</div>
       <div class="rsRowN" style="left:${rowNL}%;width:2.6%;bottom:${pb}%;height:${ph}%;grid-template-rows:repeat(${r.rows},1fr)">${rowN}</div>
       <div class="rsDim" style="left:${pl}%;width:${pw}%;top:-1%;transform:translateY(-100%)"><div class="ln"></div><span class="tx">${mmL(r.actualW)}</span><div class="ln"></div></div>
@@ -1052,7 +1055,9 @@ function caseToConfig(c) {
   //   기존에 저장된 벽이 더 크면 그대로 둔다(max).
   const clr = m ? frameClearanceMm(m.series) : 30;
   cfg.baseHeight = CASE_BASE_HEIGHT;
-  if (m && cols) cfg.spaceW = Math.max(num(cfg.spaceW), Math.round(cols * m.cabW + 2 * clr + 2 * EDGE_MARGIN));
+  // 가로 캐비닛이 6을 넘는 넓은 배열은 벽을 좌우 1.5m씩 넉넉히 잡아 불러온다(그 외엔 기본 가장자리 여유).
+  const sideMar = cols > 6 ? 1500 : EDGE_MARGIN;
+  if (m && cols) cfg.spaceW = Math.max(num(cfg.spaceW), Math.round(cols * m.cabW + 2 * clr + 2 * sideMar));
   if (m && rows) cfg.spaceH = Math.max(num(cfg.spaceH), Math.round(CASE_BASE_HEIGHT + rows * m.cabH + 2 * clr + 2 * EDGE_MARGIN));
   if (m) { cfg.selectedId = m.id; cfg.selectedModel = { ...m }; }
   return cfg;
