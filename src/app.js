@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=162';
-import { MODELS } from './models.js?v=162';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=162';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=162';
-import { parseCasesText, normalizeDate } from './cases.js?v=162';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=163';
+import { MODELS } from './models.js?v=163';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=163';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=163';
+import { parseCasesText, normalizeDate } from './cases.js?v=163';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=162')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=163')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -515,12 +515,24 @@ function renderAll() { ensureSelectionVisible(); clampManualArray(); syncCS4B();
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
 //   (그 위로는 캐비닛을 더 쌓을 수 없으므로) 입력값을 그 한계로 제한하고 max 속성도 맞춘다.
-function clampLedInputs() {
+// LED 크기 입력칸의 max 속성만 갱신(값은 절대 건드리지 않음).
+//   벽면·하단 높이를 편집할 때 이걸 쓴다 → LED 세로가 편집 중 0으로 눌러붙던 버그 방지.
+function setLedMax() {
   const maxW = Math.max(0, num($('#spaceW').value));
   const maxH = Math.max(0, num($('#spaceH').value) - num($('#baseHeight').value));
   const wEl = $('#ledW'), hEl = $('#ledH');
-  if (wEl) { wEl.max = maxW; if (num(wEl.value) > maxW) wEl.value = maxW; }
-  if (hEl) { hEl.max = maxH; if (num(hEl.value) > maxH) hEl.value = maxH; }
+  if (wEl) wEl.max = maxW;
+  if (hEl) hEl.max = maxH;
+}
+// LED 크기를 '직접' 입력할 때만 벽면 한계로 값을 제한한다.
+//   maxH가 0(하단 높이 ≥ 벽 세로)일 땐 값을 0으로 만들지 않는다(=0은 '벽면 전체 채움' 뜻이라 혼동 방지).
+function clampLedInputs() {
+  setLedMax();
+  const maxW = Math.max(0, num($('#spaceW').value));
+  const maxH = Math.max(0, num($('#spaceH').value) - num($('#baseHeight').value));
+  const wEl = $('#ledW'), hEl = $('#ledH');
+  if (wEl && maxW > 0 && num(wEl.value) > maxW) wEl.value = maxW;
+  if (hEl && maxH > 0 && num(hEl.value) > maxH) hEl.value = maxH;
 }
 // 배열 직접 지정에서 벽면(설치 공간)을 넘는 캐비닛은 자동으로 잘라낸다(넘치는 열·행 삭제).
 //   최대 = 자동 채움(벽면−하단높이, 구조틀 여백 반영)의 열·행. 그 이하로 입력값을 제한하고 max도 맞춘다.
@@ -532,8 +544,12 @@ function clampManualArray() {
   if (cEl && fit.cols > 0) { cEl.max = fit.cols; if (num(cEl.value) > fit.cols) cEl.value = fit.cols; }
   if (rEl && fit.rows > 0) { rEl.max = fit.rows; if (num(rEl.value) > fit.rows) rEl.value = fit.rows; }
 }
-['spaceW', 'spaceH', 'sboxSpare', 'baseHeight', 'ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', () => { clampLedInputs(); renderAll(); }));
-clampLedInputs();   // 초기 max 속성 설정
+// 벽면·하단 높이 편집: LED 입력칸의 max만 갱신하고 값은 보존(편집 중 LED 세로가 0으로 눌러붙지 않게).
+['spaceW', 'spaceH', 'baseHeight'].forEach(id => $('#' + id)?.addEventListener('input', () => { setLedMax(); renderAll(); }));
+// LED 크기 직접 입력: 벽면 한계로 값 제한.
+['ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', () => { clampLedInputs(); renderAll(); }));
+$('#sboxSpare')?.addEventListener('input', renderAll);
+setLedMax();   // 초기 max 속성 설정
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
 // 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).
 ['manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', () => {
@@ -731,6 +747,7 @@ function applyConfig(raw) {
   $('#ledBox').hidden = mode === 'manual';
   $('#ledSizeLabel').hidden = mode === 'manual';
   $('#signalMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sig === signalMode));
+  setLedMax();   // 불러온 값 기준으로 LED 입력칸 max 갱신(값은 보존)
   renderAll();
 }
 
