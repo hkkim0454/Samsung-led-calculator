@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=128';
-import { MODELS } from './models.js?v=128';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=128';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=128';
-import { parseCasesText, normalizeDate } from './cases.js?v=128';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=129';
+import { MODELS } from './models.js?v=129';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=129';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=129';
+import { parseCasesText, normalizeDate } from './cases.js?v=129';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=128')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=129')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -67,7 +67,7 @@ const pickDefaultId = list => (list.find(m => m.id === DEFAULT_MODEL_ID)?.id) ??
 
 let models = defaultModels();
 let selectedId = pickDefaultId(models);
-let mode = 'fill';
+let mode = 'ledsize';   // 기본 = 자동 채움(LED 설치 크기, 비우면 벽면). 'manual' = 배열 직접 지정.
 let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
 // 사용자가 직접 선택한 CS4B 여부(비-MMF 모델용). MMF는 항상 CS4B 필수이므로 체크박스를 강제한다.
@@ -189,11 +189,13 @@ function opts() {
   const gbicFB = $('#gbicFB')?.checked ?? false;
   const spareRate = spareRateOpt();
   const sboxSpares = sboxSparesOpt();
-  const baseHeight = num($('#baseHeight')?.value);   // 바닥에서 LED 아래까지(mm) — 자동 채움 시 rows 축소
+  const baseHeight = num($('#baseHeight')?.value);   // 바닥에서 LED 아래까지(mm)
   const common = { redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight };
   if (mode === 'manual') return { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), ...common };
-  if (mode === 'ledsize') return { mode: 'ledsize', ledW: num($('#ledW')?.value), ledH: num($('#ledH')?.value), ...common };
-  return { mode: 'fill', ...common };
+  // 자동 채움: ② LED 설치 크기(비우면 벽면 = 세로는 하단 높이 위)에 캐비닛을 채운다.
+  const lw = num($('#ledW')?.value) || num($('#spaceW').value);
+  const lh = num($('#ledH')?.value) || Math.max(0, num($('#spaceH').value) - baseHeight);
+  return { mode: 'ledsize', ledW: lw, ledH: lh, ...common };
 }
 
 function renderModelList() {
@@ -612,16 +614,8 @@ $('#fitMode').addEventListener('click', e => {
   const b = e.target.closest('button[data-mode]'); if (!b) return;
   mode = b.dataset.mode;
   $('#fitMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  $('#manualBox').hidden = false;   // 화면(Screen) 배열은 항상 표시 — 자동/LED크기 모드에선 계산값을 보여준다.
-  $('#ledBox').hidden = mode !== 'ledsize';
-  const m = models.find(x => x.id === selectedId);
-  // '배열 직접 지정'으로 바꿀 때는 지금 화면에 보이던 열·행(직전 모드의 계산 결과)을 그대로 쓴다 → 덮어쓰지 않음.
-  // 'LED 크기 지정' 첫 진입 시, 현재 자동 채움 LED 크기를 기본값으로 채워 시작점을 준다.
-  if (mode === 'ledsize' && m && !(num($('#ledW').value) > 0) && !(num($('#ledH').value) > 0)) {
-    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
-    if (r.actualW > 0) $('#ledW').value = Math.round(r.actualW);
-    if (r.actualH > 0) $('#ledH').value = Math.round(r.actualH);
-  }
+  // 열·행(배열 직접 지정) 칸은 '배열 직접 지정'일 때만 표시. LED 설치 크기(②)는 항상 표시.
+  $('#manualBox').hidden = mode !== 'manual';
   renderAll();
 });
 $('#modelList').addEventListener('click', e => {
@@ -763,15 +757,14 @@ function applyConfig(raw) {
   $('#useCS4B').checked = c.cs4b;
   userCS4B = c.cs4b;
   spareEdited = c.spareEdited;
-  mode = c.mode;
+  mode = (c.mode === 'fill') ? 'ledsize' : c.mode;   // 옛 '자동 채움(벽면)'은 '자동 채움(LED 크기, 비우면 벽면)'으로
   signalMode = c.signalMode;
   if (Array.isArray(c.visibleLines)) visibleLines = new Set(c.visibleLines);
   if (Array.isArray(c.indirectDisabled)) indirectDisabled = new Set(c.indirectDisabled);
   if (c.selectedId && models.some(m => m.id === c.selectedId)) selectedId = c.selectedId;
   spareModelId = selectedId; // 모델 전환 자동복귀가 복원된 예비율을 지우지 않도록 맞춰둔다.
   $('#fitMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
-  $('#manualBox').hidden = false;
-  $('#ledBox').hidden = mode !== 'ledsize';
+  $('#manualBox').hidden = mode !== 'manual';
   $('#signalMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sig === signalMode));
   renderAll();
 }
