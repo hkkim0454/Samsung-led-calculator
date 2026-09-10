@@ -250,8 +250,11 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* ==== 방 공간감 스테이지 (Claude 디자인 반영, rs*) — 항상 라이트(물리 공간 다이어그램) ==== */
 @keyframes rsBreathe{0%,100%{opacity:.55}50%{opacity:.9}}
 .rsFrame{position:relative;width:100%;padding:8.5% 9.5%;box-sizing:border-box;
+  color-scheme:light;   /* 방 다이어그램은 다크모드/브라우저 자동 어둡게에서도 원래(밝은) 색 고정 → 캐비닛 경계선 유지 */
   background:linear-gradient(170deg,#FBFBFD 0%,#EFEFF4 100%);border:1px solid rgba(16,18,40,.06);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+/* 일부 브라우저(자동 어둡게)가 색을 임의로 바꾸지 않도록, 방 스테이지 하위 요소는 밝은 색상 스킴을 강제. */
+.rsFrame, .rsFrame *{ color-scheme:light; forced-color-adjust:none; }
 .rsPersp{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .rsWall{position:relative;width:100%;background:linear-gradient(180deg,#FFFFFF 0%,#FDFDFE 72%,#F6F6FA 100%);
   border:1px solid rgba(16,18,40,.10);box-shadow:0 18px 40px -28px rgba(16,18,40,.35)}
