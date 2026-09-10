@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=131';
-import { MODELS } from './models.js?v=131';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=131';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=131';
-import { parseCasesText, normalizeDate } from './cases.js?v=131';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=132';
+import { MODELS } from './models.js?v=132';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=132';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=132';
+import { parseCasesText, normalizeDate } from './cases.js?v=132';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=131')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=132')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -354,6 +354,27 @@ function renderPreview() {
     }
     scene.appendChild(ov);
   }
+
+  // ── 치수 보조선(대시): LED·벽면 가장자리 연장선 + 상단/우측 치수선 (삼성 configurator 스타일) ──
+  const dcol = 'rgba(128,128,128,.5)';
+  const dline = (x1, y1, x2, y2) => {
+    const horiz = Math.abs(y1 - y2) < 0.5;
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;left:${Math.min(x1, x2)}px;top:${Math.min(y1, y2)}px;`
+      + (horiz ? `width:${Math.abs(x2 - x1)}px;height:0;border-top:1px dashed ${dcol}`
+               : `height:${Math.abs(y2 - y1)}px;width:0;border-left:1px dashed ${dcol}`)
+      + ';pointer-events:none';
+    scene.appendChild(d);
+  };
+  const topGuide = -16, rightGuide = spW + 8;
+  // 가로(위): 상단 치수선 + 벽/LED 좌우 가장자리 연장선
+  dline(0, topGuide, spW, topGuide);
+  dline(0, topGuide, 0, 0); dline(spW, topGuide, spW, 0);
+  dline(offX, topGuide, offX, offY); dline(offX + arW, topGuide, offX + arW, offY);
+  // 세로(우): 우측 치수선 + 벽/LED 상하 가장자리 연장선
+  dline(rightGuide, 0, rightGuide, spH);
+  dline(spW, 0, rightGuide, 0); dline(spW, spH, rightGuide, spH);
+  dline(offX + arW, offY, rightGuide, offY); dline(offX + arW, offY + arH, rightGuide, offY + arH);
 
   // dimension pills
   const pill = (cls, txt, css) => { const d = document.createElement('div'); d.className = 'pvPill ' + cls; d.textContent = txt; d.style.cssText = css; scene.appendChild(d); };
