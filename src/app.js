@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=134';
-import { MODELS } from './models.js?v=134';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=134';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=134';
-import { parseCasesText, normalizeDate } from './cases.js?v=134';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=135';
+import { MODELS } from './models.js?v=135';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=135';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=135';
+import { parseCasesText, normalizeDate } from './cases.js?v=135';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=134')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=135')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -280,6 +280,23 @@ function renderPreview() {
   const sceneLeft = (stage.clientWidth - contentPxW) / 2;
   const sceneTop = (stage.clientHeight - contentPxH) / 2;
   const floorY = sceneTop + spH;   // 공간(벽) 바닥 = 사람이 서는 바닥 레벨
+
+  // 방 컨텍스트(1단계): 벽면(scene)을 '뒷벽'으로 두고 바닥·천장·양옆 벽을 원근으로 그린다(SVG, 뒤에 깔림).
+  //   앞쪽(스테이지 가장자리)에서 뒷벽(scene) 모서리로 이어지는 1점 투시. LED·사람 외 다른 장비는 없음.
+  {
+    const SW = stage.clientWidth, SH = stage.clientHeight;
+    const bl = sceneLeft, bt = sceneTop, br = sceneLeft + spW, bb = floorY;   // 뒷벽 좌/상/우/하
+    const rb = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    rb.setAttribute('width', SW); rb.setAttribute('height', SH);
+    rb.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none';
+    const poly = (pts, fill) => `<polygon points="${pts}" fill="${fill}" stroke="rgba(128,128,128,.22)" stroke-width="1"/>`;
+    rb.innerHTML =
+      poly(`0,0 ${SW},0 ${br},${bt} ${bl},${bt}`, 'rgba(130,140,160,.05)') +        // 천장
+      poly(`0,${SH} ${SW},${SH} ${br},${bb} ${bl},${bb}`, 'rgba(130,140,160,.12)') + // 바닥
+      poly(`0,0 ${bl},${bt} ${bl},${bb} 0,${SH}`, 'rgba(130,140,160,.08)') +        // 좌벽
+      poly(`${SW},0 ${br},${bt} ${br},${bb} ${SW},${SH}`, 'rgba(130,140,160,.08)'); // 우벽
+    stage.appendChild(rb);
+  }
 
   // 사람 실루엣(한국 성인 남성 평균 키 ≈ 170cm) — 바닥 레벨 위에 서게 배치. viewBox 세로=170 → 1.7m.
   const figH = Math.max(46, Math.min(spH * 1.02, 1700 * scale));
