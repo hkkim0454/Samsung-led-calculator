@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM } from '../src/engine.js';
+import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -55,6 +55,20 @@ test('baseHeight가 너무 크면(남는 세로 < 캐비닛 1개) 안 들어간�
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'fill', baseHeight: 3200 });
   assert.equal(r.fits, false);
   assert.equal(r.rows, 0);
+});
+
+test('구조틀 여백: 시리즈별 각 변 mm (IFR·IFR-M·IEA 30 · MPF 50)', () => {
+  assert.equal(frameClearanceMm('IF'), 30);
+  assert.equal(frameClearanceMm('IFM'), 30);
+  assert.equal(frameClearanceMm('IE'), 30);
+  assert.equal(frameClearanceMm('MP'), 50);
+  assert.equal(frameClearanceMm('MM'), 30);   // 잠정(오너 확인 필요)
+});
+
+test('자동 채움은 구조틀 여백을 빼고 캐비닛 수를 계산한다', () => {
+  // MP012F cabW=806.4 · 구조틀 50mm. 폭 1650 → 여백 없으면 2열, 좌우 50씩 빼면 (1650-100)/806.4=1열.
+  assert.equal(fitCabinets(MP012F, 1650, 5000, { mode: 'fill' }).cols, 1);
+  assert.equal(fitCabinets(MP012F, 1650, 5000, { mode: 'fill', edgeClearanceMm: 0 }).cols, 2);  // 여백 0 강제 시
 });
 
 test('수동 배열에서는 baseHeight가 행 수를 바꾸지 않는다', () => {
