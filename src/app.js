@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=133';
-import { MODELS } from './models.js?v=133';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=133';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=133';
-import { parseCasesText, normalizeDate } from './cases.js?v=133';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=134';
+import { MODELS } from './models.js?v=134';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=134';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=134';
+import { parseCasesText, normalizeDate } from './cases.js?v=134';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=133')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=134')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -600,7 +600,17 @@ function renderQuote() {
 function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
-['spaceW', 'spaceH', 'sboxSpare', 'baseHeight', 'ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', renderAll));
+// LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
+//   (그 위로는 캐비닛을 더 쌓을 수 없으므로) 입력값을 그 한계로 제한하고 max 속성도 맞춘다.
+function clampLedInputs() {
+  const maxW = Math.max(0, num($('#spaceW').value));
+  const maxH = Math.max(0, num($('#spaceH').value) - num($('#baseHeight').value));
+  const wEl = $('#ledW'), hEl = $('#ledH');
+  if (wEl) { wEl.max = maxW; if (num(wEl.value) > maxW) wEl.value = maxW; }
+  if (hEl) { hEl.max = maxH; if (num(hEl.value) > maxH) hEl.value = maxH; }
+}
+['spaceW', 'spaceH', 'sboxSpare', 'baseHeight', 'ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', () => { clampLedInputs(); renderAll(); }));
+clampLedInputs();   // 초기 max 속성 설정
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
 // 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).
 ['manCols', 'manRows'].forEach(id => $('#' + id).addEventListener('input', () => {
