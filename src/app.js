@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=138';
-import { MODELS } from './models.js?v=138';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=138';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=138';
-import { parseCasesText, normalizeDate } from './cases.js?v=138';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=139';
+import { MODELS } from './models.js?v=139';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=139';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=139';
+import { parseCasesText, normalizeDate } from './cases.js?v=139';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=138')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=139')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -619,7 +619,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -630,6 +630,16 @@ function clampLedInputs() {
   const wEl = $('#ledW'), hEl = $('#ledH');
   if (wEl) { wEl.max = maxW; if (num(wEl.value) > maxW) wEl.value = maxW; }
   if (hEl) { hEl.max = maxH; if (num(hEl.value) > maxH) hEl.value = maxH; }
+}
+// 배열 직접 지정에서 벽면(설치 공간)을 넘는 캐비닛은 자동으로 잘라낸다(넘치는 열·행 삭제).
+//   최대 = 자동 채움(벽면−하단높이, 구조틀 여백 반영)의 열·행. 그 이하로 입력값을 제한하고 max도 맞춘다.
+function clampManualArray() {
+  if (mode !== 'manual') return;
+  const m = models.find(x => x.id === selectedId); if (!m) return;
+  const fit = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
+  const cEl = $('#manCols'), rEl = $('#manRows');
+  if (cEl && fit.cols > 0) { cEl.max = fit.cols; if (num(cEl.value) > fit.cols) cEl.value = fit.cols; }
+  if (rEl && fit.rows > 0) { rEl.max = fit.rows; if (num(rEl.value) > fit.rows) rEl.value = fit.rows; }
 }
 ['spaceW', 'spaceH', 'sboxSpare', 'baseHeight', 'ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', () => { clampLedInputs(); renderAll(); }));
 clampLedInputs();   // 초기 max 속성 설정
