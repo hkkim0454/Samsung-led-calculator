@@ -289,6 +289,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rsDim.mar .tx{font-size:10.5px;font-weight:600;color:#8A8A98}
 .rsRegion{position:absolute;border-left:1px dashed rgba(16,18,40,.18);display:flex;align-items:center;justify-content:center;pointer-events:none}
 .rsRegion .tx{font-size:10.5px;font-weight:600;color:#6E6E7C;background:rgba(255,255,255,.9);padding:1px 6px;border-radius:6px;white-space:nowrap}
+.rsSigWrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}  /* 신호 틀은 벽 안에서만(LED 넘어 확장, 벽 밖은 잘림) */
 .rsSig{position:absolute;box-sizing:border-box;border:1px solid rgba(20,160,255,.9);pointer-events:none;z-index:3}
 .rsSig.uhd{border-color:rgba(255,59,48,.9)}
 .rsSigTag{position:absolute;top:0;left:0;font-size:8.5px;font-weight:700;color:#fff;background:rgba(20,160,255,.92);padding:0 3px;border-radius:0 0 4px 0}
