@@ -270,6 +270,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
   box-shadow:0 22px 44px -18px rgba(10,20,60,.55),0 0 0 1px rgba(16,18,40,.4),inset 0 0 0 1px rgba(255,255,255,.06)}
 .rsGrid{position:absolute;inset:0;display:grid;gap:1.5px;background:rgba(255,255,255,.22)}
 .rsGrid>i{background:linear-gradient(155deg,#33333C 0%,#26262E 55%,#1F1F26 100%)}
+/* 다크모드(OS 다크·브라우저 자동 어둡게)에선 패널이 더 어두워져 캐비닛 경계선이 묻히므로 더 밝고 두껍게. */
+@media (prefers-color-scheme: dark){ .rsGrid{gap:2px;background:rgba(255,255,255,.55)} }
 .rsGlow{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%, rgba(10,132,255,.20) 0%, rgba(10,132,255,0) 60%);animation:rsBreathe 6s ease-in-out infinite;pointer-events:none}
 .rsHi{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,0) 38%);pointer-events:none}
 .rsColN{position:absolute;display:grid;align-items:center;font-size:9.5px;font-weight:600;color:#9A9AA8;text-align:center;pointer-events:none}
