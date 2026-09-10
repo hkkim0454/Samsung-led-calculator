@@ -250,11 +250,11 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* ==== 방 공간감 스테이지 (Claude 디자인 반영, rs*) — 항상 라이트(물리 공간 다이어그램) ==== */
 @keyframes rsBreathe{0%,100%{opacity:.55}50%{opacity:.9}}
 .rsFrame{position:relative;width:100%;padding:8.5% 9.5%;box-sizing:border-box;
-  color-scheme:light;   /* 방 다이어그램은 다크모드/브라우저 자동 어둡게에서도 원래(밝은) 색 고정 → 캐비닛 경계선 유지 */
+  color-scheme:light dark;   /* 라이트·다크 팔레트를 직접 정의(아래 @media). 브라우저 자동 어둡게가 임의로 뭉개지 않게 함 */
   background:linear-gradient(170deg,#FBFBFD 0%,#EFEFF4 100%);border:1px solid rgba(16,18,40,.06);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
 /* 일부 브라우저(자동 어둡게)가 색을 임의로 바꾸지 않도록, 방 스테이지 하위 요소는 밝은 색상 스킴을 강제. */
-.rsFrame, .rsFrame *{ color-scheme:light; forced-color-adjust:none; }
+.rsFrame, .rsFrame *{ color-scheme:light dark; forced-color-adjust:none; }
 .rsPersp{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .rsWall{position:relative;width:100%;background:linear-gradient(180deg,#FFFFFF 0%,#FDFDFE 72%,#F6F6FA 100%);
   border:1px solid rgba(16,18,40,.05);box-shadow:0 18px 40px -28px rgba(16,18,40,.35)}
@@ -293,6 +293,25 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rsSig.uhd{border-color:rgba(255,59,48,.9)}
 .rsSigTag{position:absolute;top:0;left:0;font-size:8.5px;font-weight:700;color:#fff;background:rgba(20,160,255,.92);padding:0 3px;border-radius:0 0 4px 0}
 .rsSig.uhd .rsSigTag{background:rgba(255,59,48,.92)}
+
+/* ── 다크모드 입체 팔레트: 뒷벽(밝은 어둠) > 프레임(어둠) > 패널(가장 어둠) 층으로 깊이감. 원근선·글씨 밝게. ── */
+@media (prefers-color-scheme: dark){
+  .rsFrame{background:linear-gradient(170deg,#20232b 0%,#14161b 100%);border-color:rgba(255,255,255,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .rsPersp g{stroke:rgba(210,216,230,.16)}
+  .rsWall{background:linear-gradient(180deg,#30343f 0%,#282c36 72%,#20232c 100%);border-color:rgba(255,255,255,.08);box-shadow:0 20px 44px -26px rgba(0,0,0,.7)}
+  .rsPanel{background:#0d0e12;box-shadow:0 22px 44px -18px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.05)}
+  .rsGrid>i{background:linear-gradient(155deg,#2a2b34 0%,#1e1f27 55%,#15161c 100%)}
+  .rsDim .tx{color:#E6E8EF}
+  .rsDim.out .tx{color:#AEB2C0}
+  .rsDim.mar .tx{color:#8A90A2}
+  .rsDim .ln,.rsDim.out .ln,.rsDim.mar .ln{background:rgba(255,255,255,.20)}
+  .rsColN{color:#B8BCC8} .rsRowN{color:#B8BCC8}
+  .rsRegion{border-left-color:rgba(255,255,255,.16)}
+  .rsRegion .tx{color:#C6CAD6;background:rgba(20,22,28,.92)}
+  .rsGuideLbl{background:rgba(20,22,28,.92)}
+  .rsFigLbl{color:#9AA0B0}
+  .rsFig .h{background:#565b6b} .rsFig .b{background:#4b505f} .rsFig .l{background:#414654}
+}
 
 /* Samsung-configurator style preview */
 /* 설치 공간(선언한 벽면). 얇은 회색 윤곽 + 은은한 그림자 — FHD(파랑) 신호와 색이 겹치지 않게 */
