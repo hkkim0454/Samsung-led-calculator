@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=142';
-import { MODELS } from './models.js?v=142';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=142';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=142';
-import { parseCasesText, normalizeDate } from './cases.js?v=142';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=143';
+import { MODELS } from './models.js?v=143';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=143';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=143';
+import { parseCasesText, normalizeDate } from './cases.js?v=143';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=142')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=143')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -418,7 +418,10 @@ function renderPreview() {
   const botGap = spH - offY - arH;
   if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   if (!fitsBase && r.marginH > 1 && botGap > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY + arH + botGap / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
-  pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
+  // 캐비닛 수: 방 모드(하단 높이 밴드)에선 밴드 라벨과 겹치므로 LED 안쪽 하단에 얹고,
+  //   그 외에는 예전처럼 LED 아래에 표기한다.
+  if (fitsBase) pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX + arW / 2}px;top:${offY + arH - 8}px;transform:translate(-50%,-100%)`);
+  else pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
   // 벽면(외곽) 전체 크기: LED 치수 바깥쪽에 벽 세로(우측)·가로(하단)를 항상 표시.
   const wallHX = compact ? spW + 30 : spW + 40;
   pill('sm vert', meters(sH), `top:${spH / 2}px;left:${wallHX}px;transform:translateY(-50%)`);
