@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=137';
-import { MODELS } from './models.js?v=137';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=137';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=137';
-import { parseCasesText, normalizeDate } from './cases.js?v=137';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=138';
+import { MODELS } from './models.js?v=138';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=138';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=138';
+import { parseCasesText, normalizeDate } from './cases.js?v=138';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=137')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=138')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -259,9 +259,9 @@ function renderPreview() {
     sigFootW = Math.max(sigFootW, L.footW); sigFootH = Math.max(sigFootH, L.footH);
   }
 
-  // 좁은 화면(모바일 세로)에서는 방 원근·가이드선·치수선·밴드를 생략해 겹침을 막고 LED에 공간을 더 준다.
+  // 좁은 화면(모바일 세로)에서는 겹치던 텍스트 라벨(눈높이·밴드·치수선)만 생략한다. 방 원근은 유지.
   const compact = stage.clientWidth < 480;
-  const padX = compact ? 34 : 82, padY = compact ? 30 : 54;
+  const padX = compact ? 48 : 82, padY = compact ? 38 : 54;
   const stageW = Math.max(140, stage.clientWidth - padX * 2), stageH = Math.max(140, stage.clientHeight - padY * 2);
   // 콘텐츠 박스 = 공간 ∪ 신호 발자국(벽 좌상단에서 시작). 이 박스를 스테이지에 맞춰 축소.
   const contentW = Math.max(sW, r.marginW + sigFootW), contentH = Math.max(sH, r.marginH + sigFootH);
@@ -285,7 +285,8 @@ function renderPreview() {
 
   // 방 컨텍스트(1단계): 벽면(scene)을 '뒷벽'으로 두고 바닥·천장·양옆 벽을 원근으로 그린다(SVG, 뒤에 깔림).
   //   앞쪽(스테이지 가장자리)에서 뒷벽(scene) 모서리로 이어지는 1점 투시. LED·사람 외 다른 장비는 없음.
-  if (!compact) {
+  //   방 원근은 좁은 화면에서도 유지(겹침의 원인은 텍스트 라벨이라 그쪽만 compact에서 생략).
+  {
     const SW = stage.clientWidth, SH = stage.clientHeight;
     const bl = sceneLeft, bt = sceneTop, br = sceneLeft + spW, bb = floorY;   // 뒷벽 좌/상/우/하
     const rb = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
