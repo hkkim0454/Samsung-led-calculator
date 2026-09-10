@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=135"/>
+<link rel="stylesheet" href="./styles.css?v=136"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -57,8 +57,8 @@
           <label class="field"><span class="lab">가로 W (mm)</span><input type="number" id="spaceW" value="8000" min="500" step="500"/></label>
           <label class="field"><span class="lab">세로 H (mm)</span><input type="number" id="spaceH" value="3200" min="500" step="500"/></label>
         </div>
-        <div class="lab" style="margin:10px 0 4px">② LED 설치 크기 — 가로 × 세로 (mm)</div>
-        <div class="two" id="ledBox">
+        <div class="lab" id="ledSizeLabel" style="margin:10px 0 4px" hidden>② LED 설치 크기 — 가로 × 세로 (mm)</div>
+        <div class="two" id="ledBox" hidden>
           <label class="field"><span class="lab">LED 가로 (mm)</span><input type="number" id="ledW" value="0" min="0" step="100"/></label>
           <label class="field"><span class="lab">LED 세로 (mm)</span><input type="number" id="ledH" value="0" min="0" step="100"/></label>
         </div>
@@ -71,14 +71,14 @@
         <label class="field">
           <span class="lab">③ 배열 방식</span>
           <div class="seg" id="fitMode">
-            <button data-mode="ledsize" class="on">자동 채움</button>
-            <button data-mode="manual">배열 직접 지정</button>
+            <button data-mode="ledsize">자동 채움</button>
+            <button data-mode="manual" class="on">배열 직접 지정</button>
           </div>
           <div class="hint"><b>자동 채움</b> = ② LED 설치 크기(비우면 벽면)에 캐비닛을 최대로 채워 배열을 산출. <b>배열 직접 지정</b> = 가로(열)·세로(행)를 직접 입력(벽면은 그대로, 여백은 미리보기에 표시).</div>
         </label>
-        <div class="two" id="manualBox" hidden>
-          <label class="field"><span class="lab">가로 (열, Columns)</span><input type="number" id="manCols" value="0" min="0"/></label>
-          <label class="field"><span class="lab">세로 (행, Rows)</span><input type="number" id="manRows" value="0" min="0"/></label>
+        <div class="two" id="manualBox">
+          <label class="field"><span class="lab">가로 (열, Columns)</span><input type="number" id="manCols" value="4" min="0"/></label>
+          <label class="field"><span class="lab">세로 (행, Rows)</span><input type="number" id="manRows" value="4" min="0"/></label>
         </div>
         <label class="checkline">
           <input type="checkbox" id="redundancy"/>
@@ -175,7 +175,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v135</span>
+        <span class="verTag">화면 버전 v136</span>
       </div>
     </div>
   </div>
@@ -269,6 +269,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=135"></script>
+<script type="module" src="./app.js?v=136"></script>
 </body>
 </html>
