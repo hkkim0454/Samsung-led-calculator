@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=154';
-import { MODELS } from './models.js?v=154';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=154';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=154';
-import { parseCasesText, normalizeDate } from './cases.js?v=154';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=155';
+import { MODELS } from './models.js?v=155';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=155';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=155';
+import { parseCasesText, normalizeDate } from './cases.js?v=155';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=154')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=155')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -303,7 +303,7 @@ function renderPreview() {
     : '';
 
   stage.innerHTML = `<div class="rsFrame">
-    <svg class="rsPersp" viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="rgba(16,18,40,.13)" stroke-width="1" vector-effect="non-scaling-stroke"><line x1="0" y1="0" x2="9.5" y2="16.53"/><line x1="100" y1="0" x2="90.5" y2="16.53"/><line x1="0" y1="100" x2="9.5" y2="83.47"/><line x1="100" y1="100" x2="90.5" y2="83.47"/></g></svg>
+    <svg class="rsPersp" viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="rgba(16,18,40,.06)" stroke-width="1" vector-effect="non-scaling-stroke"><line x1="0" y1="0" x2="9.5" y2="16.53"/><line x1="100" y1="0" x2="90.5" y2="16.53"/><line x1="0" y1="100" x2="9.5" y2="83.47"/><line x1="100" y1="100" x2="90.5" y2="83.47"/></g></svg>
     <div class="rsWall" style="aspect-ratio:${sW} / ${sH}">
       ${guides}
       <div class="rsFig" style="left:14.5%;bottom:0;width:${personW}%;height:${personH}%"><div class="h"></div><div class="b"></div><div class="l"></div></div>
