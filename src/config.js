@@ -12,7 +12,7 @@ export const CONFIG_VERSION = 1;
 // 항목이 없을 때 채우는 기본값(초기 화면 상태와 동일한 성격의 값).
 export const CONFIG_DEFAULTS = Object.freeze({
   spaceW: 8000,
-  spaceH: 3200,
+  spaceH: 3400,
   baseHeight: 1000,      // 바닥에서 LED 아래까지(mm)
   ledW: 0,               // 'LED 크기 지정' 모드의 LED 가로(mm)
   ledH: 0,               // 'LED 크기 지정' 모드의 LED 세로(mm)
