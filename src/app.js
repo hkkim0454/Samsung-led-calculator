@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=147';
-import { MODELS } from './models.js?v=147';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=147';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=147';
-import { parseCasesText, normalizeDate } from './cases.js?v=147';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=148';
+import { MODELS } from './models.js?v=148';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=148';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=148';
+import { parseCasesText, normalizeDate } from './cases.js?v=148';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=147')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=148')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -67,7 +67,7 @@ const pickDefaultId = list => (list.find(m => m.id === DEFAULT_MODEL_ID)?.id) ??
 
 let models = defaultModels();
 let selectedId = pickDefaultId(models);
-let mode = 'manual';   // 기본 = 배열 직접 지정(4×4). 'ledsize' = 자동 채움(LED 설치 크기, 비우면 벽면).
+let mode = 'ledsize';  // 기본 = 자동 채움(LED 설치 크기, 비우면 벽면). 'manual' = 배열 직접 지정.
 let editingId = null;
 let signalMode = 'off'; // 'off' | 'fhd' | 'uhd' — signal-region overlay on the preview
 // 사용자가 직접 선택한 CS4B 여부(비-MMF 모델용). MMF는 항상 CS4B 필수이므로 체크박스를 강제한다.
