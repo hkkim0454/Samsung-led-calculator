@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=150';
-import { MODELS } from './models.js?v=150';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=150';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=150';
-import { parseCasesText, normalizeDate } from './cases.js?v=150';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=151';
+import { MODELS } from './models.js?v=151';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=151';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=151';
+import { parseCasesText, normalizeDate } from './cases.js?v=151';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=150')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=151')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -244,199 +244,85 @@ function renderPreview() {
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
-  // 신호 레이어: HD=HD만, UHD=UHD만, 둘다(both)=HD+UHD 동시. HD=파랑 / UHD=빨강.
-  // 각 신호 영역은 '풀 크기'(HD 1920x1080 / UHD 3840x2160)로 그려 벽보다 크면 밖으로 확장된다.
+  // 신호 레이어(FHD/UHD): 패널 위에 신호 영역 타일을 겹쳐 표시. HD=파랑 / UHD=빨강.
   const sigLayers = [];
   if (signalMode !== 'off' && r.resW > 0 && r.resH > 0) {
     if (signalMode === 'fhd' || signalMode === 'both') sigLayers.push({ bw: 1920, bh: 1080, label: 'FHD', cls: 'fhd' });
     if (signalMode === 'uhd' || signalMode === 'both') sigLayers.push({ bw: 3840, bh: 2160, label: 'UHD', cls: 'uhd' });
   }
-  let sigFootW = 0, sigFootH = 0; // 그려질 신호 발자국의 최대(스케일 기준)
-  for (const L of sigLayers) {
-    L.nC = Math.ceil(r.resW / L.bw); L.nR = Math.ceil(r.resH / L.bh);
-    L.footW = L.nC * L.bw / r.resW * r.actualW; // px→mm(벽 기준)
-    L.footH = L.nR * L.bh / r.resH * r.actualH;
-    sigFootW = Math.max(sigFootW, L.footW); sigFootH = Math.max(sigFootH, L.footH);
-  }
 
-  // 좁은 화면(모바일 세로)에서는 겹치던 텍스트 라벨(눈높이·밴드·치수선)만 생략한다. 방 원근은 유지.
-  const compact = stage.clientWidth < 480;
-  const padX = compact ? 48 : 82, padY = compact ? 38 : 54;
-  const stageW = Math.max(140, stage.clientWidth - padX * 2), stageH = Math.max(140, stage.clientHeight - padY * 2);
-  // 콘텐츠 박스 = 공간 ∪ 신호 발자국(벽 좌상단에서 시작). 이 박스를 스테이지에 맞춰 축소.
-  const contentW = Math.max(sW, r.marginW + sigFootW), contentH = Math.max(sH, r.marginH + sigFootH);
-  const scale = Math.min(stageW / contentW, stageH / contentH);
-  const spW = sW * scale, spH = sH * scale, arW = r.actualW * scale, arH = r.actualH * scale;
-  const offX = r.marginW * scale;
-  // 하단 높이(바닥에서 LED 아래까지)가 지정되고 공간 안에 들어가면, LED를 바닥에서 baseH 띄워 배치(방처럼).
+  // ── 방 공간감 스테이지(Claude 디자인 반영): 벽(실측 비율) 안에 LED 패널·치수·사람·눈높이를 % 배치 ──
+  //   모든 치수는 mm 단위로 통일. 값은 실측(가로=mm/sW, 세로=mm/sH)에서 유도된 %.
   const baseH = num($('#baseHeight').value);
   const fitsBase = baseH > 0 && (baseH + r.actualH) <= sH + 1;
-  const topGapMM = fitsBase ? (sH - baseH - r.actualH) : 0;
-  const offY = fitsBase ? topGapMM * scale : r.marginH * scale;
-  const meters = mm => (mm / 1000).toLocaleString('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m';
+  const mount = fitsBase ? baseH : Math.max(0, (sH - r.actualH) / 2);   // 바닥에서 LED 아래까지(mm)
+  const pl = r.marginW / sW * 100, pw = r.actualW / sW * 100;           // 패널 좌·폭 %
+  const pb = mount / sH * 100, ph = r.actualH / sH * 100;               // 패널 하단·높이 %
+  const topGap = Math.max(0, 100 - pb - ph);                           // 위 남는 공간 %
+  const topGapMM = Math.round(sH - mount - r.actualH);
+  const personH = Math.min(100, 1700 / sH * 100), personW = Math.min(12, 25600 / sW);  // 사람 1.7m(실측)
+  const rowNL = Math.max(0, pl - 3.6);
+  const mmL = v => fmt(Math.round(v)) + 'mm';
 
-  stage.innerHTML = '';
+  // 캐비닛 셀 / 열·행 번호(번호는 패널 바깥: 위=열, 왼쪽=행)
+  let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
+  let colN = ''; if (r.cols <= 30) for (let c = 0; c < r.cols; c++) colN += `<span>${c + 1}</span>`;
+  let rowN = ''; if (r.rows <= 20) for (let ri = 0; ri < r.rows; ri++) rowN += `<span>${ri + 1}</span>`;
 
-  // 콘텐츠 박스(공간 ∪ 신호 발자국)를 스테이지 중앙에 배치. 공간(벽)의 바닥 레벨을 먼저 구한다.
-  const contentPxW = contentW * scale, contentPxH = contentH * scale;
-  const sceneLeft = (stage.clientWidth - contentPxW) / 2;
-  const sceneTop = (stage.clientHeight - contentPxH) / 2;
-  const floorY = sceneTop + spH;   // 공간(벽) 바닥 = 사람이 서는 바닥 레벨
-
-  // 방 컨텍스트(1단계): 벽면(scene)을 '뒷벽'으로 두고 바닥·천장·양옆 벽을 원근으로 그린다(SVG, 뒤에 깔림).
-  //   앞쪽(스테이지 가장자리)에서 뒷벽(scene) 모서리로 이어지는 1점 투시. LED·사람 외 다른 장비는 없음.
-  //   방 원근은 좁은 화면에서도 유지(겹침의 원인은 텍스트 라벨이라 그쪽만 compact에서 생략).
-  {
-    const SW = stage.clientWidth, SH = stage.clientHeight;
-    const bl = sceneLeft, bt = sceneTop, br = sceneLeft + spW, bb = floorY;   // 뒷벽 좌/상/우/하
-    const rb = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    rb.setAttribute('width', SW); rb.setAttribute('height', SH);
-    rb.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none';
-    const poly = (pts, fill) => `<polygon points="${pts}" fill="${fill}" stroke="rgba(128,128,128,.22)" stroke-width="1"/>`;
-    rb.innerHTML =
-      poly(`0,0 ${SW},0 ${br},${bt} ${bl},${bt}`, 'rgba(130,140,160,.05)') +        // 천장
-      poly(`0,${SH} ${SW},${SH} ${br},${bb} ${bl},${bb}`, 'rgba(130,140,160,.12)') + // 바닥
-      poly(`0,0 ${bl},${bt} ${bl},${bb} 0,${SH}`, 'rgba(130,140,160,.08)') +        // 좌벽
-      poly(`${SW},0 ${br},${bt} ${br},${bb} ${SW},${SH}`, 'rgba(130,140,160,.08)'); // 우벽
-    stage.appendChild(rb);
-  }
-
-  // 사람 실루엣(한국 성인 남성 평균 키 ≈ 170cm) — 바닥 레벨 위에 서게 배치. viewBox 세로=170 → 1.7m.
-  const figH = Math.max(46, Math.min(spH * 1.02, 1700 * scale));
-  const fig = document.createElement('div');
-  fig.className = 'pvFigure'; fig.style.height = figH + 'px';
-  fig.style.bottom = 'auto'; fig.style.top = (floorY - figH) + 'px';
-  fig.innerHTML = '<svg viewBox="0 0 62 170" preserveAspectRatio="xMidYMax meet">'
-    + '<circle cx="31" cy="12" r="11.5"/>'                       // 머리
-    + '<path d="M19,32 Q31,25 43,32 L40,92 Q31,98 22,92 Z"/>'     // 어깨~몸통~허리
-    + '<rect x="15" y="32" width="7" height="54" rx="3.5"/>'     // 왼팔
-    + '<rect x="40" y="32" width="7" height="54" rx="3.5"/>'     // 오른팔
-    + '<rect x="22.5" y="90" width="8" height="80" rx="4"/>'     // 왼다리
-    + '<rect x="31.5" y="90" width="8" height="80" rx="4"/>'     // 오른다리
-    + '</svg>';
-  stage.appendChild(fig);
-  // 사람 키 표기(한국 성인 남성 평균 ≈ 170cm) — 실루엣 머리 위 중앙에 작은 라벨.
-  const figW = figH * 62 / 170;
-  const figLabel = document.createElement('div');
-  figLabel.className = 'pvFigLabel';
-  figLabel.textContent = '키 170 cm';
-  figLabel.style.cssText = `left:${18 + figW / 2}px;top:${Math.max(2, floorY - figH - 16)}px;transform:translateX(-50%)`;
-  stage.appendChild(figLabel);
-
-  // installation space (white bezel/frame), LED wall centered inside.
-  const scene = document.createElement('div');
-  scene.className = 'pvScene'; scene.style.width = spW + 'px'; scene.style.height = spH + 'px';
-  scene.style.transform = 'none';
-  scene.style.left = sceneLeft + 'px';
-  scene.style.top = sceneTop + 'px';
-  const wall = document.createElement('div');
-  wall.className = 'pvWall';
-  wall.style.left = offX + 'px'; wall.style.top = offY + 'px';
-  wall.style.width = arW + 'px'; wall.style.height = arH + 'px';
-  // minmax(0,1fr): 셀 내용(번호 라벨)이 트랙을 밀어 벽 높이를 넘겨 마지막 줄이 잘리던 문제 방지.
-  wall.style.gridTemplateColumns = `repeat(${r.cols},minmax(0,1fr))`;
-  wall.style.gridTemplateRows = `repeat(${r.rows},minmax(0,1fr))`;
-  const cellW = arW / r.cols, cellH = arH / r.rows;
-  const showNums = r.cols <= 30 && r.rows <= 20 && cellW >= 14 && cellH >= 13;
-  const drawCells = Math.min(r.total, 2000);
-  for (let i = 0; i < drawCells; i++) {
-    const ci = i % r.cols, ri = (i / r.cols) | 0;
-    const c = document.createElement('div'); c.className = 'pvCab';
-    if (showNums && (ri === 0 || ci === 0)) c.textContent = ri === 0 ? (ci + 1) : (ri + 1);
-    wall.appendChild(c);
-  }
-  scene.appendChild(wall);
-
-  // 방 컨텍스트(하단 높이): 위 공간·하단 높이는 예전처럼 박스(밴드)로 채우지 않고,
-  //   LED 오른쪽에 세로 치수(위 → LED 세로 → 하단)로 표기한다. → 아래 dimension pills 참고.
-
-  // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 각 영역(타일)마다 좌상단에 라벨(HD/UHD).
-  // HD를 먼저, UHD를 위에 얹어(둘다 모드에서 겹치는 좌상단은 UHD가 위에 보이게).
+  // 신호 오버레이(패널 기준 %)
+  let sigHTML = '';
   for (const L of sigLayers) {
-    const cbw = arW * L.bw / r.resW, cbh = arH * L.bh / r.resH;
-    // 둘다 모드에선 HD 라벨 생략(UHD만). 영역이 많으면(>4) 라벨을 첫 칸에만 — 'HD'가 화면을 가득 채우는 것 방지.
-    const showLabel = !(signalMode === 'both' && L.cls === 'fhd');
-    const perTile = L.nC * L.nR <= 4;
-    const ov = document.createElement('div');
-    ov.className = 'pvSignal ' + L.cls;
-    ov.style.cssText = `left:${offX}px;top:${offY}px`;
-    for (let rr = 0; rr < L.nR; rr++) for (let cc = 0; cc < L.nC; cc++) {
-      const blk = document.createElement('div'); blk.className = 'pvSig';
-      blk.style.cssText = `left:${cc * cbw}px;top:${rr * cbh}px;width:${cbw}px;height:${cbh}px`;
-      if (showLabel && (perTile || (cc === 0 && rr === 0))) blk.innerHTML = `<span class="pvSigTag">${L.label}</span>`;
-      ov.appendChild(blk);
+    const nC = Math.ceil(r.resW / L.bw), nR = Math.ceil(r.resH / L.bh);
+    const tw = L.bw / r.resW * 100, th = L.bh / r.resH * 100;
+    for (let rr = 0; rr < nR; rr++) for (let cc = 0; cc < nC; cc++) {
+      const tag = (cc === 0 && rr === 0) ? `<span class="rsSigTag">${L.label}</span>` : '';
+      sigHTML += `<div class="rsSig ${L.cls}" style="left:${cc * tw}%;top:${rr * th}%;width:${tw}%;height:${th}%">${tag}</div>`;
     }
-    scene.appendChild(ov);
   }
 
-  // ── 치수 보조선(대시): LED·벽면 가장자리 연장선 + 상단/우측 치수선 (삼성 configurator 스타일) ──
-  const dcol = 'rgba(128,128,128,.5)';
-  const dline = (x1, y1, x2, y2) => {
-    const horiz = Math.abs(y1 - y2) < 0.5;
-    const d = document.createElement('div');
-    d.style.cssText = `position:absolute;left:${Math.min(x1, x2)}px;top:${Math.min(y1, y2)}px;`
-      + (horiz ? `width:${Math.abs(x2 - x1)}px;height:0;border-top:1px dashed ${dcol}`
-               : `height:${Math.abs(y2 - y1)}px;width:0;border-left:1px dashed ${dcol}`)
-      + ';pointer-events:none';
-    scene.appendChild(d);
-  };
-  const topGuide = -16;
-  if (!compact) {
-    // 좌우 여백(2.080m 등): 벽 가장자리~LED 가장자리 구간만 위쪽 보조선으로 표시(LED 위·오른쪽은 그리지 않음).
-    //   LED 치수(가로·세로)는 캐비닛에 바짝 붙어 있으므로 멀리 뻗던 연장선은 없앤다.
-    if (offX > 16) { dline(0, topGuide, offX, topGuide); dline(0, topGuide, 0, 0); dline(offX, topGuide, offX, offY); }
-    if (spW - offX - arW > 16) { dline(offX + arW, topGuide, spW, topGuide); dline(offX + arW, topGuide, offX + arW, offY); dline(spW, topGuide, spW, 0); }
-    // 벽면(외곽) 전체 크기: 오른쪽(세로 3.400m)·아래쪽(가로 8.000m) 치수 보조선만 유지.
-    const wallR = spW + 34, wallB = spH + 18;
-    dline(spW, 0, wallR, 0); dline(spW, spH, wallR, spH); dline(wallR, 0, wallR, spH);
-    dline(0, spH, 0, wallB); dline(spW, spH, spW, wallB); dline(0, wallB, spW, wallB);
+  // 눈높이 가이드(방 모드에서만): 앉은 1,200mm / 선 1,600mm
+  let guides = '';
+  if (fitsBase) {
+    for (const g of [{ mm: 1600, label: '선 눈높이 1,600mm', col: 'rgba(10,132,255,.45)', lc: '#3D8BE8' }, { mm: 1200, label: '앉은 눈높이 1,200mm', col: 'rgba(10,132,255,.35)', lc: '#7FB0EA' }]) {
+      if (g.mm > sH) continue;
+      const b = g.mm / sH * 100;
+      guides += `<div class="rsGuide" style="bottom:${b}%;border-top:1px dashed ${g.col}"></div>`
+        + `<div class="rsGuideLbl" style="left:3%;bottom:${b}%;color:${g.lc}">${g.label}</div>`;
+    }
   }
 
-  // dimension pills
-  const pill = (cls, txt, css) => { const d = document.createElement('div'); d.className = 'pvPill ' + cls; d.textContent = txt; d.style.cssText = css; scene.appendChild(d); };
-  // LED 크기(가로·세로)는 캐비닛에 바짝 붙여 표기(가로=LED 위, 세로=LED 오른쪽). 벽·여백 치수는 바깥쪽.
-  pill('big', meters(r.actualW), `left:${offX + arW / 2}px;top:${offY - 6}px;transform:translate(-50%,-100%)`);
-  pill('big vert', meters(r.actualH), `top:${offY + arH / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
-  // 여백 알약은 화면상 실제로 보이는 간격이 있을 때만 표시(간격≈0이면 치수 알약과 겹치므로 생략).
-  // 여백 수치는 04 산출 스펙의 '여백' 안내에도 표기됨.  방 모드(하단 높이)에선 세로 여백은 밴드로 대체.
-  const GAP_MIN = 16; // px
-  // 좌우 여백(공간감): LED가 벽면보다 좁으면 양쪽 여백을 위쪽에 함께 표시.
-  const rightGap = spW - offX - arW;
-  if (r.marginW > 1 && offX > GAP_MIN) pill('sm', meters(r.marginW), `left:${offX / 2}px;top:-26px;transform:translateX(-50%)`);
-  if (r.marginW > 1 && rightGap > GAP_MIN) pill('sm', meters(r.marginW), `left:${offX + arW + rightGap / 2}px;top:-26px;transform:translateX(-50%)`);
-  // 위/아래 여백: 방 모드(하단 높이)에선 밴드로 표시하므로 여기선 생략. 그 외엔 위·아래 대칭 표시.
-  const botGap = spH - offY - arH;
-  if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
-  if (!fitsBase && r.marginH > 1 && botGap > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY + arH + botGap / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
-  // 방 모드(하단 높이): 위 공간·하단 높이를 LED 오른쪽에 세로 치수로 표기(캐비닛 크기 옆, 위→LED→하단 세로 열).
-  if (fitsBase && offY > GAP_MIN) pill('sm vert', `${fmt(Math.round(topGapMM))}mm`, `top:${offY / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
-  if (fitsBase && botGap > GAP_MIN) pill('sm vert', `${fmt(Math.round(baseH))}mm`, `top:${offY + arH + botGap / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
-  // 캐비닛 수: 방 모드(하단 높이 밴드)에선 밴드 라벨과 겹치므로 LED 안쪽 하단에 얹고,
-  //   그 외에는 예전처럼 LED 아래에 표기한다.
-  if (fitsBase) pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX + arW / 2}px;top:${offY + arH - 8}px;transform:translate(-50%,-100%)`);
-  else pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
-  // 벽면(외곽) 전체 크기: LED 치수 바깥쪽에 벽 세로(우측)·가로(하단)를 항상 표시.
-  const wallHX = compact ? spW + 30 : spW + 40;
-  pill('sm vert', meters(sH), `top:${spH / 2}px;left:${wallHX}px;transform:translateY(-50%)`);
-  pill('sm', meters(sW), `left:${spW / 2}px;top:${spH + 14}px;transform:translateX(-50%)`);
-
-  // 바닥 기준선(공간감): 벽면 하단에 옅은 바닥 선을 벽 폭에 딱 맞춰 그린다(좌우로 삐져나오지 않게).
-  const floor = document.createElement('div');
-  floor.style.cssText = `position:absolute;left:0;top:${spH}px;width:${spW}px;height:0;border-top:2px solid rgba(128,128,128,.4);pointer-events:none`;
-  scene.appendChild(floor);
-
-  // 눈높이 가이드선(바닥 기준): 앉은 눈높이 1.2m·선 눈높이 1.6m 참고선. 벽 높이 안에 들 때만. 좁은 화면 생략.
-  for (const g of (compact ? [] : [{ mm: 1200, label: '앉은 눈높이 1.2m' }, { mm: 1600, label: '선 눈높이 1.6m' }])) {
-    if (g.mm > sH) continue;
-    const gy = spH - g.mm * scale;
-    if (gy < 0 || gy > spH) continue;
-    const line = document.createElement('div');
-    line.style.cssText = `position:absolute;left:0;top:${gy}px;width:${spW}px;height:0;border-top:1px dashed rgba(74,110,224,.65);pointer-events:none`;
-    line.innerHTML = `<span style="position:absolute;left:4px;top:-9px;font-size:10px;color:rgba(74,110,224,.95);background:rgba(127,127,127,.14);padding:0 4px;border-radius:4px;white-space:nowrap">${g.label}</span>`;
-    scene.appendChild(line);
+  // 위/하단 영역 라벨(패널 오른쪽 구간) — 방 모드에서만
+  let regions = '';
+  if (fitsBase) {
+    if (topGap > 1.5) regions += `<div class="rsRegion" style="left:${pl + pw}%;right:0;top:0;height:${topGap}%"><span class="tx">${mmL(topGapMM)}</span></div>`;
+    if (pb > 1.5) regions += `<div class="rsRegion" style="left:${pl + pw}%;right:0;bottom:0;height:${pb}%"><span class="tx">${mmL(mount)}</span></div>`;
   }
 
-  stage.appendChild(scene);
+  const marHTML = pl > 1.5
+    ? `<div class="rsDim mar" style="left:0;width:${pl}%;top:-14%"><div class="ln"></div><span class="tx">${mmL(r.marginW)}</span><div class="ln"></div></div><div class="rsDim mar" style="right:0;width:${pl}%;top:-14%"><div class="ln"></div><span class="tx">${mmL(r.marginW)}</span><div class="ln"></div></div>`
+    : '';
+
+  stage.innerHTML = `<div class="rsFrame">
+    <svg class="rsPersp" viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="rgba(16,18,40,.13)" stroke-width="1" vector-effect="non-scaling-stroke"><line x1="0" y1="0" x2="9.5" y2="16.53"/><line x1="100" y1="0" x2="90.5" y2="16.53"/><line x1="0" y1="100" x2="9.5" y2="83.47"/><line x1="100" y1="100" x2="90.5" y2="83.47"/></g></svg>
+    <div class="rsWall" style="aspect-ratio:${sW} / ${sH}">
+      ${guides}
+      <div class="rsFig" style="left:14.5%;bottom:0;width:${personW}%;height:${personH}%"><div class="h"></div><div class="b"></div><div class="l"></div></div>
+      <div class="rsFigLbl" style="left:2.2%;bottom:${Math.min(97, personH + 7)}%">키 170 cm</div>
+      <div class="rsPanel" style="left:${pl}%;width:${pw}%;bottom:${pb}%;height:${ph}%">
+        <div class="rsGrid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr)">${cells}</div>
+        ${sigHTML}
+        <div class="rsGlow"></div><div class="rsHi"></div>
+      </div>
+      <div class="rsColN" style="left:${pl}%;width:${pw}%;top:0;height:${topGap}%;grid-template-columns:repeat(${r.cols},1fr)">${colN}</div>
+      <div class="rsRowN" style="left:${rowNL}%;width:2.6%;bottom:${pb}%;height:${ph}%;grid-template-rows:repeat(${r.rows},1fr)">${rowN}</div>
+      <div class="rsDim" style="left:${pl}%;width:${pw}%;top:-6%;transform:translateY(-100%)"><div class="ln"></div><span class="tx">${mmL(r.actualW)}</span><div class="ln"></div></div>
+      <div class="rsDim v" style="right:-4%;transform:translateX(100%);bottom:${pb}%;height:${ph}%"><div class="ln"></div><span class="tx">${mmL(r.actualH)}</span><div class="ln"></div></div>
+      ${regions}
+      ${marHTML}
+      <div class="rsDim out" style="left:0;right:0;bottom:-9%;transform:translateY(100%)"><div class="ln"></div><span class="tx">${mmL(sW)}</span><div class="ln"></div></div>
+      <div class="rsDim out v" style="left:-5.5%;transform:translateX(-100%);top:0;height:100%"><div class="ln"></div><span class="tx">${mmL(sH)}</span><div class="ln"></div></div>
+    </div>
+  </div>`;
 }
 
 // 하단 높이(바닥에서 LED 아래까지)를 입력하면 세로 구성(바닥 여백·LED 세로·위 남는 높이)을 표시.
