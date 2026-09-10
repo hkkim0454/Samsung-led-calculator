@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=146';
-import { MODELS } from './models.js?v=146';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=146';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=146';
-import { parseCasesText, normalizeDate } from './cases.js?v=146';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=147';
+import { MODELS } from './models.js?v=147';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=147';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=147';
+import { parseCasesText, normalizeDate } from './cases.js?v=147';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=146')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=147')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -393,18 +393,14 @@ function renderPreview() {
       + ';pointer-events:none';
     scene.appendChild(d);
   };
-  const topGuide = -16, rightGuide = spW + 8;
+  const topGuide = -16;
   if (!compact) {
-    // 가로(위): 상단 치수선 + 벽/LED 좌우 가장자리 연장선
-    dline(0, topGuide, spW, topGuide);
-    dline(0, topGuide, 0, 0); dline(spW, topGuide, spW, 0);
-    dline(offX, topGuide, offX, offY); dline(offX + arW, topGuide, offX + arW, offY);
-    // 세로(우): 우측 치수선 + 벽/LED 상하 가장자리 연장선
-    dline(rightGuide, 0, rightGuide, spH);
-    dline(spW, 0, rightGuide, 0); dline(spW, spH, rightGuide, spH);
-    dline(offX + arW, offY, rightGuide, offY); dline(offX + arW, offY + arH, rightGuide, offY + arH);
-    // 벽면(외곽) 치수선: LED 치수 바깥쪽에 벽 전체 세로(우)·가로(하) 연장선.
-    const wallR = rightGuide + 26, wallB = spH + 18;
+    // 좌우 여백(2.080m 등): 벽 가장자리~LED 가장자리 구간만 위쪽 보조선으로 표시(LED 위·오른쪽은 그리지 않음).
+    //   LED 치수(가로·세로)는 캐비닛에 바짝 붙어 있으므로 멀리 뻗던 연장선은 없앤다.
+    if (offX > 16) { dline(0, topGuide, offX, topGuide); dline(0, topGuide, 0, 0); dline(offX, topGuide, offX, offY); }
+    if (spW - offX - arW > 16) { dline(offX + arW, topGuide, spW, topGuide); dline(offX + arW, topGuide, offX + arW, offY); dline(spW, topGuide, spW, 0); }
+    // 벽면(외곽) 전체 크기: 오른쪽(세로 3.400m)·아래쪽(가로 8.000m) 치수 보조선만 유지.
+    const wallR = spW + 34, wallB = spH + 18;
     dline(spW, 0, wallR, 0); dline(spW, spH, wallR, spH); dline(wallR, 0, wallR, spH);
     dline(0, spH, 0, wallB); dline(spW, spH, spW, wallB); dline(0, wallB, spW, wallB);
   }
