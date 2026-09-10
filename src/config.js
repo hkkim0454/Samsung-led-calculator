@@ -14,8 +14,8 @@ export const CONFIG_DEFAULTS = Object.freeze({
   spaceW: 8000,
   spaceH: 3400,
   baseHeight: 1000,      // 바닥에서 LED 아래까지(mm)
-  ledW: 0,               // 'LED 크기 지정' 모드의 LED 가로(mm)
-  ledH: 0,               // 'LED 크기 지정' 모드의 LED 세로(mm)
+  ledW: 4000,            // 'LED 크기 지정' 모드의 LED 가로(mm)
+  ledH: 2300,            // 'LED 크기 지정' 모드의 LED 세로(mm)
   mode: 'fill',          // 'fill'(자동 채움) | 'ledsize'(LED 크기 지정) | 'manual'(직접 지정)
   manCols: 0,
   manRows: 0,
