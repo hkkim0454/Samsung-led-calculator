@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=148';
-import { MODELS } from './models.js?v=148';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=148';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=148';
-import { parseCasesText, normalizeDate } from './cases.js?v=148';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=149';
+import { MODELS } from './models.js?v=149';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=149';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=149';
+import { parseCasesText, normalizeDate } from './cases.js?v=149';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=148')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=149')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -347,21 +347,8 @@ function renderPreview() {
   }
   scene.appendChild(wall);
 
-  // 방 컨텍스트(1단계): 하단 높이 지정 시 LED를 바닥에서 baseH 띄워 배치하고(offY로 반영),
-  //   위/아래 남는 공간을 점선 밴드로 표시한다. LED·사람 외 다른 AV 장비는 표시하지 않는다.
-  if (fitsBase && !compact) {
-    const band = (topPx, hPx, label) => {
-      if (hPx < 3) return;
-      const d = document.createElement('div');
-      d.style.cssText = `position:absolute;left:${offX}px;top:${topPx}px;width:${arW}px;height:${hPx}px;`
-        + 'display:flex;align-items:center;justify-content:center;box-sizing:border-box;'
-        + 'border:1px dashed rgba(128,128,128,.45);border-radius:6px;pointer-events:none';
-      if (hPx >= 16) d.innerHTML = `<span style="font-size:11px;padding:1px 6px;border-radius:6px;background:rgba(128,128,128,.14)">${label}</span>`;
-      scene.appendChild(d);
-    };
-    band(0, offY, `위 ${fmt(Math.round(topGapMM))}mm`);                       // LED 위 남는 공간
-    band(offY + arH, spH - (offY + arH), `LED 하단 높이 ${fmt(Math.round(baseH))}mm`);   // LED 아래(바닥에서 LED까지)
-  }
+  // 방 컨텍스트(하단 높이): 위 공간·하단 높이는 예전처럼 박스(밴드)로 채우지 않고,
+  //   LED 오른쪽에 세로 치수(위 → LED 세로 → 하단)로 표기한다. → 아래 dimension pills 참고.
 
   // 신호 영역 오버레이 — 벽 좌상단 기준으로 풀 크기 타일. 각 영역(타일)마다 좌상단에 라벨(HD/UHD).
   // HD를 먼저, UHD를 위에 얹어(둘다 모드에서 겹치는 좌상단은 UHD가 위에 보이게).
@@ -421,6 +408,9 @@ function renderPreview() {
   const botGap = spH - offY - arH;
   if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   if (!fitsBase && r.marginH > 1 && botGap > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY + arH + botGap / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
+  // 방 모드(하단 높이): 위 공간·하단 높이를 LED 오른쪽에 세로 치수로 표기(캐비닛 크기 옆, 위→LED→하단 세로 열).
+  if (fitsBase && offY > GAP_MIN) pill('sm vert', `위 ${fmt(Math.round(topGapMM))}mm`, `top:${offY / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
+  if (fitsBase && botGap > GAP_MIN) pill('sm vert', `하단 ${fmt(Math.round(baseH))}mm`, `top:${offY + arH + botGap / 2}px;left:${offX + arW + 8}px;transform:translateY(-50%)`);
   // 캐비닛 수: 방 모드(하단 높이 밴드)에선 밴드 라벨과 겹치므로 LED 안쪽 하단에 얹고,
   //   그 외에는 예전처럼 LED 아래에 표기한다.
   if (fitsBase) pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX + arW / 2}px;top:${offY + arH - 8}px;transform:translate(-50%,-100%)`);
@@ -430,9 +420,9 @@ function renderPreview() {
   pill('sm vert', meters(sH), `top:${spH / 2}px;left:${wallHX}px;transform:translateY(-50%)`);
   pill('sm', meters(sW), `left:${spW / 2}px;top:${spH + 14}px;transform:translateX(-50%)`);
 
-  // 바닥 기준선(공간감): 벽면 하단에 옅은 바닥 선을 살짝 넓게 그린다.
+  // 바닥 기준선(공간감): 벽면 하단에 옅은 바닥 선을 벽 폭에 딱 맞춰 그린다(좌우로 삐져나오지 않게).
   const floor = document.createElement('div');
-  floor.style.cssText = `position:absolute;left:-10px;top:${spH}px;width:${spW + 20}px;height:0;border-top:2px solid rgba(128,128,128,.4);pointer-events:none`;
+  floor.style.cssText = `position:absolute;left:0;top:${spH}px;width:${spW}px;height:0;border-top:2px solid rgba(128,128,128,.4);pointer-events:none`;
   scene.appendChild(floor);
 
   // 눈높이 가이드선(바닥 기준): 앉은 눈높이 1.2m·선 눈높이 1.6m 참고선. 벽 높이 안에 들 때만. 좁은 화면 생략.
