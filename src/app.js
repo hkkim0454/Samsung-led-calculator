@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=151';
-import { MODELS } from './models.js?v=151';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=151';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=151';
-import { parseCasesText, normalizeDate } from './cases.js?v=151';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=152';
+import { MODELS } from './models.js?v=152';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=152';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=152';
+import { parseCasesText, normalizeDate } from './cases.js?v=152';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=151')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=152')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -316,7 +316,7 @@ function renderPreview() {
       <div class="rsColN" style="left:${pl}%;width:${pw}%;top:0;height:${topGap}%;grid-template-columns:repeat(${r.cols},1fr)">${colN}</div>
       <div class="rsRowN" style="left:${rowNL}%;width:2.6%;bottom:${pb}%;height:${ph}%;grid-template-rows:repeat(${r.rows},1fr)">${rowN}</div>
       <div class="rsDim" style="left:${pl}%;width:${pw}%;top:-6%;transform:translateY(-100%)"><div class="ln"></div><span class="tx">${mmL(r.actualW)}</span><div class="ln"></div></div>
-      <div class="rsDim v" style="right:-4%;transform:translateX(100%);bottom:${pb}%;height:${ph}%"><div class="ln"></div><span class="tx">${mmL(r.actualH)}</span><div class="ln"></div></div>
+      <div class="rsDim v" style="left:${pl + pw}%;transform:translateX(8px);bottom:${pb}%;height:${ph}%"><div class="ln"></div><span class="tx">${mmL(r.actualH)}</span><div class="ln"></div></div>
       ${regions}
       ${marHTML}
       <div class="rsDim out" style="left:0;right:0;bottom:-9%;transform:translateY(100%)"><div class="ln"></div><span class="tx">${mmL(sW)}</span><div class="ln"></div></div>
