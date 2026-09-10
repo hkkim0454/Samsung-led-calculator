@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=143';
-import { MODELS } from './models.js?v=143';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=143';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=143';
-import { parseCasesText, normalizeDate } from './cases.js?v=143';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=144';
+import { MODELS } from './models.js?v=144';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=144';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=144';
+import { parseCasesText, normalizeDate } from './cases.js?v=144';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=143')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=144')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -1141,13 +1141,23 @@ function caseResolution(c) {
   return ` · ${fmt(m.resW * c.cols)}×${fmt(m.resH * c.rows)}px`;
 }
 // 사례 → 화면 적용용 구성. 모델 스냅샷이 담긴 data가 있으면 그대로, 없으면 모델명으로 찾아 합성.
+// 불러올 때 기본 하단 높이(바닥에서 LED 아래까지, mm). 벽 세로는 이 높이 위에 배열이 다 들어가게 잡는다.
+const CASE_BASE_HEIGHT = 1000;
 function caseToConfig(c) {
-  if (c.data && typeof c.data === 'object' && c.data.selectedId) return c.data;
-  const m = findModelByName(c.model_name);
-  const cols = c.cols || 0, rows = c.rows || 0;
-  const spaceW = c.space_w || (m && cols ? Math.round(cols * m.cabW + 2 * EDGE_MARGIN) : 0);
-  const spaceH = c.space_h || (m && rows ? Math.round(rows * m.cabH + 2 * EDGE_MARGIN) : 0);
-  const cfg = { mode: 'manual', manCols: cols, manRows: rows, spaceW, spaceH };
+  // 스냅샷(data)이 있으면 그 값을 기준으로, 없으면 열·행에서 구성한다.
+  const stored = (c.data && typeof c.data === 'object' && c.data.selectedId) ? { ...c.data } : null;
+  const m = (stored ? models.find(x => x.id === stored.selectedId) : null) || findModelByName(c.model_name);
+  const cols = (stored ? stored.manCols : c.cols) || 0;
+  const rows = (stored ? stored.manRows : c.rows) || 0;
+  const cfg = stored || {};
+  cfg.mode = 'manual'; cfg.manCols = cols; cfg.manRows = rows;
+  // 하단 높이 1000mm 기준으로 벽을 넉넉히 잡아 배열이 잘리지 않게 한다.
+  //   가로 = 열×캐비닛 + 구조틀 여백(양쪽) + 가장자리 여유. 세로 = 하단높이 + 행×캐비닛 + 구조틀 + 여유.
+  //   기존에 저장된 벽이 더 크면 그대로 둔다(max).
+  const clr = m ? frameClearanceMm(m.series) : 30;
+  cfg.baseHeight = CASE_BASE_HEIGHT;
+  if (m && cols) cfg.spaceW = Math.max(num(cfg.spaceW), Math.round(cols * m.cabW + 2 * clr + 2 * EDGE_MARGIN));
+  if (m && rows) cfg.spaceH = Math.max(num(cfg.spaceH), Math.round(CASE_BASE_HEIGHT + rows * m.cabH + 2 * clr + 2 * EDGE_MARGIN));
   if (m) { cfg.selectedId = m.id; cfg.selectedModel = { ...m }; }
   return cfg;
 }
