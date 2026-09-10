@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=140';
-import { MODELS } from './models.js?v=140';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=140';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=140';
-import { parseCasesText, normalizeDate } from './cases.js?v=140';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries } from './engine.js?v=141';
+import { MODELS } from './models.js?v=141';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=141';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=141';
+import { parseCasesText, normalizeDate } from './cases.js?v=141';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=140')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=141')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -277,13 +277,6 @@ function renderPreview() {
 
   stage.innerHTML = '';
 
-  // 벽면(설치 공간) 실제 크기 캡션(좌상단) — 벽 세로 높이가 안 보이던 불편 해소. 가로 × 세로.
-  const wallCap = document.createElement('div');
-  wallCap.style.cssText = 'position:absolute;left:10px;top:8px;z-index:5;font-size:11px;font-weight:700;'
-    + 'color:var(--ink);opacity:.72;background:rgba(127,127,127,.14);padding:2px 8px;border-radius:8px;pointer-events:none';
-  wallCap.textContent = `벽면 ${fmtMeters(sW)} × ${fmtMeters(sH)} m`;
-  stage.appendChild(wallCap);
-
   // 콘텐츠 박스(공간 ∪ 신호 발자국)를 스테이지 중앙에 배치. 공간(벽)의 바닥 레벨을 먼저 구한다.
   const contentPxW = contentW * scale, contentPxH = contentH * scale;
   const sceneLeft = (stage.clientWidth - contentPxW) / 2;
@@ -403,6 +396,10 @@ function renderPreview() {
     dline(rightGuide, 0, rightGuide, spH);
     dline(spW, 0, rightGuide, 0); dline(spW, spH, rightGuide, spH);
     dline(offX + arW, offY, rightGuide, offY); dline(offX + arW, offY + arH, rightGuide, offY + arH);
+    // 벽면(외곽) 치수선: LED 치수 바깥쪽에 벽 전체 세로(우)·가로(하) 연장선.
+    const wallR = rightGuide + 26, wallB = spH + 18;
+    dline(spW, 0, wallR, 0); dline(spW, spH, wallR, spH); dline(wallR, 0, wallR, spH);
+    dline(0, spH, 0, wallB); dline(spW, spH, spW, wallB); dline(0, wallB, spW, wallB);
   }
 
   // dimension pills
@@ -421,6 +418,10 @@ function renderPreview() {
   if (!fitsBase && r.marginH > 1 && offY > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   if (!fitsBase && r.marginH > 1 && botGap > GAP_MIN) pill('sm vert', meters(r.marginH), `top:${offY + arH + botGap / 2}px;left:${spW + 14}px;transform:translateY(-50%)`);
   pill('count', `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, `left:${offX}px;top:${offY + arH + 8}px`);
+  // 벽면(외곽) 전체 크기: LED 치수 바깥쪽에 벽 세로(우측)·가로(하단)를 항상 표시.
+  const wallHX = compact ? spW + 30 : spW + 40;
+  pill('sm vert', meters(sH), `top:${spH / 2}px;left:${wallHX}px;transform:translateY(-50%)`);
+  pill('sm', meters(sW), `left:${spW / 2}px;top:${spH + 14}px;transform:translateX(-50%)`);
 
   // 바닥 기준선(공간감): 벽면 하단에 옅은 바닥 선을 살짝 넓게 그린다.
   const floor = document.createElement('div');
