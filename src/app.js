@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=166';
-import { MODELS } from './models.js?v=166';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=166';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=166';
-import { parseCasesText, normalizeDate } from './cases.js?v=166';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=167';
+import { MODELS } from './models.js?v=167';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=167';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=167';
+import { parseCasesText, normalizeDate } from './cases.js?v=167';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=166')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=167')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -254,8 +254,10 @@ function renderPreview() {
   // ── 방 공간감 스테이지(Claude 디자인 반영): 벽(실측 비율) 안에 LED 패널·치수·사람·눈높이를 % 배치 ──
   //   모든 치수는 mm 단위로 통일. 값은 실측(가로=mm/sW, 세로=mm/sH)에서 유도된 %.
   const baseH = num($('#baseHeight').value);
-  const fitsBase = baseH > 0 && (baseH + r.actualH) <= sH + 1;
-  const mount = fitsBase ? baseH : Math.max(0, (sH - r.actualH) / 2);   // 바닥에서 LED 아래까지(mm)
+  // 하단 높이를 넣으면 항상 바닥 기준으로 배치(가운데로 튀지 않음). LED가 벽을 넘으면 벽 안에 들어오는
+  //   최고 위치로 고정(하단 높이 입력칸도 그 최대치로 제한됨 → clampBaseHeight).
+  const roomMode = baseH > 0;
+  const mount = roomMode ? Math.min(baseH, Math.max(0, sH - r.actualH)) : Math.max(0, (sH - r.actualH) / 2);   // 바닥에서 LED 아래까지(mm)
   const pl = r.marginW / sW * 100, pw = r.actualW / sW * 100;           // 패널 좌·폭 %
   const pb = mount / sH * 100, ph = r.actualH / sH * 100;               // 패널 하단·높이 %
   const topGap = Math.max(0, 100 - pb - ph);                           // 위 남는 공간 %
@@ -285,7 +287,7 @@ function renderPreview() {
 
   // 눈높이 가이드(방 모드에서만): 앉은 1,200mm / 선 1,600mm
   let guides = '';
-  if (fitsBase) {
+  if (roomMode) {
     for (const g of [{ mm: 1600, label: '선 눈높이 1,600mm', col: 'rgba(10,132,255,.45)', lc: '#3D8BE8' }, { mm: 1200, label: '앉은 눈높이 1,200mm', col: 'rgba(10,132,255,.35)', lc: '#7FB0EA' }]) {
       if (g.mm > sH) continue;
       const b = g.mm / sH * 100;
@@ -296,7 +298,7 @@ function renderPreview() {
 
   // 위/하단 영역 라벨(패널 오른쪽 구간) — 방 모드에서만
   let regions = '';
-  if (fitsBase) {
+  if (roomMode) {
     if (topGap > 1.5) regions += `<div class="rsRegion" style="left:${pl + pw}%;right:0;top:0;height:${topGap}%"><span class="tx">${mmL(topGapMM)}</span></div>`;
     if (pb > 1.5) regions += `<div class="rsRegion" style="left:${pl + pw}%;right:0;bottom:0;height:${pb}%"><span class="tx">${mmL(mount)}</span></div>`;
   }
@@ -513,7 +515,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -536,6 +538,18 @@ function clampLedInputs() {
   const wEl = $('#ledW'), hEl = $('#ledH');
   if (wEl && maxW > 0 && num(wEl.value) > maxW) wEl.value = maxW;
   if (hEl && maxH > 0 && num(hEl.value) > maxH) hEl.value = maxH;
+}
+// 하단 높이는 'LED가 벽면 안에 들어오는 최대치'(= 벽 세로 − LED 세로)까지만 허용한다.
+//   그 이상 올리면 입력칸에서 그 최대치로 되돌린다 → 미리보기 LED가 가운데로 튀지 않고 최고 위치를 유지.
+function clampBaseHeight() {
+  const m = models.find(x => x.id === selectedId); const el = $('#baseHeight');
+  if (!m || !el) return;
+  const sH = num($('#spaceH').value);
+  const r = computeConfig(m, num($('#spaceW').value), sH, opts());
+  if (!r.fits || !(r.actualH > 0)) { el.removeAttribute('max'); return; }
+  const maxBase = Math.max(0, Math.round(sH - r.actualH));
+  el.max = maxBase;
+  if (num(el.value) > maxBase) el.value = maxBase;
 }
 // 배열 직접 지정에서 벽면(설치 공간)을 넘는 캐비닛은 자동으로 잘라낸다(넘치는 열·행 삭제).
 //   최대 = 자동 채움(벽면−하단높이, 구조틀 여백 반영)의 열·행. 그 이하로 입력값을 제한하고 max도 맞춘다.
