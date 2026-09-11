@@ -1,9 +1,9 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=167';
-import { MODELS } from './models.js?v=167';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=167';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=167';
-import { parseCasesText, normalizeDate } from './cases.js?v=167';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=168';
+import { MODELS } from './models.js?v=168';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=168';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=168';
+import { parseCasesText, normalizeDate } from './cases.js?v=168';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +12,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=167')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=168')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -254,10 +254,10 @@ function renderPreview() {
   // ── 방 공간감 스테이지(Claude 디자인 반영): 벽(실측 비율) 안에 LED 패널·치수·사람·눈높이를 % 배치 ──
   //   모든 치수는 mm 단위로 통일. 값은 실측(가로=mm/sW, 세로=mm/sH)에서 유도된 %.
   const baseH = num($('#baseHeight').value);
-  // 하단 높이를 넣으면 항상 바닥 기준으로 배치(가운데로 튀지 않음). LED가 벽을 넘으면 벽 안에 들어오는
+  // LED는 항상 하단 높이 기준으로 배치(0이면 바닥에 붙임 — 가운데로 튀지 않음). 벽을 넘으면 벽 안에 들어오는
   //   최고 위치로 고정(하단 높이 입력칸도 그 최대치로 제한됨 → clampBaseHeight).
-  const roomMode = baseH > 0;
-  const mount = roomMode ? Math.min(baseH, Math.max(0, sH - r.actualH)) : Math.max(0, (sH - r.actualH) / 2);   // 바닥에서 LED 아래까지(mm)
+  const roomMode = baseH > 0;   // 눈높이 가이드·위/하단 라벨은 하단 높이가 있을 때만 표시
+  const mount = Math.min(Math.max(0, baseH), Math.max(0, sH - r.actualH));   // 바닥에서 LED 아래까지(mm)
   const pl = r.marginW / sW * 100, pw = r.actualW / sW * 100;           // 패널 좌·폭 %
   const pb = mount / sH * 100, ph = r.actualH / sH * 100;               // 패널 하단·높이 %
   const topGap = Math.max(0, 100 - pb - ph);                           // 위 남는 공간 %
