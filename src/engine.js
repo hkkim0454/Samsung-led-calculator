@@ -319,3 +319,230 @@ export function bom(model, total, opts = {}) {
     jitQty: null,    // TODO(SPEC:BOM): define Jig count rule
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 비디오 프로세서(영상 스위처/스플라이서) 선정 로직  (DEC-017, 컨텍스트 문서 2026-09-12)
+//
+// 흐름: LED 산출(computeConfig) + 사용자 요구 → processorRequirements()
+//       → validateProcessor()로 제품별 하드 제약 판정(PASS / CONDITIONAL / FAIL)
+//       → rankProcessors()로 등급(권장/적합/조건부 적합/한계 구성/부적합) 매김·정렬.
+//
+// 데이터 신뢰성 원칙(문서 §15, CLAUDE.md 규칙 2): 확인되지 않은 사양은 절대 추정하지 않는다.
+//   사양이 null이면 그 검사는 ok=null(확인 필요)로 두고, 종합 판정은 CONDITIONAL이 된다.
+//   null을 임의로 PASS로 만들지 않는다.
+//
+// 절대 혼동 금지(문서 §4): 독립 입력 ≠ 레이어 ≠ 윈도우 ≠ 출력. 각각 별도로 검사한다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 표준 신호 타일 크기(px). 4K=3840x2160, 2K/FHD=1920x1080. */
+export const TILE_4K_W = 3840, TILE_4K_H = 2160;
+export const TILE_2K_W = 1920, TILE_2K_H = 1080;
+
+/** 영역 타일 수 = ceil(resW/tileW) × ceil(resH/tileH). 입력이 유효하지 않으면 null. */
+export function regionTiles(resW, resH, tileW, tileH) {
+  if (!(resW > 0) || !(resH > 0) || !(tileW > 0) || !(tileH > 0)) return null;
+  return Math.ceil(resW / tileW) * Math.ceil(resH / tileH);
+}
+
+/** 여러 값 중 최댓값(null 무시). 전부 null이면 null. */
+function maxNullable(...vals) {
+  const nums = vals.filter(v => v != null);
+  return nums.length ? Math.max(...nums) : null;
+}
+
+/**
+ * LED 한 벌 + 사용자 요구를 프로세서 요구사양으로 변환한다(문서 §10 ProcessorRequirement).
+ * config: computeConfig() 결과(resW/resH 사용).
+ *  - required4kOutputs = ceil(resW/3840) × ceil(resH/2160)   (오너 확정 공식)
+ *  - required2kOutputs = ceil(resW/1920) × ceil(resH/1080)
+ * SBOX 이중화(config.redundancy)는 신호 경로 이중화일 뿐 프로세서 출력량을 2배로 만들지 않는다 → 반영 안 함(문서 §13).
+ * o: 사용자 입력(입력 소스 수·레이어 수·필요 기능·운용 환경 등). 값이 없으면 0/false/other.
+ */
+export function processorRequirements(config, o = {}) {
+  const resW = config?.resW, resH = config?.resH;
+  const int = (v) => Math.max(0, Math.floor(v ?? 0));
+  return {
+    resW: resW ?? null, resH: resH ?? null,
+    required4kOutputs: regionTiles(resW, resH, TILE_4K_W, TILE_4K_H),
+    required2kOutputs: regionTiles(resW, resH, TILE_2K_W, TILE_2K_H),
+    independent4kInputs: int(o.independent4kInputs),
+    independent2kInputs: int(o.independent2kInputs),
+    simultaneous4kLayers: int(o.simultaneous4kLayers),
+    simultaneous2kLayers: int(o.simultaneous2kLayers),
+    // 한 출력(카드/보드)에 올라갈 최대 레이어 수(선택). 모르면 null → 카드별 검사는 '확인 필요'.
+    maxLayersPerOutput: o.maxLayersPerOutput != null ? int(o.maxLayersPerOutput) : null,
+    allowSourceDuplication: o.allowSourceDuplication ?? false,  // 기본 꺼짐(문서 §4)
+    seamlessSwitching: !!o.seamlessSwitching,
+    fadeRequired: !!o.fadeRequired,
+    trueABRequired: !!o.trueABRequired,
+    advancedTransitionRequired: !!o.advancedTransitionRequired,
+    previewProgramRequired: !!o.previewProgramRequired,
+    genlockRequired: !!o.genlockRequired,
+    hdrRequired: !!o.hdrRequired,
+    tenBitRequired: !!o.tenBitRequired,
+    externalControlRequired: !!o.externalControlRequired,
+    application: o.application ?? 'other',
+  };
+}
+
+/**
+ * 출력카드/출력보드별 레이어 한계 검사(NovaStar per_output_card, Universe screen_group).
+ * 한 출력에 올라갈 최대 레이어 수(req.maxLayersPerOutput)를 카드/보드 1장 용량과 비교한다.
+ * 필요한 값이 없으면 ok=null(확인 필요) — 전체 레이어 합만으로 PASS 처리하지 않는다(문서 §5.2).
+ * 반환: 검사 객체 { name, need, have, unit, ok } 또는 해당 없으면 null.
+ */
+export function validateOutputCardLayers(proc, req) {
+  const L = proc?.layers ?? {};
+  if (L.model !== 'per_output_card' && L.model !== 'screen_group') return null;
+  if (req.simultaneous4kLayers <= 0 && req.simultaneous2kLayers <= 0) return null;
+  const per4k = L.perOutputCard4k ?? L.perOutputBoard4k ?? null;
+  if (req.maxLayersPerOutput == null) {
+    return { name: '출력카드별 레이어', need: '확인 필요', have: (per4k ?? '확인 필요'), unit: '', ok: null };
+  }
+  if (per4k == null) {
+    return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: null, unit: '개', ok: null };
+  }
+  return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: per4k, unit: '개', ok: per4k >= req.maxLayersPerOutput };
+}
+
+/**
+ * 하드 제약 검사. proc(제품) vs req(processorRequirements 결과).
+ * 각 검사 ok: true(충족)/false(미달)/null(사양 미확인). 요구하지 않은 항목은 검사 생략.
+ * 종합 verdict: 하나라도 false면 FAIL, false는 없고 null 있으면 CONDITIONAL, 모두 true면 PASS.
+ * 반환: { id, verdict, checks: [{name, need, have, unit, ok}] }.
+ */
+export function validateProcessor(proc, req) {
+  if (!proc || !req) return null;
+  const checks = [];
+  const numCheck = (name, need, have, unit = '개') => {
+    let ok = null;
+    if (need != null && have != null) ok = have >= need;
+    checks.push({ name, need: need ?? null, have: have ?? null, unit, ok });
+  };
+  const featCheck = (name, required, have) => {
+    if (!required) return;
+    const ok = have === true ? true : (have === false ? false : null);
+    checks.push({ name, need: '지원', have: have === true ? '지원' : (have === false ? '미지원' : '확인 필요'), unit: '', ok });
+  };
+
+  // 1) 독립 입력(4K/2K) — 윈도우·레이어와 별개(문서 §4).
+  if (req.independent4kInputs > 0) numCheck('독립 4K 입력', req.independent4kInputs, proc.inputs?.maxIndependent4k);
+  if (req.independent2kInputs > 0) numCheck('독립 2K 입력', req.independent2kInputs, proc.inputs?.maxIndependent2k);
+
+  // 2) 필요 출력 수(4K).
+  if (req.required4kOutputs > 0) numCheck('4K 출력', req.required4kOutputs, proc.outputs?.max4k);
+
+  // 3) 레이어 용량 — capacityModel별로 다르게 산출(문서 §5).
+  const L = proc.layers ?? {};
+  if (req.simultaneous4kLayers > 0) {
+    let cap = null, name = '4K 레이어';
+    switch (L.model) {
+      case 'mixing_split':
+        // True A/B가 필요하면 반드시 '믹싱' 레이어만 사용(분할 레이어로 대체 불가, 문서 §12).
+        cap = req.trueABRequired ? (L.mixing4k ?? null) : maxNullable(L.mixing4k, L.split4k);
+        name = req.trueABRequired ? '4K 믹싱 레이어(A/B)' : '4K 레이어(믹싱/분할)';
+        break;
+      case 'per_output_card':
+        cap = (L.perOutputCard4k != null && proc.outputs?.maxOutputBoards != null)
+          ? L.perOutputCard4k * proc.outputs.maxOutputBoards : (L.global4k ?? null);
+        break;
+      case 'global_window':
+      case 'screen_group':
+      default:
+        cap = L.global4k ?? null;
+    }
+    numCheck(name, req.simultaneous4kLayers, cap);
+  }
+  if (req.simultaneous2kLayers > 0) {
+    let cap = null;
+    switch (L.model) {
+      case 'per_output_card':
+        cap = (L.perOutputCard2k != null && proc.outputs?.maxOutputBoards != null)
+          ? L.perOutputCard2k * proc.outputs.maxOutputBoards : (L.global2k ?? null);
+        break;
+      case 'global_window':
+        cap = L.global2k ?? L.maxWindows ?? null;
+        break;
+      case 'screen_group':
+      default:
+        cap = L.global2k ?? null;
+    }
+    numCheck('2K 레이어', req.simultaneous2kLayers, cap);
+  }
+
+  // 3b) 총 윈도우(글로벌 윈도우 모델, 예: Colorlight X100 Pro): 동시 표시 수 ≤ maxWindows.
+  if (L.model === 'global_window' && L.maxWindows != null) {
+    const windows = req.simultaneous4kLayers + req.simultaneous2kLayers;
+    if (windows > 0) numCheck('최대 윈도우', windows, L.maxWindows, '개');
+  }
+
+  // 3c) 출력카드/보드별 레이어 한계.
+  const cardCheck = validateOutputCardLayers(proc, req);
+  if (cardCheck) checks.push(cardCheck);
+
+  // 4) 스위칭/기능 요구.
+  featCheck('True A/B 믹싱', req.trueABRequired, proc.switching?.trueABMixing);
+  featCheck('Seamless 스위칭', req.seamlessSwitching, proc.switching?.seamless);
+  featCheck('Fade', req.fadeRequired, proc.switching?.fade);
+  featCheck('Preview/Program', req.previewProgramRequired, proc.switching?.previewProgram);
+  featCheck('Genlock', req.genlockRequired, proc.features?.genlock);
+  featCheck('HDR', req.hdrRequired, proc.features?.hdr);
+  featCheck('10-bit', req.tenBitRequired, proc.features?.tenBit);
+  if (req.advancedTransitionRequired) {
+    const g = proc.switching?.transitionGrade;
+    const ok = g == null ? null : (g === 'live_production' || g === 'broadcast_grade');
+    checks.push({ name: '고급 트랜지션', need: '지원', have: g ?? '확인 필요', unit: '', ok });
+  }
+  if (req.externalControlRequired) {
+    const c = proc.control ?? {};
+    const vals = [c.amxCompatible, c.crestronCompatible, c.tcp, c.restApi];
+    const ok = vals.some(v => v === true) ? true : (vals.every(v => v === false) ? false : null);
+    checks.push({ name: '외부 제어(AMX/Crestron 등)', need: '지원', have: ok === true ? '지원' : (ok === false ? '미지원' : '확인 필요'), unit: '', ok });
+  }
+
+  const anyFail = checks.some(c => c.ok === false);
+  const anyUnknown = checks.some(c => c.ok === null);
+  const verdict = anyFail ? 'FAIL' : (anyUnknown ? 'CONDITIONAL' : 'PASS');
+  return { id: proc.id ?? null, verdict, checks };
+}
+
+// 운용 환경별 우선 제품군(문서 §8). 정렬 시 가벼운 가중치로만 사용(v1은 정확한 판정이 우선, 문서 §16).
+const APPLICATION_PREFERRED = Object.freeze({
+  conference: ['Midra', 'Alta', 'X100 Pro'],
+  auditorium: ['Alta', 'Aquilon', 'Universe', 'H'],
+  event: ['Aquilon'],
+  broadcast: ['Aquilon'],
+  control_room: ['Universe', 'H'],
+});
+
+/** 등급 라벨. 미달=부적합, 미확인=조건부 적합, 충족 시 수치 여유로 권장/적합/한계 구성 구분. */
+function gradeLabel(v) {
+  if (!v || v.verdict === 'FAIL') return '부적합';
+  if (v.verdict === 'CONDITIONAL') return '조건부 적합';
+  const nums = v.checks.filter(c => typeof c.need === 'number' && typeof c.have === 'number');
+  if (nums.some(c => c.have === c.need)) return '한계 구성';        // 딱 맞음
+  if (nums.length && nums.every(c => c.have >= c.need * 1.5)) return '권장';  // 넉넉한 여유
+  return '적합';
+}
+
+const GRADE_ORDER = Object.freeze({ '권장': 0, '적합': 1, '조건부 적합': 2, '한계 구성': 3, '부적합': 4 });
+
+/**
+ * 제품 목록을 평가·정렬한다. 반환: [{ proc, verdict, checks, label, appPreferred }] (좋은 등급 먼저).
+ * 동급이면 (1) 운용 환경 우선 제품군, (2) 4K 출력 여유 큰 순.
+ */
+export function rankProcessors(procs, req) {
+  if (!Array.isArray(procs) || !req) return [];
+  const pref = APPLICATION_PREFERRED[req.application] ?? [];
+  return procs
+    .map(proc => {
+      const v = validateProcessor(proc, req);
+      const out4k = v?.checks.find(c => c.name === '4K 출력');
+      const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
+      return { proc, ...v, label: gradeLabel(v), appPreferred: pref.includes(proc.family), _headroom: headroom };
+    })
+    .sort((a, b) =>
+      (GRADE_ORDER[a.label] - GRADE_ORDER[b.label]) ||
+      (Number(b.appPreferred) - Number(a.appPreferred)) ||
+      (b._headroom - a._headroom));
+}

@@ -73,3 +73,28 @@ Flat 캐비닛형만(1차) vs Curved 포함. 현재: **Flat 전용**.
 - 외부 런타임 의존성 0(브라우저 순수 ESM). 테스트는 Node 내장 `node:test`.
 - 계산 엔진은 순수 함수(DOM/전역 상태 없음) — 테스트 가능성 최우선.
 - 개인정보·자격증명 미저장. 모델 데이터는 JSON import/export로만 영속.
+
+## 7. 비디오 프로세서 선정 (DEC-018, 오너 컨텍스트 문서 2026-09-12)
+
+LED 산출 스펙(§3)과 사용자 요구를 받아 Analog Way / NovaStar / Colorlight 프로세서의 적합성을 판정·추천한다. **데이터는 `src/processors.js`(순수 스펙), 로직은 `engine.js`.** app.js는 계산하지 않는다.
+
+### 7.1 데이터 스키마 (`processors.js`)
+컨텍스트 문서 §9. 핵심: `inputs{maxIndependent2k,maxIndependent4k,…}`, `outputs{max2k,max4k,maxOutputBoards}`, `layers{model,…}`, `switching{…}`, `features{…}`, `control{…}`, `verification{status,sourceUrl,…}`.
+- `layers.model`: `mixing_split`(Analog Way, 믹싱 vs 분할) · `per_output_card`(NovaStar, 카드당 레이어) · `global_window`(Colorlight X100 Pro, 윈도우 상한) · `screen_group`(Colorlight Universe, 전역+보드).
+
+### 7.2 계산 규칙 (engine.js, 1:1 대응)
+- `processorRequirements(config, opts)`: `required4kOutputs = ⌈resW/3840⌉×⌈resH/2160⌉`, `required2kOutputs = ⌈resW/1920⌉×⌈resH/1080⌉`. 사용자 입력(독립 입력 수·동시 레이어 수·필요 기능·운용 환경)을 요구사양으로 정규화.
+- `validateProcessor(proc, req)`: 항목별 검사 → 종합 **PASS / CONDITIONAL / FAIL**. 검사 ok는 true/false/**null(사양 미확인)**.
+- `validateOutputCardLayers(proc, req)`: `per_output_card`·`screen_group`에서 한 출력에 올라갈 최대 레이어(`req.maxLayersPerOutput`)를 카드/보드 용량과 비교.
+- `rankProcessors(procs, req)`: 등급(권장/적합/조건부 적합/한계 구성/부적합) 매김·정렬. 동급이면 운용 환경 우선 제품군 → 4K 출력 여유 순.
+
+### 7.3 불변 규칙
+1. **독립 입력 ≠ 레이어 ≠ 윈도우 ≠ 출력** — 각각 별도 검사(문서 §4). 예: X100 Pro 7U는 윈도우 64여도 독립 4K 입력 상한은 8.
+2. **True A/B가 필요하면 믹싱 레이어만 사용** — 분할 레이어로 대체 불가(문서 §12).
+3. **NovaStar는 전체 레이어 합이 충분해도 특정 출력카드 한계를 넘으면 FAIL/조건부**(문서 §5.2).
+4. **S-Box 이중화 ≠ 프로세서 출력 이중화** — required 출력을 자동으로 2배로 만들지 않음(문서 §13).
+5. **확인되지 않은 값(null)은 임의 PASS 처리 금지** — 해당 검사는 null → 종합 CONDITIONAL, UI는 "확인 필요"(문서 §15).
+
+### 7.4 미확정/후속
+- NovaStar H·Colorlight의 모델별 슬롯·출력·독립입력 수는 공식 PDF 사양서 값 확인 필요(현재 null). 확보 시 `verification.status='official'`로 갱신.
+- 후속: 운용 환경별 정밀 랭킹, 레이어 드래그 시뮬레이션 연동, 가격/가성비 랭킹, 견적 연동(DEC-017 로드맵).
