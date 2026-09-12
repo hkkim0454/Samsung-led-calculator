@@ -56,11 +56,11 @@ export const PROCESSORS = [
     manufacturer: AW, family: 'Midra', model,
     inputs: { maxIndependent4k: 8, maxIndependent2k: 2, hdmi20: 4, dp12: 2, sdi12g: 2 },
     outputs: { max4k: 2 },
-    layers: { model: 'mixing_split', mixing4k: null, split4k: null },  // 확인 필요
+    layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },  // 최대 2×4K 믹싱 / 4×4K 분할(프로젝트 조사 기준)
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
     control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'needs_verification', sourceUrl: 'https://www.analogway.com/midra-4k-presentation-switchers', notes: 'I/O 공식 확인, 레이어 수 확인 필요' },
+    verification: { status: 'partial_official', sourceUrl: 'https://www.analogway.com/midra-4k-presentation-switchers', sourceVersion: 'handoff 2026-09-12 §2', notes: 'I/O 공식. 믹싱2/분할4는 프로젝트 조사 기준. Eikos Wide Canvas는 별도(미반영)' },
   })),
 
   // ── Analog Way · Alta 4K (Zenith 200 기준) ────────────────────────────────
@@ -158,13 +158,13 @@ export const PROCESSORS = [
   proc({
     id: 'cl-universe-u9max',
     manufacturer: CL, family: 'Universe', model: 'Universe U9 Max',
-    inputs: {},                                        // I/O 채널 수 확인 필요(PDF)
-    outputs: {},
-    layers: { model: 'screen_group', global2k: 160, global4k: 40 },  // per-board 확인 필요
+    inputs: { maxIndependent4k: 36, maxIndependent2k: 108, maxInputBoards: 18 },
+    outputs: { max4k: 20, max2k: 60, maxOutputBoards: 10 },
+    layers: { model: 'screen_group', global2k: 160, global4k: 40, perBoard2k: 16, perBoard4k: 4 },
     switching: { fade: true },
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U9 Max Specification V1.1 (문서 §13)', notes: '전역 레이어(160×2K/40×4K) 공식. I/O·출력·per-board는 확인 필요' },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U9 Max Specification V1.1 (handoff 2026-09-12 §6)', notes: 'I/O·출력·전역/보드 레이어 공식(V1.1)' },
   }),
   proc({
     id: 'cl-universe-u15max',
