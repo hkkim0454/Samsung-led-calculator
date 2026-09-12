@@ -14,7 +14,7 @@ import {
   inputsCapacity,
   outputs4kCapacity,
   validateOutputCardLayers,
-} from './processor-limits.js?v=218';
+} from './processor-limits.js?v=219';
 
 /** 여러 값 중 최댓값(null 무시). 전부 null이면 null. */
 function maxNullable(...vals) {
@@ -173,11 +173,16 @@ export function rankProcessors(procs, req) {
     .filter(proc => !isExpensiveOverspec(proc, req))
     .map(proc => {
       const v = validateProcessor(proc, req);
+      const label = gradeLabel(v);
       const out4k = v?.checks.find(c => c.name.startsWith('4K 출력'));
       const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
-      return { proc, ...v, label: gradeLabel(v), appPreferred: pref.includes(proc.family), _headroom: headroom };
+      // 필요 4K 출력이 정확히 2개('4K 2판')이면 Eikos 4K를 최우선 추천(이사 지침 2026-09-12).
+      //   2×4K는 Eikos가 딱 맞아 '한계 구성'이 되어 여유 큰 대형 모델보다 뒤로 밀리던 것을 위로 끌어올림.
+      const eikosTop = req.required4kOutputs === 2 && /eikos\s*4k/i.test(proc.model) && label !== '부적합';
+      return { proc, ...v, label, appPreferred: pref.includes(proc.family), _headroom: headroom, _eikosTop: eikosTop };
     })
     .sort((a, b) =>
+      (Number(b._eikosTop) - Number(a._eikosTop)) ||   // 4K 2판 → Eikos 4K 최우선
       (GRADE_ORDER[a.label] - GRADE_ORDER[b.label]) ||
       (Number(b.appPreferred) - Number(a.appPreferred)) ||
       (a._headroom - b._headroom));   // 여유가 적은(적정 크기) 모델 먼저 → 대용량은 후순위
