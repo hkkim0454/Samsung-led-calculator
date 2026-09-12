@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=195';
-import { MODELS } from './models.js?v=195';
-import { PROCESSORS } from './processor-data.js?v=195';
-import { processorRequirements } from './processor-limits.js?v=195';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=195';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=195';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=195';
-import { parseCasesText, normalizeDate } from './cases.js?v=195';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=196';
+import { MODELS } from './models.js?v=196';
+import { PROCESSORS } from './processor-data.js?v=196';
+import { processorRequirements } from './processor-limits.js?v=196';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=196';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=196';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=196';
+import { parseCasesText, normalizeDate } from './cases.js?v=196';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -274,8 +274,9 @@ function renderPreview() {
   const eyePx = px(1600), vEye = SHp - eyePx;               // 카메라 눈높이 1.6 m
   const ZW = px(camMM), P = ZW;
   const CX = CW / 2, CY = CH / 2;
-  // 씬 좌표(u,v,d) → 화면 px. 오버레이는 스케일 캔버스 밖이므로 fit을 곱해 실화면 좌표로(라벨이 안 줄어듦, v2 1-1).
-  const proj = (u, v, d = 0) => { const f = P / (P + ZW - d); return { x: (CX + (u - SWp / 2) * f) * fit, y: (CY + (v - vEye) * f) * fit }; };
+  // 씬 좌표(u,v,d) → 캔버스 px. 오버레이는 스케일 캔버스 '안'에 두어 3D와 항상 같은 좌표계(정렬 보장).
+  //   라벨이 캔버스 축소에 줄지 않도록 글자만 CSS에서 1/fit로 역보정(v2 1-1 B안 — fit 타이밍에 안 흔들림).
+  const proj = (u, v, d = 0) => { const f = P / (P + ZW - d); return { x: CX + (u - SWp / 2) * f, y: CY + (v - vEye) * f }; };
 
   // LED 월(정면벽 로컬 좌표, px)
   const Lx = px(r.marginW), Ly = px(topGapMM), Lw = px(r.actualW), Lh = px(r.actualH);
@@ -395,7 +396,7 @@ function renderPreview() {
   const ledGlow = `box-shadow:0 0 0 2px #2f7ff6,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
   const personLbl = proj(personX, SHp, personD);
 
-  stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${Math.round(CH * fit)}px">
+  stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${Math.round(CH * fit)}px;--fit:${fit}">
     <div class="rs3Canvas" style="width:${CW}px;height:${CH}px;transform:scale(${fit});">
       <div class="rs3Persp" style="perspective:${P}px;perspective-origin:50% 50%">
         <div class="rs3Scene" style="transform:${sceneT}">
@@ -422,7 +423,7 @@ function renderPreview() {
       <div class="rs3Overlay">
         ${dims.join('')}
         ${numHTML}
-        <div class="rs3Dlbl person" style="left:${personLbl.x}px;top:${personLbl.y + 14 * fit}px;transform:translate(-50%,0)">키 170 cm</div>
+        <div class="rs3Dlbl person" style="left:${personLbl.x}px;top:${personLbl.y + 14}px;transform:translate(-50%,0)">키 170 cm</div>
       </div>
     </div>
   </div>`;
