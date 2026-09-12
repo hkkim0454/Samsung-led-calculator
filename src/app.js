@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=231';
-import { MODELS } from './models.js?v=231';
-import { PROCESSORS } from './processor-data.js?v=231';
-import { processorRequirements } from './processor-limits.js?v=231';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=231';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=231';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=231';
-import { parseCasesText, normalizeDate } from './cases.js?v=231';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=232';
+import { MODELS } from './models.js?v=232';
+import { PROCESSORS } from './processor-data.js?v=232';
+import { processorRequirements } from './processor-limits.js?v=232';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=232';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=232';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=232';
+import { parseCasesText, normalizeDate } from './cases.js?v=232';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -320,7 +320,11 @@ function renderPreview() {
   const padH = 40 / effFit;   // 아래 여유를 키워 바닥(가로 치수선)을 조금 뒤로(위로) 당김(이사 요청)
   const fH = Math.max(0.5, Math.min(fFront, (CY - visT - padH) / vEye, (visB - padH - CY) / (SHp - vEye)));
   const dHeight = P + ZW - P / fH;
-  const uHeight = Math.max(0, (SWp / 2) + (((36 - tx) / effFit) - CX) / fH);   // 왼쪽에서 36px 안쪽(가장자리 잘림 방지)
+  // 벽공간 치수선(가로·세로)을 라벨 글자 높이(약 14px)만큼 앞쪽(카메라 쪽)으로 이동(이사 요청).
+  const wallFwdPx = 14;
+  const fWall = Math.min(fFront, fH + wallFwdPx / (effFit * Math.max(1, SHp - vEye)));
+  const dWall = Math.min(Dp, P + ZW - P / fWall);
+  const uHeightWall = Math.max(0, (SWp / 2) + (((36 - tx) / effFit) - CX) / fWall);   // 앞쪽 이동 후에도 좌측 정렬 유지
   // 사람을 '벽 공간 치수선(dHeight)'보다 30cm 안쪽(뒤)에 세워 앞으로 튀어나오지 않게(이사 요청: 눈높이가 어색).
   //   → 벽과 치수선 사이에 위치. 눈높이선·라벨·사람 모두 이 깊이(personDeff)를 공유해 정렬 유지.
   const personDeff = Math.max(px(400), Math.min(personD, dHeight - px(300)));
@@ -424,10 +428,10 @@ function renderPreview() {
     hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
     hDim(Lx + Lw, SWp, topDimV, 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
   }
-  // 벽 크기(가로·세로): 같은 바닥 레벨(dHeight). 가로선 왼쪽 끝을 세로선(uHeight)에서 시작해
+  // 벽 크기(가로·세로): 같은 바닥 레벨(dWall, 앞쪽 이동). 가로선 왼쪽 끝을 세로선(uHeightWall)에서 시작해
   //   좌하단에서 L자로 깔끔히 만나게(이사 요청: 세로축과 왼쪽 모서리 만남).
-  hDim(uHeight, SWp, SHp, dHeight, mL(sW), 'sub');
-  vDim(uHeight, 0, SHp, dHeight, mL(sH), 'sub');
+  hDim(uHeightWall, SWp, SHp, dWall, mL(sW), 'sub');
+  vDim(uHeightWall, 0, SHp, dWall, mL(sH), 'sub');
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
