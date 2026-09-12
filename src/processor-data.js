@@ -66,18 +66,36 @@ export const PROCESSORS = [
   })),
 
   // ── Analog Way · Alta 4K (Zenith 200 기준) ────────────────────────────────
-  // 오너 문서 §5.2: 16입력(14×4K + 2×2K), 6출력(최대 4×4K Program), 8×4K 분할 / 4×4K 믹싱.
+  // ZEN200 뒷면 데이터시트(이사 제공 2026-09-12): 16입력(IN1·2 HDMI1.4/3G-SDI 겸용, IN3·4 12G-SDI,
+  // IN5-12 HDMI2.0, IN13-16 DP1.2), 6출력(최대 4×4K Program). 16입력 모두 2K 가능.
   proc({
     id: 'aw-alta-zenith-200',
     manufacturer: AW, family: 'Alta', model: 'Alta 4K (Zenith 200)',
-    inputs: { maxIndependent4k: 14, maxIndependent2k: 2, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 겸용 HDMI1.4/3G SDI 2개(이사 제공 2026-09-12)
+    inputs: { maxIndependent4k: 14, maxIndependent2k: 16, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 16입력 전부 2K 가능(4K는 14). 겸용 HDMI1.4/3G-SDI 2개(이사 제공 2026-09-12)
     outputs: { max4k: 4 },   // 최대 4×4K60 Program outputs (총 6 outputs)
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
     control: { tcp: true, crestronCompatible: true },   // AMX는 공식 미확인(null 유지)
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceVersion: 'Zenith 200 datasheet + Alta 4K brochure(handoff v2 §G)', notes: '총 6출력 중 4×4K Program. Genlock·Crestron 공식. AMX 확인 필요' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceVersion: 'ZEN200 뒷면 데이터시트(이사 제공 2026-09-12) + Alta 4K brochure(handoff v2 §G)', notes: 'I/O: 16입력(IN1·2 HDMI1.4/3G-SDI 겸용, IN3·4 12G-SDI, IN5-12 HDMI2.0, IN13-16 DP1.2), 4K 14 / 2K 16, 총 6출력 중 4×4K Program. Genlock·Crestron 공식. AMX 확인 필요' },
+  }),
+
+  // ── Analog Way · Alta 4K (Zenith 100 기준) ────────────────────────────────
+  // ZEN100 뒷면 데이터시트(이사 제공 2026-09-12): 13입력(IN1·2 HDMI1.4/3G-SDI 겸용, IN3·4 12G-SDI,
+  // IN5-10 HDMI2.0, IN11-13 DP1.2), 4출력(OUT#1-4 = 4×4K). 13입력 모두 2K 가능, 4K는 11.
+  // 믹싱/분할 레이어는 데이터시트에 수치 없음 → null(확인 필요).
+  proc({
+    id: 'aw-alta-zenith-100',
+    manufacturer: AW, family: 'Alta', model: 'Alta 4K (Zenith 100)',
+    inputs: { maxIndependent4k: 11, maxIndependent2k: 13, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 13입력 전부 2K 가능(4K는 11). 겸용 HDMI1.4/3G-SDI 2개(이사 제공 2026-09-12)
+    outputs: { max4k: 4 },   // OUT#1-4 = 4×4K
+    layers: { model: 'mixing_split', mixing4k: null, split4k: null },   // 데이터시트에 믹싱/분할 수치 없음(확인 필요)
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
+    latency: { frames: 1 },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true },
+    control: { tcp: true, crestronCompatible: true },   // AMX는 공식 미확인(null 유지)
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-100', sourceVersion: 'ZEN100 뒷면 데이터시트(이사 제공 2026-09-12)', notes: 'I/O: 13입력(IN1·2 HDMI1.4/3G-SDI 겸용, IN3·4 12G-SDI, IN5-10 HDMI2.0, IN11-13 DP1.2), 4K 11 / 2K 13, 출력 OUT#1-4 = 4×4K. 믹싱/분할 레이어 수치는 데이터시트 미기재(확인 필요)' },
   }),
 
   // ── Analog Way · Aquilon (LivePremier RS) ─────────────────────────────────
