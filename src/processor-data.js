@@ -70,7 +70,7 @@ export const PROCESSORS = [
   // IN5-12 HDMI2.0, IN13-16 DP1.2), 6출력(최대 4×4K Program). 16입력 모두 2K 가능.
   proc({
     id: 'aw-alta-zenith-200',
-    manufacturer: AW, family: 'Alta', model: 'Alta 4K (Zenith 200)',
+    manufacturer: AW, family: 'Alta', model: 'Zenith 200',
     inputs: { maxIndependent4k: 14, maxIndependent2k: 16, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 16입력 전부 2K 가능(4K는 14). 겸용 HDMI1.4/3G-SDI 2개(이사 제공 2026-09-12)
     outputs: { max4k: 4 },   // 최대 4×4K60 Program outputs (총 6 outputs)
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
@@ -87,7 +87,7 @@ export const PROCESSORS = [
   // 믹싱/분할 레이어는 데이터시트에 수치 없음 → null(확인 필요).
   proc({
     id: 'aw-alta-zenith-100',
-    manufacturer: AW, family: 'Alta', model: 'Alta 4K (Zenith 100)',
+    manufacturer: AW, family: 'Alta', model: 'Zenith 100',
     inputs: { maxIndependent4k: 11, maxIndependent2k: 13, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 13입력 전부 2K 가능(4K는 11). 겸용 HDMI1.4/3G-SDI 2개(이사 제공 2026-09-12)
     outputs: { max4k: 4 },   // OUT#1-4 = 4×4K
     layers: { model: 'mixing_split', mixing4k: null, split4k: null },   // 데이터시트에 믹싱/분할 수치 없음(확인 필요)
