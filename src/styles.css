@@ -275,8 +275,9 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Grid{position:absolute;inset:0;display:grid;box-sizing:border-box}
 .rs3Grid>i{background:linear-gradient(160deg,#2b3037,#1e2228 60%,#23272d);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);border-radius:1px}
 .rs3Glow{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(47,127,246,.22),transparent 60%);animation:rs3Breathe 6s ease-in-out infinite;pointer-events:none}
-/* 캐비닛 번호(2D 오버레이, v2 1-2): 열=캐비닛 위(밝은 글자+그림자), 행=벽(어두운 글자). */
-.rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:14px;font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
+/* 캐비닛 번호(2D 오버레이, v2 1-2): 열=캐비닛 위(밝은 글자+그림자), 행=벽(어두운 글자).
+   오버레이는 스케일 캔버스 안이라 글자를 1/fit로 역보정 → 화면상 항상 14px(v2 1-1 B안). */
+.rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:calc(14px / var(--fit,1));font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
 .rs3Num.col{color:#EDEEF4;text-shadow:0 1px 2px rgba(0,0,0,.7)}
 .rs3Num.row{color:#6B7178}
 .rs3Sig{position:absolute;box-sizing:border-box;border:2px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}
@@ -285,7 +286,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Sig.uhd .rs3SigTag{background:rgba(255,59,48,.95)}
 .rs3EyeLayer{position:absolute;inset:0;pointer-events:none}
 .rs3Eye{position:absolute;height:0;border-top:1px dashed rgba(29,95,208,.65);transform-origin:left center;pointer-events:none}
-.rs3EyeLbl{position:absolute;transform:translateY(-50%);font-size:9px;font-weight:600;color:#1d5fd0;background:rgba(255,255,255,.82);padding:0 3px;border-radius:3px;white-space:nowrap;pointer-events:none}
+.rs3EyeLbl{position:absolute;transform:translateY(-50%);font-size:calc(9px / var(--fit,1));font-weight:600;color:#1d5fd0;background:rgba(255,255,255,.82);padding:0 3px;border-radius:3px;white-space:nowrap;pointer-events:none}
 .rs3Person{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;pointer-events:none}
 .rs3Person .h{width:100%;aspect-ratio:1;border-radius:50%;background:#a9a9b7}
 .rs3Person .b{width:190%;height:56%;margin-top:6%;border-radius:44% 44% 14% 14%/24% 24% 8% 8%;background:#b4b4c1}
@@ -295,10 +296,10 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Dln.h{border-top:1px dashed rgba(16,18,22,.3);transform:translateY(-50%)}
 .rs3Dln.v{border-left:1px dashed rgba(16,18,22,.3);transform:translateX(-50%)}
 .rs3Dlbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-family:var(--mono);pointer-events:none}
-.rs3Dlbl.key{background:#14161a;color:#fff;font-size:12px;font-weight:600;padding:2px 7px;border-radius:6px}
-.rs3Dlbl.sub{background:rgba(255,255,255,.94);color:#5b6069;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
-.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
-.rs3Dlbl.person{background:rgba(255,255,255,.94);color:#5b6069;font-size:10px;font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
+.rs3Dlbl.key{background:#14161a;color:#fff;font-size:calc(12px / var(--fit,1));font-weight:600;padding:2px 7px;border-radius:6px}
+.rs3Dlbl.sub{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(10.5px / var(--fit,1));font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
+.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:calc(11.5px / var(--fit,1));font-weight:700;padding:3px 9px;border-radius:999px}
+.rs3Dlbl.person{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(10px / var(--fit,1));font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
 .rs3Dlbl.vlbl{transform:translate(-50%,-50%) rotate(-90deg)}
 .rs3Frame.noGrid .rs3FloorGrid{display:none}
 .rs3Frame.noEye .rs3Eye,.rs3Frame.noEye .rs3EyeLbl{display:none}
