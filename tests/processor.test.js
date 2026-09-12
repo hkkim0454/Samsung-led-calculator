@@ -327,6 +327,44 @@ test('Universe does NOT use the 1:4 input-slot budget (density differs)', () => 
   assert.equal(findCheck(v, '독립 2K 입력').ok, true);   // 20 ≤ 108
 });
 
+// ── handoff v2: 공식 확인된 기능값 반영 (UNKNOWN은 null 유지) ─────────────────────
+test('handoff v2 features: confirmed O values applied, UNKNOWN kept null', () => {
+  const h9 = getProcessor('ns-h9');
+  assert.equal(h9.switching.seamless, true);
+  assert.equal(h9.switching.fade, true);
+  assert.equal(h9.features.genlock, true);
+  assert.equal(h9.switching.trueABMixing, null);      // 확인 필요 유지
+  assert.equal(h9.switching.previewProgram, null);    // 확인 필요 유지
+
+  const x = getProcessor('cl-x100pro-7u');
+  assert.equal(x.features.genlock, true);
+  assert.equal(x.features.tenBit, true);
+  assert.equal(x.switching.monitoringPreview, true);
+  assert.equal(x.switching.previewProgram, null);     // 모니터링≠PVW/PGM
+  assert.equal(x.features.hdr, null);                 // 확인 필요 유지
+
+  const rs4 = getProcessor('aw-aquilon-rs4');
+  assert.equal(rs4.features.genlock, true);
+  assert.equal(rs4.control.amxCompatible, true);
+  assert.equal(rs4.control.crestronCompatible, true);
+
+  const alta = getProcessor('aw-alta-zenith-200');
+  assert.equal(alta.control.crestronCompatible, true);
+  assert.equal(alta.control.amxCompatible, null);     // AMX 확인 필요 유지
+
+  const u6 = getProcessor('cl-universe-u6max');
+  assert.equal(u6.switching.trueABMixing, null);      // false→null(공식 미확인)
+  assert.equal(u6.switching.monitoringPreview, true);
+  const u15 = getProcessor('cl-universe-u15max');
+  assert.equal(u15.features.tenBit, true);
+});
+test('Genlock now passes where confirmed (NovaStar/X100/Aquilon), Universe still CONDITIONAL', () => {
+  const req = processorRequirements({ resW: 3840, resH: 2160 }, { genlockRequired: true });
+  assert.equal(findCheck(validateProcessor(getProcessor('ns-h9'), req), 'Genlock').ok, true);
+  assert.equal(findCheck(validateProcessor(getProcessor('cl-x100pro-7u'), req), 'Genlock').ok, true);
+  assert.equal(findCheck(validateProcessor(getProcessor('cl-universe-u9max'), req), 'Genlock').ok, null); // 확인 필요
+});
+
 // ── QuickVu / QuickMatrix 단종 삭제 확인 ────────────────────────────────────────
 test('discontinued Midra models removed; Pulse/Eikos remain', () => {
   const midra = PROCESSORS.filter(p => p.family === 'Midra').map(p => p.model);
