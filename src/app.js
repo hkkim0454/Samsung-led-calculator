@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=217';
-import { MODELS } from './models.js?v=217';
-import { PROCESSORS } from './processor-data.js?v=217';
-import { processorRequirements } from './processor-limits.js?v=217';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=217';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=217';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=217';
-import { parseCasesText, normalizeDate } from './cases.js?v=217';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=218';
+import { MODELS } from './models.js?v=218';
+import { PROCESSORS } from './processor-data.js?v=218';
+import { processorRequirements } from './processor-limits.js?v=218';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=218';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=218';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=218';
+import { parseCasesText, normalizeDate } from './cases.js?v=218';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -570,9 +570,13 @@ function vpCheckHTML(c) {
     : `${c.have}`;
   return `<li class="vc ${cls}"><span class="ic">${icon}</span><span class="cn">${esc(c.name)}</span><span class="cv">${esc(String(val))}</span></li>`;
 }
-// 입출력 포트가 '고정형'(커넥터 수량이 명시된 제품, 예: Analog Way)인지. 카드 증설형은 포트 고정 수량이 없어 제외.
+// 입출력 정보(팝업으로 보여줄 값)가 있는 제품인지. 커넥터 수량(HDMI/DP/SDI) 또는
+//   최대 독립 입력(4K/2K)·최대 출력(4K/2K) 중 하나라도 있으면 대상. (Aquilon RS 등 카드형 포함, 이사 요청)
 function procHasFixedPorts(p) {
-  return ['hdmi14', 'hdmi20', 'dp12', 'sdi3g', 'sdi12g'].some(k => p.inputs?.[k] != null);
+  const i = p.inputs || {}, o = p.outputs || {};
+  return ['hdmi14', 'hdmi20', 'dp12', 'sdi3g', 'sdi12g'].some(k => i[k] != null)
+    || i.maxIndependent4k != null || i.maxIndependent2k != null
+    || o.max4k != null || o.max2k != null;
 }
 function vpItemHTML(item) {
   const p = item.proc;
@@ -595,12 +599,19 @@ function openPortPopup(id) {
   const p = PROCESSORS.find(x => x.id === id);
   if (!p) return;
   const nn = v => (v == null ? '<span class="muted-note">—</span>' : `<b>${v}</b>개`);
-  const inRows = [['HDMI 1.4', p.inputs.hdmi14], ['HDMI 2.0', p.inputs.hdmi20], ['DisplayPort 1.2', p.inputs.dp12], ['SDI 3G', p.inputs.sdi3g], ['SDI 12G', p.inputs.sdi12g]]
-    .filter(([, v]) => v != null);
-  const outRows = [['4K 출력', p.outputs.max4k], ['2K 출력', p.outputs.max2k]].filter(([, v]) => v != null);
   const row = (label, v) => `<tr><td>${esc(label)}</td><td class="pp-n">${nn(v)}</td></tr>`;
+  // 커넥터별 수량(고정형: Pulse/Eikos/Alta)이 있으면 그걸, 없으면 최대 독립 입력(카드형: Aquilon RS)을 보여줌.
+  const connRows = [['HDMI 1.4', p.inputs.hdmi14], ['HDMI 2.0', p.inputs.hdmi20], ['DisplayPort 1.2', p.inputs.dp12], ['SDI 3G', p.inputs.sdi3g], ['SDI 12G', p.inputs.sdi12g]]
+    .filter(([, v]) => v != null);
+  const indepRows = [['독립 입력 · 4K', p.inputs.maxIndependent4k], ['독립 입력 · 2K', p.inputs.maxIndependent2k]]
+    .filter(([, v]) => v != null);
+  const inRows = connRows.length ? connRows : indepRows;
+  const inTitle = connRows.length ? '입력 포트' : '입력 (최대)';
+  const outRows = [['4K 출력', p.outputs.max4k], ['2K 출력', p.outputs.max2k]].filter(([, v]) => v != null);
   const inHTML = inRows.length ? inRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요(데이터시트 미확보)</td></tr>`;
   const outHTML = outRows.length ? outRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요</td></tr>`;
+  // 커넥터를 보여줄 때만 독립 입력 최대를 참고로 덧붙임(카드형은 이미 위에 표시됨).
+  const showIndepNote = connRows.length && (p.inputs.maxIndependent4k != null || p.inputs.maxIndependent2k != null);
   const needsVer = p.verification?.status !== 'official';
   let el = document.querySelector('#portPop');
   if (!el) {
@@ -616,8 +627,8 @@ function openPortPopup(id) {
       <button type="button" class="ppClose" data-portclose aria-label="닫기">✕</button>
     </div>
     <div class="ppBody">
-      <div class="ppSec"><div class="ppSecTitle">입력 포트</div><table class="ppTable">${inHTML}</table>
-        ${(p.inputs.maxIndependent4k != null || p.inputs.maxIndependent2k != null)
+      <div class="ppSec"><div class="ppSecTitle">${inTitle}</div><table class="ppTable">${inHTML}</table>
+        ${showIndepNote
           ? `<div class="ppNote">독립 입력 최대 · 4K ${p.inputs.maxIndependent4k ?? '—'} / 2K ${p.inputs.maxIndependent2k ?? '—'}</div>` : ''}
       </div>
       <div class="ppSec"><div class="ppSecTitle">출력</div><table class="ppTable">${outHTML}</table></div>
