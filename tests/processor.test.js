@@ -1,10 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  processorRequirements, validateProcessor, validateOutputCardLayers, rankProcessors, regionTiles,
-  outputCardUsage2kEq, outputs4kCapacity, inputsCapacity, validateBuild,
-} from '../src/engine.js';
-import { PROCESSORS, getProcessor } from '../src/processors.js';
+  processorRequirements, validateOutputCardLayers, regionTiles,
+  outputCardUsage2kEq, outputs4kCapacity, inputsCapacity,
+} from '../src/processor-limits.js';
+import {
+  validateProcessor, rankProcessors, validateBuild,
+} from '../src/processor-validator.js';
+import { PROCESSORS, getProcessor } from '../src/processor-data.js';
 
 // 판정 결과에서 특정 검사 항목을 찾는 헬퍼.
 const findCheck = (v, name) => v.checks.find(c => c.name === name);

@@ -1,7 +1,7 @@
 # 비디오 프로세서 데이터 문서 (docs/processors)
 
 이 폴더는 **비디오 프로세서 선정(05 비디오 프로세서)** 에 쓰이는 제조사별 사양을 사람이 읽기 쉽게 정리한 참고 문서다.
-실제 계산에 쓰이는 데이터는 `src/processors.js`(순수 데이터), 로직은 `src/engine.js`에 있다. **이 문서와 코드가 다르면 코드(`processors.js`)가 기준이다.**
+실제 계산에 쓰이는 데이터는 `src/processor-data.js`(순수 데이터), 용량·한계 계산은 `src/processor-limits.js`, 판정·정렬은 `src/processor-validator.js`에 있다(코드 3분할, DEC-030). **이 문서와 코드가 다르면 코드(`processor-data.js`)가 기준이다.**
 
 > 관련: [SOURCE-OF-TRUTH.md](SOURCE-OF-TRUTH.md)(데이터 정책 — **작업 전 필독**), `docs/SPEC.md` §7, `docs/audit.md` DEC-018~028.
 
