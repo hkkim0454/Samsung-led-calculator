@@ -208,9 +208,10 @@ test('unknown required feature yields CONDITIONAL, not PASS', () => {
   assert.equal(v.verdict, 'CONDITIONAL');
 });
 test('output capacity unknown (null) is never auto-PASS', () => {
-  const x = getProcessor('cl-x100pro-7u');   // global_window, 출력보드 미상 → 유도 불가
-  const req = processorRequirements({ resW: 7680, resH: 4320 });  // 4K 출력 4 요구
-  const v = validateProcessor(x, req);
+  // 출력 정보가 전혀 없는(그리고 유도 불가한 mixing_split) 가상 제품 → 4K 출력 확인 불가.
+  const fx = { id: 'fx-noout', manufacturer: 'X', family: 'X', model: 'fixture',
+    inputs: {}, outputs: {}, layers: { model: 'mixing_split' }, switching: {}, features: {}, control: {} };
+  const v = validateProcessor(fx, processorRequirements({ resW: 7680, resH: 4320 }));  // 4K 출력 4 요구
   assert.equal(findCheck(v, '4K 출력').ok, null);
   assert.notEqual(v.verdict, 'PASS');
 });
@@ -220,7 +221,7 @@ test('outputs4kCapacity: HDMI 2.0 assumption derives NovaStar 4K outputs', () =>
   assert.deepEqual(outputs4kCapacity(getProcessor('ns-h9')), { value: 20, assumed: true });   // 4×5
   assert.deepEqual(outputs4kCapacity(getProcessor('ns-h20')), { value: 80, assumed: true });  // 4×20
   assert.deepEqual(outputs4kCapacity(getProcessor('cl-universe-u6max')), { value: 10, assumed: false }); // 공식값 유지
-  assert.deepEqual(outputs4kCapacity(getProcessor('cl-x100pro-7u')), { value: null, assumed: false });   // 유도 불가
+  assert.deepEqual(outputs4kCapacity(getProcessor('cl-x100pro-7u')), { value: 8, assumed: false });      // 공식 출력값 반영
 });
 test('NovaStar 4K output check uses HDMI 2.0 assumption (labeled)', () => {
   const v = validateProcessor(getProcessor('ns-h9'), processorRequirements({ resW: 7680, resH: 4320 })); // 필요 4
@@ -363,6 +364,31 @@ test('Genlock now passes where confirmed (NovaStar/X100/Aquilon), Universe still
   assert.equal(findCheck(validateProcessor(getProcessor('ns-h9'), req), 'Genlock').ok, true);
   assert.equal(findCheck(validateProcessor(getProcessor('cl-x100pro-7u'), req), 'Genlock').ok, true);
   assert.equal(findCheck(validateProcessor(getProcessor('cl-universe-u9max'), req), 'Genlock').ok, null); // 확인 필요
+});
+
+// ── Colorlight 공식 출력값 반영 (X100 Pro 출력 / U15 Max I/O) ────────────────────
+test('X100 Pro official outputs (boards × per-board ports)', () => {
+  const o2 = getProcessor('cl-x100pro-2u').outputs;
+  const o7 = getProcessor('cl-x100pro-7u').outputs;
+  assert.deepEqual({ b: o2.maxOutputBoards, k: o2.max4k, t: o2.max2k }, { b: 4, k: 4, t: 16 });
+  assert.deepEqual({ b: o7.maxOutputBoards, k: o7.max4k, t: o7.max2k }, { b: 8, k: 8, t: 32 });
+  // 전역 레이어는 여전히 null(윈도우≠레이어)
+  assert.equal(getProcessor('cl-x100pro-7u').layers.global4k, null);
+});
+test('X100 Pro-7U now evaluable for 4K output (8), still bounded by independent input', () => {
+  const x = getProcessor('cl-x100pro-7u');
+  // 7680×4320 → 4K 출력 4 요구, 지원 8 → OK
+  const v = validateProcessor(x, processorRequirements({ resW: 7680, resH: 4320 }, { independent4kInputs: 8 }));
+  assert.equal(findCheck(v, '4K 출력').ok, true);   // 4 ≤ 8
+  assert.equal(findCheck(v, '독립 4K 입력').ok, true); // 8 ≤ 8
+});
+test('U15 Max official I/O filled', () => {
+  const u = getProcessor('cl-universe-u15max');
+  assert.deepEqual(
+    { i4: u.inputs.maxIndependent4k, i2: u.inputs.maxIndependent2k, iB: u.inputs.maxInputBoards,
+      o4: u.outputs.max4k, o2: u.outputs.max2k, oB: u.outputs.maxOutputBoards,
+      g4: u.layers.global4k, pb4: u.layers.perBoard4k },
+    { i4: 60, i2: 120, iB: 30, o4: 40, o2: 120, oB: 20, g4: 80, pb4: null });  // per-board 미확인 유지
 });
 
 // ── QuickVu / QuickMatrix 단종 삭제 확인 ────────────────────────────────────────

@@ -125,20 +125,21 @@ export const PROCESSORS = [
 
   // ── Colorlight · X100 Pro ─────────────────────────────────────────────────
   // 오너 문서 §6 표(2U/4U/7U): 독립 2K/4K 입력, Max Window. 출력 수·기능은 확인 필요.
+  // 출력: 4K 출력보드 1장=1×4K, 2K 출력보드 1장=4×2K. 4K/2K 출력보드는 혼용 불가 → max4k와 max2k를 동시 사용으로 계산 금지.
   ...[
-    { model: 'X100 Pro 2U', boards: 2, in2k: 8,  in4k: 2, win: 32, slug: '2u' },
-    { model: 'X100 Pro 4U', boards: 4, in2k: 16, in4k: 4, win: 32, slug: '4u' },
-    { model: 'X100 Pro 7U', boards: 8, in2k: 32, in4k: 8, win: 64, slug: '7u' },
+    { model: 'X100 Pro 2U', boards: 2, in2k: 8,  in4k: 2, win: 32, outB: 4, out4k: 4, out2k: 16, slug: '2u' },
+    { model: 'X100 Pro 4U', boards: 4, in2k: 16, in4k: 4, win: 32, outB: 4, out4k: 4, out2k: 16, slug: '4u' },
+    { model: 'X100 Pro 7U', boards: 8, in2k: 32, in4k: 8, win: 64, outB: 8, out4k: 8, out2k: 32, slug: '7u' },
   ].map(m => proc({
     id: 'cl-x100pro-' + m.slug,
     manufacturer: CL, family: 'X100 Pro', model: m.model,
     inputs: { maxIndependent2k: m.in2k, maxIndependent4k: m.in4k, maxInputBoards: m.boards },
-    outputs: {},                                   // 출력 수 확인 필요
+    outputs: { max4k: m.out4k, max2k: m.out2k, maxOutputBoards: m.outB },
     layers: { model: 'global_window', maxWindows: m.win },  // global2k/4k 확인 필요(윈도우≠레이어)
     switching: { monitoringPreview: true },        // 멀티스크린 프리뷰·모니터링 공식(≠ A/B PVW/PGM). seamless/fade/trueAB 확인 필요
     features: { genlock: true, tenBit: true },      // Genlock 공식, 10bit는 4K 출력보드 기준. HDR 확인 필요
     control: {},                                   // AMX/Crestron 확인 필요
-    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/service/download/', sourceVersion: 'X100 Pro-' + m.slug.toUpperCase() + ' Specification V2.0', notes: '독립 입력·윈도우 공식. Genlock·10bit(출력보드) 공식. 출력 수·전역 레이어·HDR·스위칭 확인 필요' },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/download/111', sourceVersion: 'X100 Pro-' + m.slug.toUpperCase() + ' Specification V2.0', notes: '독립 입력·윈도우·출력(보드×포트) 공식. 4K/2K 출력보드 혼용 불가(동시 사용 아님). 전역 레이어·HDR·스위칭 확인 필요' },
   })),
 
   // ── Colorlight · Universe (U Series) ──────────────────────────────────────
@@ -170,13 +171,13 @@ export const PROCESSORS = [
   proc({
     id: 'cl-universe-u15max',
     manufacturer: CL, family: 'Universe', model: 'Universe U15 Max',
-    inputs: {},                                        // I/O 확인 필요. 카드당 최대 8K 입력(문서 §14)
-    outputs: {},
-    layers: { model: 'screen_group', global2k: 320, global4k: 80 },  // per-board 확인 필요(U6/U9 규칙 자동적용 금지)
+    inputs: { maxIndependent4k: 60, maxIndependent2k: 120, maxInputBoards: 30 },   // 카드당 최대 8K 입력
+    outputs: { max4k: 40, max2k: 120, maxOutputBoards: 20 },   // 4K 40 = 출력보드 20 × HDMI2.0 2포트
+    layers: { model: 'screen_group', global2k: 320, global4k: 80 },  // per-board 공식 미확인 → null(U6/U9 규칙 자동적용 금지)
     switching: { fade: true, monitoringPreview: true },
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/product/special///2376', sourceVersion: 'U15 Max Specification V1.0 (handoff v2 §B)', notes: '전역 레이어(320×2K/80×4K)·HDR·10bit·Fade 공식. 최대 5.2억 화소·슬롯 40·카드당 8K 입력. I/O·출력·per-board 확인 필요' },
+    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/product/download///2376', sourceVersion: 'U15 Max Specification V1.0', notes: '입력보드 30·독립 60×4K/120×2K, 출력보드 20·40×4K/120×2K, 전역 80×4K/320×2K 공식. 슬롯 40(입출력 합≠40, 조합 사용). 보드당 레이어 공식 미확인(null)' },
   }),
 
 ];
