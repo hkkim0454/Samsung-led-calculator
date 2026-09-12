@@ -371,6 +371,8 @@ export function processorRequirements(config, o = {}) {
     simultaneous2kLayers: int(o.simultaneous2kLayers),
     // 한 출력(카드/보드)에 올라갈 최대 레이어 수(선택). 모르면 null → 카드별 검사는 '확인 필요'.
     maxLayersPerOutput: o.maxLayersPerOutput != null ? int(o.maxLayersPerOutput) : null,
+    // 한 출력카드에 몰리는 레이어 배치(선택): {layers4k,layersDL,layers2k}. 있으면 2K 환산으로 카드 예산 검사.
+    perOutputCardDemand: o.perOutputCardDemand ?? null,
     allowSourceDuplication: o.allowSourceDuplication ?? false,  // 기본 꺼짐(문서 §4)
     seamlessSwitching: !!o.seamlessSwitching,
     fadeRequired: !!o.fadeRequired,
@@ -385,24 +387,49 @@ export function processorRequirements(config, o = {}) {
   };
 }
 
+// 출력카드 레이어 비용(2K 환산): 4K=4, DL(듀얼링크)=2, 2K=1. 카드 1장 용량은 2K 16개 분량.
+// (NovaStar H 공식: 1 output card = 16×2K = 8×DL = 4×4K, 컨텍스트 문서 §4.)
+export const LAYER_COST_2KEQ = Object.freeze({ '2k': 1, 'dl': 2, '4k': 4 });
+
+/** 한 출력카드에 올라갈 레이어들의 2K 환산 사용량 = 4×(4K수) + 2×(DL수) + 1×(2K수). */
+export function outputCardUsage2kEq(demand = {}) {
+  const n = (v) => Math.max(0, Math.floor(v ?? 0));
+  return n(demand.layers4k) * LAYER_COST_2KEQ['4k']
+       + n(demand.layersDL) * LAYER_COST_2KEQ['dl']
+       + n(demand.layers2k) * LAYER_COST_2KEQ['2k'];
+}
+
 /**
  * 출력카드/출력보드별 레이어 한계 검사(NovaStar per_output_card, Universe screen_group).
- * 한 출력에 올라갈 최대 레이어 수(req.maxLayersPerOutput)를 카드/보드 1장 용량과 비교한다.
- * 필요한 값이 없으면 ok=null(확인 필요) — 전체 레이어 합만으로 PASS 처리하지 않는다(문서 §5.2).
+ * 카드 1장 용량(2K 16개 분량)을 기준으로, 한 카드에 몰리는 레이어가 예산을 넘는지 본다(문서 §4·§5.2).
+ * 우선순위:
+ *   1) req.perOutputCardDemand({layers4k,layersDL,layers2k})가 있으면 2K 환산 사용량 vs 카드 2K 용량.
+ *   2) 없고 req.maxLayersPerOutput(한 카드 4K 레이어 수)가 있으면 카드당 4K 용량과 비교.
+ *   3) 둘 다 없으면 ok=null(확인 필요) — 전체 레이어 합만으로 PASS 처리하지 않는다.
+ * 필요한 카드 용량 사양이 없으면 ok=null.
  * 반환: 검사 객체 { name, need, have, unit, ok } 또는 해당 없으면 null.
  */
 export function validateOutputCardLayers(proc, req) {
   const L = proc?.layers ?? {};
   if (L.model !== 'per_output_card' && L.model !== 'screen_group') return null;
-  if (req.simultaneous4kLayers <= 0 && req.simultaneous2kLayers <= 0) return null;
-  const per4k = L.perOutputCard4k ?? L.perOutputBoard4k ?? null;
-  if (req.maxLayersPerOutput == null) {
-    return { name: '출력카드별 레이어', need: '확인 필요', have: (per4k ?? '확인 필요'), unit: '', ok: null };
+  const cap2k = L.perOutputCard2k ?? L.perBoard2k ?? null;   // 카드 1장 2K 용량(예: 16)
+  const per4k = L.perOutputCard4k ?? L.perBoard4k ?? null;   // 카드 1장 4K 용량(예: 4)
+
+  // 1) 상세 레이어 배치(2K 환산): 한 카드에 몰리는 레이어 vs 카드 예산.
+  if (req.perOutputCardDemand != null) {
+    const usage = outputCardUsage2kEq(req.perOutputCardDemand);
+    if (cap2k == null) return { name: '출력카드별 레이어(2K환산)', need: usage, have: null, unit: '', ok: null };
+    return { name: '출력카드별 레이어(2K환산)', need: usage, have: cap2k, unit: '', ok: cap2k >= usage };
   }
-  if (per4k == null) {
-    return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: null, unit: '개', ok: null };
+
+  // 2) 한 카드 4K 레이어 수만 지정된 경우.
+  if (req.maxLayersPerOutput != null) {
+    if (per4k == null) return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: null, unit: '개', ok: null };
+    return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: per4k, unit: '개', ok: per4k >= req.maxLayersPerOutput };
   }
-  return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: per4k, unit: '개', ok: per4k >= req.maxLayersPerOutput };
+
+  // 레이어 배치 정보가 없으면 카드별 검사를 생략한다(장치 전역 레이어 검사로 갈음). null = 검사 없음.
+  return null;
 }
 
 /**

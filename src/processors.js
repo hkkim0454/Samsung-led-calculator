@@ -36,7 +36,7 @@ function proc(p) {
     model: p.model,
     inputs: { ...emptyInputs(), ...(p.inputs ?? {}) },
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
-    layers: { model: p.layers.model, maxWindows: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCard4k: null, perOutputBoard2k: null, perOutputBoard4k: null, ...p.layers },
+    layers: { model: p.layers.model, maxWindows: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, ...p.layers },
     switching: { ...emptySwitching(), ...(p.switching ?? {}) },
     latency: { ...emptyLatency(), ...(p.latency ?? {}) },
     features: { ...emptyFeatures(), ...(p.features ?? {}) },
@@ -98,23 +98,27 @@ export const PROCESSORS = [
   })),
 
   // ── NovaStar · H Series ───────────────────────────────────────────────────
-  // 레이어 자원은 출력카드 단위(카드 1장 = 16×2K / 8×DL / 4×4K, 문서 §5.2).
-  // 모델별 슬롯·출력카드 수·독립 입력 수는 PDF에만 있어 대부분 확인 필요.
+  // 레이어 자원은 출력카드 단위(카드 1장 = 16×2K / 8×DL / 4×4K, 문서 §4). 카드 예산 검사가 핵심.
+  // chassis maxLayers(참고값)·입력/출력 카드 수는 공식(문서 §3). 단, 독립 4K 입력 수는 장착 카드에
+  // 따라 달라 산출 불가 → null(확인 필요, 문서 §7).
   ...[
-    { model: 'H2',  boards: null, slug: 'h2' },
-    { model: 'H5',  boards: 10,   slug: 'h5' },   // 조사: 최대 10 출력카드
-    { model: 'H9',  boards: 15,   slug: 'h9' },   // 조사: 최대 15 출력카드
-    { model: 'H15', boards: null, slug: 'h15' },
+    { model: 'H2',           slug: 'h2',   u: 2,  inCards: 4,  outCards: 2,  maxLayers: 32 },
+    { model: 'H5',           slug: 'h5',   u: 5,  inCards: 10, outCards: 3,  maxLayers: 48 },
+    { model: 'H9',           slug: 'h9',   u: 9,  inCards: 15, outCards: 5,  maxLayers: 80 },
+    { model: 'H9 Enhanced',  slug: 'h9e',  u: 9,  inCards: 15, outCards: 10, maxLayers: 160 },
+    { model: 'H15',          slug: 'h15',  u: 15, inCards: 30, outCards: 10, maxLayers: 160 },
+    { model: 'H15 Enhanced', slug: 'h15e', u: 15, inCards: 30, outCards: 16, maxLayers: 160 },
+    { model: 'H20',          slug: 'h20',  u: 20, inCards: 40, outCards: 20, maxLayers: 320 },
   ].map(m => proc({
     id: 'ns-' + m.slug,
     manufacturer: NS, family: 'H', model: 'H Series ' + m.model,
-    inputs: {},                                   // 독립 입력 수 확인 필요(구성 의존)
-    outputs: { maxOutputBoards: m.boards },        // max4k/max2k 확인 필요
-    layers: { model: 'per_output_card', perOutputCard2k: 16, perOutputCard4k: 4 },
+    inputs: { maxInputBoards: m.inCards },          // 독립 4K/2K 입력 수는 카드 종류 의존 → null(확인 필요)
+    outputs: { maxOutputBoards: m.outCards },        // 4K 출력 커버리지 = 카드당 4K(4) × 출력카드 수
+    layers: { model: 'per_output_card', perOutputCard2k: 16, perOutputCardDL: 8, perOutputCard4k: 4, chassisMaxLayers2k: m.maxLayers },
     switching: {},                                 // A/B 믹서 아님 — 스위칭 세부 확인 필요
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true, rs232: true },
-    verification: { status: 'needs_verification', sourceUrl: 'https://www.novastar.tech/product/detail.html?catid=3&id=39', notes: '카드당 레이어는 문서 §5.2 기준. 슬롯/출력/독립입력 수는 공식 PDF 확인 필요' },
+    verification: { status: 'official', sourceUrl: 'https://www.novastar.tech/tpl/H_SERIES.html', sourceVersion: 'Claude 자료문서 2026-09-12 §3·§4', notes: `${m.u}U. 카드당 16×2K/8×DL/4×4K. 독립 입력 수는 장착 카드 의존(확인 필요)` },
   })),
 
   // ── Colorlight · X100 Pro ─────────────────────────────────────────────────
@@ -132,39 +136,45 @@ export const PROCESSORS = [
     switching: {},                                 // 스위칭 기능 확인 필요
     features: {},                                  // HDR/10bit/genlock 확인 필요
     control: {},
-    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceVersion: 'owner-doc 2026-09-12 §6', notes: '독립 입력·윈도우 오너 문서 확인. 출력 수·기능 확인 필요' },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/service/download/', sourceVersion: 'X100 Pro-' + m.slug.toUpperCase() + ' Specification V2.0', notes: '독립 입력·윈도우 공식 확인(문서 §9). 독립 입력 ≠ 윈도우 수. 출력 수·기능 확인 필요' },
   })),
 
   // ── Colorlight · Universe (U Series) ──────────────────────────────────────
-  // U6 Max: 오너 문서 §7 확인 값. U9 Max: 레이어만(160×2K / 40×4K). U15 Max: 확인 필요.
+  // 독립 입력 + 전역(global) 레이어 + 보드/스크린그룹(per-board) 레이어를 분리 관리(문서 §11·§17).
+  // U6 Max: 공식(문서 §12). U9/U15 Max: 레이어는 공식, I/O·per-board는 PDF 확인 필요 → partial_official.
   proc({
     id: 'cl-universe-u6max',
     manufacturer: CL, family: 'Universe', model: 'Universe U6 Max',
     inputs: { maxIndependent4k: 20, maxIndependent2k: 60, maxInputBoards: 10 },
     outputs: { max4k: 10, max2k: 30, maxOutputBoards: 5 },
-    layers: { model: 'screen_group', global2k: 80 },  // "Max Layer 80"(2K 기준으로 봄), 4K 세분 확인 필요
-    switching: { fade: true },                        // seamless/A-B 확인 필요
+    // 장치 전체 80×2K 또는 20×4K, 보드 1장 16×2K 또는 4×4K.
+    layers: { model: 'screen_group', global2k: 80, global4k: 20, perBoard2k: 16, perBoard4k: 4 },
+    switching: { cut: true, fade: true, trueABMixing: false },
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceVersion: 'owner-doc 2026-09-12 §7', notes: 'I/O·출력 확인. 레이어 4K 세분·per-board 확인 필요' },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U6 Max Specification V1.0 (문서 §12)', notes: 'I/O·출력·전역/보드 레이어 공식 확인' },
   }),
   proc({
     id: 'cl-universe-u9max',
     manufacturer: CL, family: 'Universe', model: 'Universe U9 Max',
-    inputs: {},                                        // 독립 입력 수 확인 필요
+    inputs: {},                                        // I/O 채널 수 확인 필요(PDF)
     outputs: {},
-    layers: { model: 'screen_group', global2k: 160, global4k: 40 },
+    layers: { model: 'screen_group', global2k: 160, global4k: 40 },  // per-board 확인 필요
     switching: { fade: true },
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'needs_verification', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceVersion: 'owner-doc 2026-09-12 §7', notes: '레이어(160×2K/40×4K)만 확인. I/O·출력 확인 필요' },
+    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U9 Max Specification V1.1 (문서 §13)', notes: '전역 레이어(160×2K/40×4K) 공식. I/O·출력·per-board는 확인 필요' },
   }),
   proc({
     id: 'cl-universe-u15max',
     manufacturer: CL, family: 'Universe', model: 'Universe U15 Max',
-    layers: { model: 'screen_group' },                 // 전부 확인 필요
-    features: { hdr: true, redundancy: true },
-    verification: { status: 'needs_verification', sourceUrl: 'https://en.colorlightinside.com/product/special/111', notes: '공식 U15 Max 사양 확인 필요' },
+    inputs: {},                                        // I/O 확인 필요. 카드당 최대 8K 입력(문서 §14)
+    outputs: {},
+    layers: { model: 'screen_group', global2k: 320, global4k: 80 },  // per-board 확인 필요
+    switching: { fade: true },
+    features: { hdr: true, tenBit: true, redundancy: true },
+    control: { tcp: true },
+    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/service/download/', sourceVersion: 'U15 Max Specification V1.0 (문서 §14)', notes: '전역 레이어(320×2K/80×4K) 공식. 최대 5.2억 화소·슬롯 40·카드당 8K 입력. I/O·per-board 확인 필요' },
   }),
 
 ];
