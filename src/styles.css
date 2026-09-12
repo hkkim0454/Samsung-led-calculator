@@ -287,6 +287,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3EyeLayer{position:absolute;inset:0;pointer-events:none}
 .rs3Eye{position:absolute;height:0;border-top:1px dashed rgba(29,95,208,.65);transform-origin:left center;pointer-events:none}
 .rs3EyeLbl{position:absolute;transform:translateY(-50%);font-size:calc(6.3px / var(--fit,1));font-weight:600;color:#1d5fd0;background:rgba(255,255,255,.82);padding:0 3px;border-radius:3px;white-space:nowrap;pointer-events:none}
+.rs3EyeLbl.r{transform:translate(-100%,-50%)}   /* 우측벽 눈높이선: 라벨을 앞쪽 코너에서 안쪽으로(왼쪽) 정렬 */
 .rs3Person{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;pointer-events:none}
 .rs3Person .h{width:100%;aspect-ratio:1;border-radius:50%;background:#a9a9b7}
 .rs3Person .b{width:190%;height:56%;margin-top:6%;border-radius:44% 44% 14% 14%/24% 24% 8% 8%;background:#b4b4c1}
