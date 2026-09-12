@@ -265,7 +265,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#ccd1da,#eceef3)}
 /* 방 모서리(구조 edge) — 2D 오버레이 선으로 확실히(3D 면 테두리 대체). */
 .rs3EdgeLayer{position:absolute;inset:0;pointer-events:none}
-.rs3Edge{position:absolute;height:0;border-top:calc(0.6px / var(--fit,1)) solid rgba(16,18,40,.26);transform-origin:left center;pointer-events:none}
+.rs3Edge{position:absolute;height:0;border-top:1px solid rgba(16,18,40,.26);transform-origin:left center;pointer-events:none}
 /* 바닥 격자: 가로 격자(깊이로 물러나는 좌우 방향 선 = to bottom)를 더 진하게, 세로(수렴) 선은 은은하게. */
 .rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat}
 /* 깊이 단서 높이·offset은 mm 환산값을 인라인으로 넘긴다(v2 2-3) — CSS 고정 px 제거. */

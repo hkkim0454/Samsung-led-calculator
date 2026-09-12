@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=224';
-import { MODELS } from './models.js?v=224';
-import { PROCESSORS } from './processor-data.js?v=224';
-import { processorRequirements } from './processor-limits.js?v=224';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=224';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=224';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=224';
-import { parseCasesText, normalizeDate } from './cases.js?v=224';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=225';
+import { MODELS } from './models.js?v=225';
+import { PROCESSORS } from './processor-data.js?v=225';
+import { processorRequirements } from './processor-limits.js?v=225';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=225';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=225';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=225';
+import { parseCasesText, normalizeDate } from './cases.js?v=225';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -381,7 +381,8 @@ function renderPreview() {
     const a = proj(u1, v1, d1), b = proj(u2, v2, d2);
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
-    return `<div class="rs3Edge" style="left:${a.x}px;top:${a.y}px;width:${len}px;transform:rotate(${ang}deg)"></div>`;
+    const ew = (0.6 / effFit).toFixed(3);   // 화면상 0.6px 고정(캔버스가 effFit로 확대되므로 역보정)
+    return `<div class="rs3Edge" style="left:${a.x}px;top:${a.y}px;width:${len}px;border-top-width:${ew}px;transform:rotate(${ang}deg)"></div>`;
   };
   const roomEdges =
     edgeSeg(0, 0, 0, 0, 0, Dp) + edgeSeg(SWp, 0, 0, SWp, 0, Dp)
