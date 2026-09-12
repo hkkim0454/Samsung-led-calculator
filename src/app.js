@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=191';
-import { MODELS } from './models.js?v=191';
-import { PROCESSORS } from './processor-data.js?v=191';
-import { processorRequirements } from './processor-limits.js?v=191';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=191';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=191';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=191';
-import { parseCasesText, normalizeDate } from './cases.js?v=191';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=192';
+import { MODELS } from './models.js?v=192';
+import { PROCESSORS } from './processor-data.js?v=192';
+import { processorRequirements } from './processor-limits.js?v=192';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=192';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=192';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=192';
+import { parseCasesText, normalizeDate } from './cases.js?v=192';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -322,6 +322,24 @@ function renderPreview() {
       + `<span class="rs3EyeLbl" style="left:${cP.x + 5}px;top:${cP.y}px">${g.t}</span>`;
   }
 
+  // 방 모서리(구조 edge)를 2D 오버레이 선으로 확실히 그린다(3D 면 테두리는 렌더가 불안정 → 좌측벽↔천장 경계가 안 잡히던 문제 해결).
+  //   4개 깊이 모서리(앞면 개구부↔뒷벽): 천장·바닥 ↔ 좌우벽. + 뒷벽 둘레 4변.
+  const edgeSeg = (u1, v1, d1, u2, v2, d2) => {
+    const a = proj(u1, v1, d1), b = proj(u2, v2, d2);
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    return `<div class="rs3Edge" style="left:${a.x}px;top:${a.y}px;width:${len}px;transform:rotate(${ang}deg)"></div>`;
+  };
+  const roomEdges =
+    edgeSeg(0, 0, 0, 0, 0, Dp)         // 천장↔좌측벽
+    + edgeSeg(SWp, 0, 0, SWp, 0, Dp)   // 천장↔우측벽
+    + edgeSeg(0, SHp, 0, 0, SHp, Dp)   // 바닥↔좌측벽
+    + edgeSeg(SWp, SHp, 0, SWp, SHp, Dp) // 바닥↔우측벽
+    + edgeSeg(0, 0, 0, SWp, 0, 0)      // 뒷벽 상단(천장↔뒷벽)
+    + edgeSeg(0, SHp, 0, SWp, SHp, 0)  // 뒷벽 하단(바닥↔뒷벽)
+    + edgeSeg(0, 0, 0, 0, SHp, 0)      // 뒷벽 좌변(좌측벽↔뒷벽)
+    + edgeSeg(SWp, 0, 0, SWp, SHp, 0); // 뒷벽 우변(우측벽↔뒷벽)
+
   // 바닥 1 m 그리드 라인 수
   const gridMM = 1000;
 
@@ -388,6 +406,7 @@ function renderPreview() {
           <div class="rs3Person" style="left:${SWp - px(600)}px;top:${SHp - px(1700)}px;width:${px(300)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${px(600)}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
         </div>
       </div>
+      <div class="rs3EdgeLayer">${roomEdges}</div>
       <div class="rs3EyeLayer">${eyeLines}</div>
       <div class="rs3Overlay">
         ${dims.join('')}

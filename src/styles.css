@@ -330,10 +330,13 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Face{position:absolute;transform-style:preserve-3d;backface-visibility:hidden;box-sizing:border-box}
 /* 면별 명도차 + 뒷벽쪽 경계선으로 방(천장·좌우벽·바닥)이 배경과 구분되어 또렷이 읽히게. */
 .rs3Face.front{background:linear-gradient(160deg,#dde2e9,#d2d8e1);box-shadow:inset 0 0 60px rgba(16,18,40,.06)}
-.rs3Face.ceil{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#dfe4ec,#f3f5f9);border-top:1.5px solid rgba(16,18,40,.16);border-left:1.5px solid rgba(16,18,40,.18);border-right:1.5px solid rgba(16,18,40,.18)}
-.rs3Face.floor{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#cdd3dc,#bcc3ce);overflow:hidden;border-top:1.5px solid rgba(16,18,40,.16);border-left:1.5px solid rgba(16,18,40,.15);border-right:1.5px solid rgba(16,18,40,.15)}
-.rs3Face.wallL{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to right,#ccd1da,#eceef3);border-left:1.5px solid rgba(16,18,40,.12)}
-.rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#ccd1da,#eceef3);border-left:1.5px solid rgba(16,18,40,.12)}
+.rs3Face.ceil{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#dfe4ec,#f3f5f9)}
+.rs3Face.floor{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#cdd3dc,#bcc3ce);overflow:hidden}
+.rs3Face.wallL{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to right,#ccd1da,#eceef3)}
+.rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#ccd1da,#eceef3)}
+/* 방 모서리(구조 edge) — 2D 오버레이 선으로 확실히(3D 면 테두리 대체). */
+.rs3EdgeLayer{position:absolute;inset:0;pointer-events:none}
+.rs3Edge{position:absolute;height:0;border-top:1px solid rgba(16,18,40,.26);transform-origin:left center;pointer-events:none}
 /* 바닥 격자: 가로 격자(깊이로 물러나는 좌우 방향 선 = to bottom)를 더 진하게, 세로(수렴) 선은 은은하게. */
 .rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat}
 .rs3Ao{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(to bottom,rgba(16,18,22,.22),transparent)}
@@ -343,7 +346,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Grid{position:absolute;inset:0;display:grid;gap:2px;padding:3px;box-sizing:border-box}
 .rs3Grid>i{background:linear-gradient(160deg,#2b3037,#1e2228 60%,#23272d);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);border-radius:1px}
 .rs3Glow{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(47,127,246,.22),transparent 60%);animation:rs3Breathe 6s ease-in-out infinite;pointer-events:none}
-.rs3ColN,.rs3RowN{position:absolute;display:grid;align-items:center;justify-items:center;font-size:9.5px;font-weight:700;color:#EDEDF4;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none}
+.rs3ColN,.rs3RowN{position:absolute;display:grid;align-items:center;justify-items:center;font-size:14px;font-weight:700;color:#EDEDF4;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none}
 .rs3Sig{position:absolute;box-sizing:border-box;border:2px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}
 .rs3Sig.uhd{border-color:rgba(255,59,48,.95)}
 .rs3SigTag{position:absolute;top:0;left:0;font-size:8.5px;font-weight:700;color:#fff;background:rgba(47,127,246,.95);padding:0 4px;border-radius:0 0 4px 0}
