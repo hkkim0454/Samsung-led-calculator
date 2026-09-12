@@ -125,7 +125,7 @@ test('§26 X100 Pro-7U: 8 sources × 2 windows(16) -> input OK; 9 sources -> FAI
   const x = getProcessor('cl-x100pro-7u');
   const dup = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 8, simultaneous4kLayers: 16 }));
   assert.equal(findCheck(dup, '독립 4K 입력').ok, true);   // 8 / 8
-  assert.equal(findCheck(dup, '최대 윈도우').ok, true);    // 16 / 64
+  assert.equal(findCheck(dup, '최대 레이어').ok, true);    // 16 / 64
   assert.notEqual(dup.verdict, 'FAIL');
   const over = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 9, simultaneous4kLayers: 9 }));
   assert.equal(findCheck(over, '독립 4K 입력').ok, false); // 9 > 8, 윈도우 여유 있어도 FAIL
@@ -364,6 +364,19 @@ test('Genlock now passes where confirmed (NovaStar/X100/Aquilon), Universe still
   assert.equal(findCheck(validateProcessor(getProcessor('ns-h9'), req), 'Genlock').ok, true);
   assert.equal(findCheck(validateProcessor(getProcessor('cl-x100pro-7u'), req), 'Genlock').ok, true);
   assert.equal(findCheck(validateProcessor(getProcessor('cl-universe-u9max'), req), 'Genlock').ok, null); // 확인 필요
+});
+
+// ── X100 Pro 공식 Max. layers = 64 (해상도 무관 총 레이어) ───────────────────────
+test('X100 Pro-7U maxLayers = 64 (해상도 무관), total-layer check', () => {
+  const x = getProcessor('cl-x100pro-7u');
+  assert.equal(x.layers.maxLayers, 64);
+  assert.equal(x.layers.global4k, null);   // 4K/2K로 쪼개지 않음
+  const ok = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 40, simultaneous2kLayers: 20 }));
+  assert.equal(findCheck(ok, '최대 레이어').ok, true);    // 60 ≤ 64
+  const over = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 65 }));
+  assert.equal(findCheck(over, '최대 레이어').ok, false);  // 65 > 64
+  // 해상도별 '4K 레이어' 검사는 global_window에선 만들지 않는다(총 레이어로 갈음).
+  assert.equal(findCheck(ok, '4K 레이어'), undefined);
 });
 
 // ── Colorlight 공식 출력값 반영 (X100 Pro 출력 / U15 Max I/O) ────────────────────

@@ -522,46 +522,42 @@ export function validateProcessor(proc, req) {
 
   // 3) 레이어 용량 — capacityModel별로 다르게 산출(문서 §5).
   const L = proc.layers ?? {};
-  if (req.simultaneous4kLayers > 0) {
-    let cap = null, name = '4K 레이어';
-    switch (L.model) {
-      case 'mixing_split':
-        // True A/B가 필요하면 반드시 '믹싱' 레이어만 사용(분할 레이어로 대체 불가, 문서 §12).
-        cap = req.trueABRequired ? (L.mixing4k ?? null) : maxNullable(L.mixing4k, L.split4k);
-        name = req.trueABRequired ? '4K 믹싱 레이어(A/B)' : '4K 레이어(믹싱/분할)';
-        break;
-      case 'per_output_card':
-        cap = (L.perOutputCard4k != null && proc.outputs?.maxOutputBoards != null)
-          ? L.perOutputCard4k * proc.outputs.maxOutputBoards : (L.global4k ?? null);
-        break;
-      case 'global_window':
-      case 'screen_group':
-      default:
-        cap = L.global4k ?? null;
+  if (L.model === 'global_window') {
+    // Colorlight X100 Pro: 공식 "Max. layers"는 해상도 무관 총 레이어(4K/2K로 쪼개지 않음, 이사 확인).
+    const totalLayers = req.simultaneous4kLayers + req.simultaneous2kLayers;
+    if (totalLayers > 0) numCheck('최대 레이어', totalLayers, L.maxLayers ?? L.maxWindows ?? null, '개', '해상도 무관 총 레이어(공식 Max. layers)');
+  } else {
+    if (req.simultaneous4kLayers > 0) {
+      let cap = null, name = '4K 레이어';
+      switch (L.model) {
+        case 'mixing_split':
+          // True A/B가 필요하면 반드시 '믹싱' 레이어만 사용(분할 레이어로 대체 불가, 문서 §12).
+          cap = req.trueABRequired ? (L.mixing4k ?? null) : maxNullable(L.mixing4k, L.split4k);
+          name = req.trueABRequired ? '4K 믹싱 레이어(A/B)' : '4K 레이어(믹싱/분할)';
+          break;
+        case 'per_output_card':
+          cap = (L.perOutputCard4k != null && proc.outputs?.maxOutputBoards != null)
+            ? L.perOutputCard4k * proc.outputs.maxOutputBoards : (L.global4k ?? null);
+          break;
+        case 'screen_group':
+        default:
+          cap = L.global4k ?? null;
+      }
+      numCheck(name, req.simultaneous4kLayers, cap);
     }
-    numCheck(name, req.simultaneous4kLayers, cap);
-  }
-  if (req.simultaneous2kLayers > 0) {
-    let cap = null;
-    switch (L.model) {
-      case 'per_output_card':
-        cap = (L.perOutputCard2k != null && proc.outputs?.maxOutputBoards != null)
-          ? L.perOutputCard2k * proc.outputs.maxOutputBoards : (L.global2k ?? null);
-        break;
-      case 'global_window':
-        cap = L.global2k ?? L.maxWindows ?? null;
-        break;
-      case 'screen_group':
-      default:
-        cap = L.global2k ?? null;
+    if (req.simultaneous2kLayers > 0) {
+      let cap = null;
+      switch (L.model) {
+        case 'per_output_card':
+          cap = (L.perOutputCard2k != null && proc.outputs?.maxOutputBoards != null)
+            ? L.perOutputCard2k * proc.outputs.maxOutputBoards : (L.global2k ?? null);
+          break;
+        case 'screen_group':
+        default:
+          cap = L.global2k ?? null;
+      }
+      numCheck('2K 레이어', req.simultaneous2kLayers, cap);
     }
-    numCheck('2K 레이어', req.simultaneous2kLayers, cap);
-  }
-
-  // 3b) 총 윈도우(글로벌 윈도우 모델, 예: Colorlight X100 Pro): 동시 표시 수 ≤ maxWindows.
-  if (L.model === 'global_window' && L.maxWindows != null) {
-    const windows = req.simultaneous4kLayers + req.simultaneous2kLayers;
-    if (windows > 0) numCheck('최대 윈도우', windows, L.maxWindows, '개');
   }
 
   // 3c) 출력카드/보드별 레이어 한계.
