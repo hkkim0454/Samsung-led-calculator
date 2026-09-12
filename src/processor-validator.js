@@ -14,7 +14,7 @@ import {
   inputsCapacity,
   outputs4kCapacity,
   validateOutputCardLayers,
-} from './processor-limits.js?v=184';
+} from './processor-limits.js?v=185';
 
 /** 여러 값 중 최댓값(null 무시). 전부 null이면 null. */
 function maxNullable(...vals) {
@@ -162,7 +162,8 @@ const isExpensiveOverspec = (proc, req) =>
 
 /**
  * 제품 목록을 평가·정렬한다. 반환: [{ proc, verdict, checks, label, appPreferred }] (좋은 등급 먼저).
- * 동급이면 (1) 운용 환경 우선 제품군, (2) 4K 출력 여유 큰 순.
+ * 동급이면 (1) 운용 환경 우선 제품군, (2) **필요에 가까운(여유가 적은) 작은 모델 우선**.
+ *   → 소형 작업에서 대용량(고가) 모델이 위로 오지 않고 적정 모델이 먼저 추천된다(이사 지침 2026-09-12).
  * 소형 작업에서는 Aquilon(고가)을 목록에서 숨긴다(위 규칙, 예외 없음).
  */
 export function rankProcessors(procs, req) {
@@ -179,7 +180,7 @@ export function rankProcessors(procs, req) {
     .sort((a, b) =>
       (GRADE_ORDER[a.label] - GRADE_ORDER[b.label]) ||
       (Number(b.appPreferred) - Number(a.appPreferred)) ||
-      (b._headroom - a._headroom));
+      (a._headroom - b._headroom));   // 여유가 적은(적정 크기) 모델 먼저 → 대용량은 후순위
 }
 
 /**

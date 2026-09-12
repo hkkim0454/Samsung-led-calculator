@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=184';
-import { MODELS } from './models.js?v=184';
-import { PROCESSORS } from './processor-data.js?v=184';
-import { processorRequirements } from './processor-limits.js?v=184';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=184';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=184';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=184';
-import { parseCasesText, normalizeDate } from './cases.js?v=184';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=185';
+import { MODELS } from './models.js?v=185';
+import { PROCESSORS } from './processor-data.js?v=185';
+import { processorRequirements } from './processor-limits.js?v=185';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=185';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=185';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=185';
+import { parseCasesText, normalizeDate } from './cases.js?v=185';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -452,6 +452,32 @@ function vpItemHTML(item) {
     <ul class="vpChecksList">${checks}</ul>
   </div>`;
 }
+// 추천 결과를 제조사별로 묶어 접이식(details)으로 그린다. 순서는 전체 추천 순위를 유지
+//   (=제일 좋은 모델을 가진 제조사가 맨 위, 그 제조사 그룹만 기본 펼침). 나머지는 제조사명을 눌러 펼친다.
+//   불필요하게 긴 목록을 줄이기 위함(이사 지침 2026-09-12).
+function vpGroupsHTML(good) {
+  const order = [];
+  const groups = new Map();
+  for (const item of good) {
+    const mfr = item.proc.manufacturer || '기타';
+    if (!groups.has(mfr)) { groups.set(mfr, []); order.push(mfr); }
+    groups.get(mfr).push(item);
+  }
+  return order.map((mfr, i) => {
+    const items = groups.get(mfr);
+    const best = items[0];   // 그룹 내 최상위(전체 순위 정렬 유지)
+    const cls = VP_BADGE_CLASS[best.label] || '';
+    return `<details class="vpMfr ${cls}"${i === 0 ? ' open' : ''}>
+      <summary class="vpMfrHead">
+        <span class="vpMfrName">${esc(mfr)}</span>
+        <span class="vpBadge">${best.label}</span>
+        <span class="vpMfrTop">${esc(best.proc.model)}</span>
+        <span class="vpMfrCount">${items.length}개 모델</span>
+      </summary>
+      <div class="vpResult">${items.map(vpItemHTML).join('')}</div>
+    </details>`;
+  }).join('');
+}
 function renderProcessors() {
   const auto = $('#vpAuto'), out = $('#vpResult');
   if (!auto || !out) return;
@@ -477,7 +503,7 @@ function renderProcessors() {
   const good = ranked.filter(x => x.label !== '부적합');
   const bad = ranked.filter(x => x.label === '부적합');
   out.innerHTML =
-    (good.length ? good.map(vpItemHTML).join('')
+    (good.length ? vpGroupsHTML(good)
       : '<div class="notice warn">지금 요구 조건을 만족하는 프로세서가 없습니다. 입력 수·레이어 수·운용 방식을 조정해 보세요.</div>')
     + (bad.length ? `<details class="vpFail"><summary>부적합 ${bad.length}개 보기</summary>${bad.map(vpItemHTML).join('')}</details>` : '');
   renderBuild(req, ranked);
