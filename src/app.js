@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=206';
-import { MODELS } from './models.js?v=206';
-import { PROCESSORS } from './processor-data.js?v=206';
-import { processorRequirements } from './processor-limits.js?v=206';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=206';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=206';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=206';
-import { parseCasesText, normalizeDate } from './cases.js?v=206';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=207';
+import { MODELS } from './models.js?v=207';
+import { PROCESSORS } from './processor-data.js?v=207';
+import { processorRequirements } from './processor-limits.js?v=207';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=207';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=207';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=207';
+import { parseCasesText, normalizeDate } from './cases.js?v=207';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -271,7 +271,10 @@ function renderPreview() {
   const S = Math.min((CW * 0.99) / (sW * fFront), (CH * 0.97) / (sH * fFront));   // px per mm
   const px = mm => mm * S;
   const SWp = px(sW), SHp = px(sH), Dp = px(depthMM);
-  const eyePx = px(1600), vEye = SHp - eyePx;               // 카메라 눈높이 1.6 m
+  // 카메라 눈높이: 기본 1.6 m이되, 방이 높으면(≥3.2 m) 방 높이의 절반까지 올려 천장/바닥이 균형 있게
+  //   보이도록(이사 요청: 천장이 너무 많이 보이던 문제). ※ 눈높이 기준선(1.6/1.2 m 표시)은 별개로 유지.
+  const camEyeMM = Math.min(sH * 0.9, Math.max(1600, sH * 0.5));
+  const vEye = SHp - px(camEyeMM);
   const ZW = px(camMM), P = ZW;
   const CX = CW / 2, CY = CH / 2;
   // 씬 좌표(u,v,d) → 캔버스 px. 오버레이는 스케일 캔버스 '안'에 두어 3D와 항상 같은 좌표계(정렬 보장).
