@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=213';
-import { MODELS } from './models.js?v=213';
-import { PROCESSORS } from './processor-data.js?v=213';
-import { processorRequirements } from './processor-limits.js?v=213';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=213';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=213';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=213';
-import { parseCasesText, normalizeDate } from './cases.js?v=213';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=214';
+import { MODELS } from './models.js?v=214';
+import { PROCESSORS } from './processor-data.js?v=214';
+import { processorRequirements } from './processor-limits.js?v=214';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=214';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=214';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=214';
+import { parseCasesText, normalizeDate } from './cases.js?v=214';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -315,9 +315,12 @@ function renderPreview() {
   //   여백은 '화면 px' 기준(effFit로 환산) — 줌·기기에 상관없이 라벨 pill이 프레임 밖으로 안 나가게.
   const clx = x => { const p = 26 / effFit; return Math.max(visL + p, Math.min(visR - p, x)); };
   const cly = y => { const p = 18 / effFit; return Math.max(visT + p, Math.min(visB - p, y)); };
-  // 벽 세로(높이) 치수 라벨: 줌 후에도 왼쪽 화면 안(≥18px)에 남는 '가장 바깥' u(제일 밖에 유지).
-  const fdFront = P / (P + ZW - dFront);
-  const uHeight = Math.max(0, (SWp / 2) + (((36 - tx) / effFit) - CX) / fdFront);   // 왼쪽에서 36px 안쪽(가장자리 잘림 방지)
+  // 벽 세로(높이) 치수선: 방 전체 높이가 화면에 다 들어오도록 깊이(dHeight)를 잡아 위·아래 끝(눈금)이 보이게(이사 요청).
+  //   f(깊이)가 클수록 세로 span이 커짐 → 위·아래가 화면 안에 들어오는 최대 f를 선택(단, 0.5~fFront).
+  const padH = 16 / effFit;
+  const fH = Math.max(0.5, Math.min(fFront, (CY - visT - padH) / vEye, (visB - padH - CY) / (SHp - vEye)));
+  const dHeight = P + ZW - P / fH;
+  const uHeight = Math.max(0, (SWp / 2) + (((36 - tx) / effFit) - CX) / fH);   // 왼쪽에서 36px 안쪽(가장자리 잘림 방지)
 
   let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
 
@@ -422,7 +425,7 @@ function renderPreview() {
   let dWidth = dFront;
   if (proj(0, SHp, dFront).y > yWidthMax) dWidth = P + ZW - P / ((yWidthMax - CY) / (SHp - vEye));
   hDim(0, SWp, SHp, dWidth, mL(sW), 'sub');
-  vDim(uHeight, 0, SHp, dFront, mL(sH), 'sub');
+  vDim(uHeight, 0, SHp, dHeight, mL(sH), 'sub');
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
