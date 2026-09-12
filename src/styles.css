@@ -334,7 +334,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Face.floor{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#cdd3dc,#bcc3ce);overflow:hidden;border-top:1.5px solid rgba(16,18,40,.16);border-left:1.5px solid rgba(16,18,40,.15);border-right:1.5px solid rgba(16,18,40,.15)}
 .rs3Face.wallL{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to right,#ccd1da,#eceef3);border-left:1.5px solid rgba(16,18,40,.12)}
 .rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#ccd1da,#eceef3);border-left:1.5px solid rgba(16,18,40,.12)}
-.rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.22) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.22) 0 1px,transparent 1px);background-repeat:repeat}
+/* 바닥 격자: 가로 격자(깊이로 물러나는 좌우 방향 선 = to bottom)를 더 진하게, 세로(수렴) 선은 은은하게. */
+.rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat}
 .rs3Ao{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(to bottom,rgba(16,18,22,.22),transparent)}
 .rs3FloorGlow{position:absolute;top:0;height:420px;background:radial-gradient(120% 100% at 50% 0%,rgba(47,127,246,.20),transparent 70%)}
 .rs3Led{position:absolute;transform:translateZ(10px);border-radius:2px;background:#14161a;
