@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=196';
-import { MODELS } from './models.js?v=196';
-import { PROCESSORS } from './processor-data.js?v=196';
-import { processorRequirements } from './processor-limits.js?v=196';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=196';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=196';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=196';
-import { parseCasesText, normalizeDate } from './cases.js?v=196';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=197';
+import { MODELS } from './models.js?v=197';
+import { PROCESSORS } from './processor-data.js?v=197';
+import { processorRequirements } from './processor-limits.js?v=197';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=197';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=197';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=197';
+import { parseCasesText, normalizeDate } from './cases.js?v=197';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -308,26 +308,25 @@ function renderPreview() {
     }
   }
 
-  // 캐비닛 번호(2D 오버레이) — 투시·스케일 축소 없이 판독(v2 1-2). 열=윗줄 셀 중심(밝은 글자), 행=LED 왼쪽 바깥.
+  // 캐비닛 번호(2D 오버레이) — 열=맨 윗줄 칸 위쪽, 행=맨 왼쪽 칸 왼쪽(둘 다 캐비닛 안, 밝은 글자). 코너 겹침 방지 오프셋.
   const dNum = Math.min(px(20), Dp * 0.02);
   let numHTML = '';
   {
-    const c0 = proj(Lx + colWp * 0.5, Ly + rowHp * 0.5, dNum), c1 = proj(Lx + colWp * 1.5, Ly + rowHp * 0.5, dNum);
+    const c0 = proj(Lx + colWp * 0.5, Ly + rowHp * 0.32, dNum), c1 = proj(Lx + colWp * 1.5, Ly + rowHp * 0.32, dNum);
     const spCol = Math.abs(c1.x - c0.x), stepC = spCol >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spCol)));
     for (let c = 0; c < r.cols; c++) {
       if (stepC > 1 && c % stepC !== 0 && c !== r.cols - 1) continue;
-      const p = proj(Lx + colWp * (c + 0.5), Ly + rowHp * 0.5, dNum);
+      const p = proj(Lx + colWp * (c + 0.5), Ly + rowHp * 0.32, dNum);   // 윗줄 칸 위쪽
       numHTML += `<span class="rs3Num col" style="left:${p.x}px;top:${p.y}px">${c + 1}</span>`;
     }
-    // 행 번호: 여백 있으면 벽(왼쪽 바깥·어두운 글자), 없으면 LED 안 왼쪽(밝은 글자).
-    const outside = Lx > px(400);
-    const rowU = outside ? Lx - px(200) : Lx + colWp * 0.5;
-    const r0 = proj(rowU, Ly + rowHp * 0.5, 0), r1 = proj(rowU, Ly + rowHp * 1.5, 0);
+    // 행 번호: 항상 맨 왼쪽 칸 안쪽(왼쪽으로 치우쳐 열 번호와 안 겹침).
+    const rowU = Lx + colWp * 0.28;
+    const r0 = proj(rowU, Ly + rowHp * 0.5, dNum), r1 = proj(rowU, Ly + rowHp * 1.5, dNum);
     const spRow = Math.abs(r1.y - r0.y), stepR = spRow >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spRow)));
     for (let ri = 0; ri < r.rows; ri++) {
       if (stepR > 1 && ri % stepR !== 0 && ri !== r.rows - 1) continue;
-      const p = proj(rowU, Ly + rowHp * (ri + 0.5), 0);
-      numHTML += `<span class="rs3Num ${outside ? 'row' : 'col'}" style="left:${p.x}px;top:${p.y}px">${ri + 1}</span>`;
+      const p = proj(rowU, Ly + rowHp * (ri + 0.5), dNum);
+      numHTML += `<span class="rs3Num col" style="left:${p.x}px;top:${p.y}px">${ri + 1}</span>`;
     }
   }
 
@@ -380,7 +379,8 @@ function renderPreview() {
     if (topGapMM > 40) vDim(Lx + Lw + px(140), 0, Ly, 0, mmL(topGapMM), 'sub');
     vDim(Lx + Lw + px(140), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
-  if (r.marginW > 40) { pt(Lx / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); pt(Lx + Lw + (SWp - Lx - Lw) / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); }
+  // 좌우 여백 치수를 캐비닛(LED) 바로 옆(가장자리 근처, 세로 중앙)에 배치.
+  if (r.marginW > 40) { pt(Math.max(px(150), Lx - px(400)), Ly + Lh / 2, 0, mL(r.marginW), 'sub'); pt(Lx + Lw + px(400), Ly + Lh / 2, 0, mL(r.marginW), 'sub'); }
   // 벽 전체 폭: 앞쪽 치수선이 캔버스 밖으로 나가거나 사람과 겹치지 않게 clamp(v2 2-4).
   let dFront = Dp * 0.82;
   while (dFront > px(500) && proj(0, SHp, dFront).x < 8) dFront -= Dp * 0.04;
