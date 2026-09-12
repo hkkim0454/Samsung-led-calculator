@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=207';
-import { MODELS } from './models.js?v=207';
-import { PROCESSORS } from './processor-data.js?v=207';
-import { processorRequirements } from './processor-limits.js?v=207';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=207';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=207';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=207';
-import { parseCasesText, normalizeDate } from './cases.js?v=207';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=208';
+import { MODELS } from './models.js?v=208';
+import { PROCESSORS } from './processor-data.js?v=208';
+import { processorRequirements } from './processor-limits.js?v=208';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=208';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=208';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=208';
+import { parseCasesText, normalizeDate } from './cases.js?v=208';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -313,8 +313,9 @@ function renderPreview() {
   const frameW = CW * fit;
   const visL = (0 - tx) / effFit, visR = (frameW - tx) / effFit;
   const visT = (0 - ty) / effFit, visB = (frameH - ty) / effFit;
-  const clx = x => Math.max(visL + 30, Math.min(visR - 30, x));
-  const cly = y => Math.max(visT + 12, Math.min(visB - 12, y));
+  //   여백은 '화면 px' 기준(effFit로 환산) — 줌·기기에 상관없이 라벨 pill이 프레임 밖으로 안 나가게.
+  const clx = x => { const p = 26 / effFit; return Math.max(visL + p, Math.min(visR - p, x)); };
+  const cly = y => { const p = 18 / effFit; return Math.max(visT + p, Math.min(visB - p, y)); };
   // 벽 세로(높이) 치수 라벨: 줌 후에도 왼쪽 화면 안(≥18px)에 남는 '가장 바깥' u(제일 밖에 유지).
   const fdFront = P / (P + ZW - dFront);
   const uHeight = Math.max(0, (SWp / 2) + (((18 - tx) / effFit) - CX) / fdFront);
@@ -455,7 +456,7 @@ function renderPreview() {
       <div class="rs3Overlay">
         ${dims.join('')}
         ${numHTML}
-        <div class="rs3Dlbl person" style="left:${clx(personLbl.x)}px;top:${cly(personLbl.y + 14)}px;transform:translate(-50%,0)">키 170 cm</div>
+        <div class="rs3Dlbl person" style="left:${clx(personLbl.x)}px;top:${cly(personLbl.y + 14)}px;transform:translate(-50%,-50%)">키 170 cm</div>
       </div>
     </div>
   </div>`;
