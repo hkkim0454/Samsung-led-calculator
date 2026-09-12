@@ -462,6 +462,25 @@ export function outputs4kCapacity(proc) {
   return { value: null, assumed: false };
 }
 
+// 입력카드 1장 = 4K 1채널 또는 2K 4채널 (X100 Pro 실측과 일치, 이사 확인 2026-09-12).
+export const INPUT_2K_PER_CARD = 4;
+
+/**
+ * 독립 입력 용량(HDMI 2.0/카드 기준). 공식 maxIndependent4k/2k가 있으면 그대로(X100 Pro),
+ * 없고 입력슬롯(maxInputBoards)이 있으면 "슬롯 1개 = 4K 1개 또는 2K 4개" 가정으로 유도
+ * (max4k=슬롯, max2k=슬롯×4). 4K/2K는 슬롯을 공유하므로 실제 판정은 validateProcessor의 '입력 슬롯' 검사.
+ * 반환: { max4k, max2k, slots, assumed4k, assumed2k }.
+ */
+export function inputsCapacity(proc) {
+  const i = proc?.inputs ?? {};
+  const slots = i.maxInputBoards ?? null;
+  let max4k = i.maxIndependent4k ?? null, assumed4k = false;
+  let max2k = i.maxIndependent2k ?? null, assumed2k = false;
+  if (max4k == null && slots != null) { max4k = slots; assumed4k = true; }
+  if (max2k == null && slots != null) { max2k = slots * INPUT_2K_PER_CARD; assumed2k = true; }
+  return { max4k, max2k, slots, assumed4k, assumed2k };
+}
+
 /**
  * 하드 제약 검사. proc(제품) vs req(processorRequirements 결과).
  * 각 검사 ok: true(충족)/false(미달)/null(사양 미확인). 요구하지 않은 항목은 검사 생략.
@@ -471,10 +490,10 @@ export function outputs4kCapacity(proc) {
 export function validateProcessor(proc, req) {
   if (!proc || !req) return null;
   const checks = [];
-  const numCheck = (name, need, have, unit = '개') => {
+  const numCheck = (name, need, have, unit = '개', note) => {
     let ok = null;
     if (need != null && have != null) ok = have >= need;
-    checks.push({ name, need: need ?? null, have: have ?? null, unit, ok });
+    checks.push({ name, need: need ?? null, have: have ?? null, unit, ok, ...(note ? { note } : {}) });
   };
   const featCheck = (name, required, have) => {
     if (!required) return;
@@ -482,9 +501,15 @@ export function validateProcessor(proc, req) {
     checks.push({ name, need: '지원', have: have === true ? '지원' : (have === false ? '미지원' : '확인 필요'), unit: '', ok });
   };
 
-  // 1) 독립 입력(4K/2K) — 윈도우·레이어와 별개(문서 §4).
-  if (req.independent4kInputs > 0) numCheck('독립 4K 입력', req.independent4kInputs, proc.inputs?.maxIndependent4k);
-  if (req.independent2kInputs > 0) numCheck('독립 2K 입력', req.independent2kInputs, proc.inputs?.maxIndependent2k);
+  // 1) 독립 입력(4K/2K) — 윈도우·레이어와 별개(문서 §4). 입력카드 기준(슬롯당 4K 1 또는 2K 4).
+  const inCap = inputsCapacity(proc);
+  if (req.independent4kInputs > 0) numCheck('독립 4K 입력', req.independent4kInputs, inCap.max4k, '개', inCap.assumed4k ? '입력카드 가정(슬롯=4K1)' : undefined);
+  if (req.independent2kInputs > 0) numCheck('독립 2K 입력', req.independent2kInputs, inCap.max2k, '개', inCap.assumed2k ? '입력카드 가정(슬롯=2K4)' : undefined);
+  // 4K·2K 입력이 동시에 필요하면 슬롯을 나눠 쓴다: 필요 4K + 올림(필요 2K/4) ≤ 슬롯 수.
+  if (req.independent4kInputs > 0 && req.independent2kInputs > 0 && inCap.slots != null) {
+    const need = req.independent4kInputs + Math.ceil(req.independent2kInputs / INPUT_2K_PER_CARD);
+    numCheck('입력 슬롯', need, inCap.slots, '슬롯', '4K 1개=슬롯 1, 2K 4개=슬롯 1');
+  }
 
   // 2) 필요 출력 수(4K) — HDMI 2.0(4K@60) 포트 기준. 출력카드 HDMI 2.0 가정 시 유도값 사용.
   if (req.required4kOutputs > 0) {
