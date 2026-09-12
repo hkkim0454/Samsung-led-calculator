@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=185"/>
+<link rel="stylesheet" href="./styles.css?v=186"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -119,11 +119,19 @@
     <div class="col-right">
       <div class="card previewCard">
         <h2><span class="idx">03</span> 배열 미리보기 · <span id="pvModelName" class="pvname">—</span></h2>
-        <div class="seg sigseg" id="signalMode">
-          <button data-sig="off" class="on">미선택</button>
-          <button data-sig="fhd">FHD</button>
-          <button data-sig="uhd">UHD</button>
-          <button data-sig="both">둘다</button>
+        <div class="pvHeadRow">
+          <div class="seg sigseg" id="signalMode">
+            <button data-sig="off" class="on">미선택</button>
+            <button data-sig="fhd">FHD</button>
+            <button data-sig="uhd">UHD</button>
+            <button data-sig="both">둘다</button>
+          </div>
+          <div class="pvToggles" id="pvToggles">
+            <button class="pvTog on" data-tog="person"><span class="dot"></span>사람</button>
+            <button class="pvTog on" data-tog="eye"><span class="dot"></span>눈높이선</button>
+            <button class="pvTog on" data-tog="grid"><span class="dot"></span>바닥 그리드</button>
+            <button class="pvTog on" data-tog="dims"><span class="dot"></span>치수</button>
+          </div>
         </div>
         <div class="previewStage" id="stage"><div class="previewEmpty">모델을 선택하세요</div></div>
       </div>
@@ -226,7 +234,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v185</span>
+        <span class="verTag">화면 버전 v186</span>
       </div>
     </div>
   </div>
@@ -321,6 +329,6 @@
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록).
      app.js가 import하는 모든 모듈의 v=, 그리고 모듈끼리의 내부 import(processor-validator.js → processor-limits.js)의 v=도 함께 올릴 것. -->
-<script type="module" src="./app.js?v=185"></script>
+<script type="module" src="./app.js?v=186"></script>
 </body>
 </html>
