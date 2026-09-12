@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=204';
-import { MODELS } from './models.js?v=204';
-import { PROCESSORS } from './processor-data.js?v=204';
-import { processorRequirements } from './processor-limits.js?v=204';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=204';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=204';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=204';
-import { parseCasesText, normalizeDate } from './cases.js?v=204';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=205';
+import { MODELS } from './models.js?v=205';
+import { PROCESSORS } from './processor-data.js?v=205';
+import { processorRequirements } from './processor-limits.js?v=205';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=205';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=205';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=205';
+import { parseCasesText, normalizeDate } from './cases.js?v=205';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -375,24 +375,44 @@ function renderPreview() {
   };
   const pt = (u, v, d, label, cls = '') => { const p = proj(u, v, d); dims.push(`<div class="rs3Dlbl ${cls}" style="left:${p.x}px;top:${p.y}px">${label}</div>`); };
 
-  hDim(Lx, Lx + Lw, Ly - px(120), 0, mmL(r.actualW), 'key');
+  // 상단 가로 치수선(LED 가로·좌우 여백)을 캐비닛 번호와 겹치지 않게 충분히 위로(이사 요청).
+  const topDimGap = px(400);
+  const topDimV = Ly - topDimGap;
+  hDim(Lx, Lx + Lw, topDimV, 0, mmL(r.actualW), 'key');
   vDim(Lx + Lw + px(140), Ly, Ly + Lh, 0, mmL(r.actualH), 'key');
   if (mount > 0) {
     if (topGapMM > 40) vDim(Lx + Lw + px(140), 0, Ly, 0, mmL(topGapMM), 'sub');
     vDim(Lx + Lw + px(140), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
-  // 좌우 여백 치수: LED 가로 치수선(3,840mm)과 '같은 좌우 선상'(같은 높이 Ly-120)에 올려
+  // 좌우 여백 치수: LED 가로 치수선과 '같은 좌우 선상'(같은 높이 topDimV)에 올려
   //   위쪽에서 [좌 여백]-[LED 가로]-[우 여백]가 한 줄로 이어지게 배치(이사 요청).
   if (r.marginW > 40) {
-    hDim(0, Lx, Ly - px(120), 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
-    hDim(Lx + Lw, SWp, Ly - px(120), 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
+    hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
+    hDim(Lx + Lw, SWp, topDimV, 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
   }
   // 벽 크기(가로·세로)를 방 '제일 바깥' 앞면 모서리로(이사 요청): 가로=앞쪽 바닥 맨 아래, 세로=앞쪽 좌측 맨 왼쪽.
   //   사람 위치 제약은 빼고, 라벨이 캔버스 밖으로 안 나가는 한도까지 최대한 앞(=바깥)으로.
   let dFront = Dp * 0.98;
   while (dFront > px(500) && proj(0, SHp, dFront).x < 26) dFront -= Dp * 0.03;
-  hDim(0, SWp, SHp, dFront, mL(sW), 'sub');   // 가로: 앞쪽 바닥 맨 아래 모서리
-  vDim(0, 0, SHp, dFront, mL(sH), 'sub');      // 세로: 앞쪽 좌측 맨 왼쪽 모서리(가로와 같은 앞면)
+  // ── 살짝 줌인(이사 요청) + 위·아래 빈 여백 크롭 ─────────────────────────────
+  //   방+오버레이가 모두 rs3Canvas 안에 있어, 캔버스에 zoom(scale)+이동만 주면 정렬이 안 깨진다.
+  const personLbl = proj(personX, SHp, personD);
+  // 콘텐츠(방 앞개구부 + 상단 치수선 + 하단 사람) 세로 범위(캔버스 좌표).
+  const yTopC = Math.min(proj(0, 0, Dp).y, proj(Lx, topDimV, 0).y) - 8;
+  const yBotC = Math.max(proj(0, SHp, Dp).y, personLbl.y + 20) + 8;
+  const contentH = Math.max(1, yBotC - yTopC);
+  // 줌 배율: 세로로 프레임(CH)을 넘지 않는 한도까지만 확대 → 상하 라벨 잘림 방지. 최대 1.12배.
+  const ZOOM = Math.max(1, Math.min(1.12, CH / contentH));
+  const effFit = fit * ZOOM;            // 화면상 실제 배율(라벨 폰트는 --fit=effFit로 고정 보정)
+  const tx = (CW * fit) / 2 - CX * effFit;                  // 방 중앙(x=CX)을 프레임 가로 중앙에
+  const frameH = Math.round(Math.min(CH * fit, contentH * effFit));
+  const ty = frameH / 2 - ((yTopC + yBotC) / 2) * effFit;   // 콘텐츠 세로 중심을 프레임 중앙에
+  const canvasT = `translate(${tx}px, ${ty}px) scale(${effFit})`;
+  // 벽 세로 라벨: 줌 후에도 왼쪽 화면 안(≥18px)에 남는 '가장 바깥' u(제일 밖에 유지, 잘림 방지).
+  const fdFront = P / (P + ZW - dFront);
+  const uHeight = Math.max(0, (SWp / 2) + (((18 - tx) / effFit) - CX) / fdFront);
+  hDim(0, SWp, SHp, dFront, mL(sW), 'sub');   // 가로: 앞쪽 바닥 맨 아래 모서리(중앙 라벨이라 줌해도 안전)
+  vDim(uHeight, 0, SHp, dFront, mL(sH), 'sub'); // 세로: 왼쪽 최대한 바깥(줌 후에도 보이는 한도)
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
@@ -400,10 +420,9 @@ function renderPreview() {
   const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims'].filter(Boolean).join(' ');
   // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
   const ledGlow = `box-shadow:0 0 0 2px #2f7ff6,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
-  const personLbl = proj(personX, SHp, personD);
 
-  stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${Math.round(CH * fit)}px;--fit:${fit}">
-    <div class="rs3Canvas" style="width:${CW}px;height:${CH}px;transform:scale(${fit});">
+  stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${frameH}px;--fit:${effFit}">
+    <div class="rs3Canvas" style="width:${CW}px;height:${CH}px;transform:${canvasT};">
       <div class="rs3Persp" style="perspective:${P}px;perspective-origin:50% 50%">
         <div class="rs3Scene" style="transform:${sceneT}">
           <div class="rs3Face ceil" style="left:0;top:0;width:${SWp}px;height:${Dp}px"></div>
