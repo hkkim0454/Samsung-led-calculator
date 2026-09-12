@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=202';
-import { MODELS } from './models.js?v=202';
-import { PROCESSORS } from './processor-data.js?v=202';
-import { processorRequirements } from './processor-limits.js?v=202';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=202';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=202';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=202';
-import { parseCasesText, normalizeDate } from './cases.js?v=202';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=203';
+import { MODELS } from './models.js?v=203';
+import { PROCESSORS } from './processor-data.js?v=203';
+import { processorRequirements } from './processor-limits.js?v=203';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=203';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=203';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=203';
+import { parseCasesText, normalizeDate } from './cases.js?v=203';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
