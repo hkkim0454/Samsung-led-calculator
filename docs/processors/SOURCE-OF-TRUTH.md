@@ -30,7 +30,11 @@ Reseller·블로그·쇼핑몰·커뮤니티 자료는 공식값 근거로 쓰�
 
 ## 6. 사양과 Limit Rule 분리
 - 공식 숫자 = 데이터, 제조사별 동작 제한 = validator. DB 숫자만으로 모든 판정 금지.
-- **현재 코드 매핑**(코드 3분할은 후속 예정): 데이터 = `src/processors.js`, 한계/판정 로직 = `src/engine.js`(processorRequirements·validate*·rankProcessors·validateBuild). 향후 `processor-data.js`/`processor-limits.js`/`processor-validator.js`로 분리 계획.
+- **현재 코드 매핑**(코드 3분할 완료, DEC-030 2026-09-12):
+  - 데이터 = `src/processor-data.js` (`PROCESSORS`·`getProcessor`·`proc()` 팩토리).
+  - 용량·한계 계산 = `src/processor-limits.js` (`processorRequirements`·`regionTiles`·`inputsCapacity`·`outputs4kCapacity`·`outputCardUsage2kEq`·`validateOutputCardLayers`).
+  - 판정·등급·정렬 = `src/processor-validator.js` (`validateProcessor`·`rankProcessors`·`validateBuild`).
+  - `src/engine.js`는 LED 코어 계산 전용(프로세서 로직 없음). `src/app.js`는 위 세 파일에서 직접 import.
 
 ## 7. 공식값에 출처 기록
 각 Processor에 `verification: { status, sourceUrl, sourceVersion, verifiedAt, notes }` 유지. 중요한 한계값은 field-level 출처(document/page)도 허용.

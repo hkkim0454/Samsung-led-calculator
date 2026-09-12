@@ -175,6 +175,7 @@
 | P5-3 | 미확인 프로세서 스펙(NovaStar H·Colorlight PDF) 확정 → `verification.status='official'` 갱신 | 김현규 / AI | 진행 중 | **1차 반영 완료(2026-09-12, v170, DEC-019):** NovaStar H 7모델·U6 Max official, U9/U15 partial_official. 남은 확인: NovaStar 독립입력·4K출력 수, U9/U15 I/O·per-board |
 | P5-4 | 05 화면에 레이어 배치(카드별) 입력 추가 — NovaStar/Universe 카드 예산·cross-output 정밀 판정용. **엔진 지원 완료(DEC-021, `perOutputCardDemand` 배열)**, UI 미노출 | 김현규 / AI | 검토 | 이사 요청 시 |
 | P5-5 | 05 화면 제조사별 의미·판정 이유 표시(자료문서 §24·§25) — 노바 "카드당 4×4K", X100 "독립4K 8/8·윈도우 16/64", AW "믹싱/분할" 등. DEC-021 2차 | AI | 진행 예정 | 이사 확인 |
+| P5-6 | **프로세서 코드 3분할** — `processor-data.js`(데이터)·`processor-limits.js`(용량·한계)·`processor-validator.js`(판정)로 분리, engine.js는 LED 코어 전용. DEC-030 | AI | **완료(2026-09-12, v183)** | 무동작-변경 리팩터, 115/115 통과·헤드리스 로드 무오류 |
 
 ## Notes
 
