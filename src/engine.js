@@ -643,3 +643,40 @@ export function rankProcessors(procs, req) {
       (Number(b.appPreferred) - Number(a.appPreferred)) ||
       (b._headroom - a._headroom));
 }
+
+/**
+ * 사용자가 실제로 계획한 카드 구성(build)이 이 LED에 충분한지 검증한다.
+ * build: { out4kCards, in4kPorts, in2kPorts } — 값이 없으면(null/undefined) 해당 검사 생략.
+ * 각 항목: (1) LED 요구를 덮는가(필요 ≤ 보유), (2) 제품(섀시) 최대에 맞는가(보유 ≤ 최대).
+ * 반환: { verdict, checks:[{name,need,have,unit,ok,note?}] }.
+ */
+export function validateBuild(proc, req, build = {}) {
+  if (!proc || !req) return null;
+  const checks = [];
+  const cover = (name, need, have, unit) => {
+    let ok = null; if (need != null && have != null) ok = have >= need;
+    checks.push({ name, need: need ?? null, have: have ?? null, unit, ok });
+  };
+  const withinMax = (name, have, max, unit) => {
+    if (have == null || max == null) return;
+    if (have > max) checks.push({ name, need: max, have, unit, ok: false, note: '제품(섀시) 최대 초과' });
+  };
+  const inCap = inputsCapacity(proc);
+
+  if (build.out4kCards != null) {
+    cover('4K 출력카드(보유)', req.required4kOutputs, build.out4kCards, '장');
+    withinMax('4K 출력카드 섀시 한계', build.out4kCards, proc.outputs?.max4k, '장');
+  }
+  if (build.in4kPorts != null) {
+    cover('4K 입력 포트(보유)', req.independent4kInputs, build.in4kPorts, '포트');
+    withinMax('4K 입력 섀시 한계', build.in4kPorts, inCap.max4k, '포트');
+  }
+  if (build.in2kPorts != null) {
+    cover('2K 입력 포트(보유)', req.independent2kInputs, build.in2kPorts, '포트');
+    withinMax('2K 입력 섀시 한계', build.in2kPorts, inCap.max2k, '포트');
+  }
+
+  const anyFail = checks.some(c => c.ok === false);
+  const anyUnknown = checks.some(c => c.ok === null);
+  return { verdict: checks.length === 0 ? null : (anyFail ? 'FAIL' : (anyUnknown ? 'CONDITIONAL' : 'PASS')), checks };
+}

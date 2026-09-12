@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   processorRequirements, validateProcessor, validateOutputCardLayers, rankProcessors, regionTiles,
-  outputCardUsage2kEq, outputs4kCapacity, inputsCapacity,
+  outputCardUsage2kEq, outputs4kCapacity, inputsCapacity, validateBuild,
 } from '../src/engine.js';
 import { PROCESSORS, getProcessor } from '../src/processors.js';
 
@@ -402,6 +402,28 @@ test('U15 Max official I/O filled', () => {
       o4: u.outputs.max4k, o2: u.outputs.max2k, oB: u.outputs.maxOutputBoards,
       g4: u.layers.global4k, pb4: u.layers.perBoard4k },
     { i4: 60, i2: 120, iB: 30, o4: 40, o2: 120, oB: 20, g4: 80, pb4: null });  // per-board 미확인 유지
+});
+
+// ── 내 장비 구성 검증(validateBuild) — 이사 실사례: X100 7U 출력2장·입력12포트 → IFR 9×3 ──
+test('validateBuild: X100 7U 실사례 (IF015R 9×3 = 5760×1080)', () => {
+  const x = getProcessor('cl-x100pro-7u');
+  const req = processorRequirements({ resW: 5760, resH: 1080 });   // 필요 4K 출력 2
+  // 출력카드 2장 + 2K 입력 12포트 → 충분(PASS)
+  const v = validateBuild(x, req, { out4kCards: 2, in2kPorts: 12 });
+  assert.equal(v.verdict, 'PASS');
+  assert.equal(findCheck(v, '4K 출력카드(보유)').ok, true);   // 필요 2 ≤ 보유 2
+  assert.equal(findCheck(v, '2K 입력 포트(보유)').ok, true);  // 12 ≤ 섀시 32, req 2K입력 0
+  // 출력카드 1장 → 부족(FAIL)
+  assert.equal(validateBuild(x, req, { out4kCards: 1 }).verdict, 'FAIL');
+  // 출력카드 9장 → 섀시(8) 초과 FAIL
+  const over = validateBuild(x, req, { out4kCards: 9 });
+  assert.equal(over.verdict, 'FAIL');
+  assert.ok(over.checks.some(c => c.name === '4K 출력카드 섀시 한계' && c.ok === false));
+});
+test('validateBuild: 빈 구성이면 검사 없음(null verdict)', () => {
+  const x = getProcessor('cl-x100pro-7u');
+  const req = processorRequirements({ resW: 3840, resH: 2160 });
+  assert.equal(validateBuild(x, req, {}).verdict, null);
 });
 
 // ── QuickVu / QuickMatrix 단종 삭제 확인 ────────────────────────────────────────
