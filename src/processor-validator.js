@@ -14,7 +14,7 @@ import {
   inputsCapacity,
   outputs4kCapacity,
   validateOutputCardLayers,
-} from './processor-limits.js?v=232';
+} from './processor-limits.js?v=233';
 
 /** 여러 값 중 최댓값(null 무시). 전부 null이면 null. */
 function maxNullable(...vals) {
