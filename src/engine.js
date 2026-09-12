@@ -401,25 +401,31 @@ export function outputCardUsage2kEq(demand = {}) {
 
 /**
  * 출력카드/출력보드별 레이어 한계 검사(NovaStar per_output_card, Universe screen_group).
- * 카드 1장 용량(2K 16개 분량)을 기준으로, 한 카드에 몰리는 레이어가 예산을 넘는지 본다(문서 §4·§5.2).
+ * 카드 1장 용량(2K 16개 분량)을 기준으로, 한 카드에 몰리는 레이어가 예산을 넘는지 본다(문서 §19·§21).
  * 우선순위:
- *   1) req.perOutputCardDemand({layers4k,layersDL,layers2k})가 있으면 2K 환산 사용량 vs 카드 2K 용량.
- *   2) 없고 req.maxLayersPerOutput(한 카드 4K 레이어 수)가 있으면 카드당 4K 용량과 비교.
- *   3) 둘 다 없으면 ok=null(확인 필요) — 전체 레이어 합만으로 PASS 처리하지 않는다.
- * 필요한 카드 용량 사양이 없으면 ok=null.
- * 반환: 검사 객체 { name, need, have, unit, ok } 또는 해당 없으면 null.
+ *   1) req.perOutputCardDemand — 카드별 레이어 배치. {layers4k,layersDL,layers2k} 하나 또는 배열.
+ *      각 카드의 2K 환산 사용량이 카드 예산 이하이고, 사용 카드 수가 출력카드 수 이하이면 PASS.
+ *      (한 레이어가 카드 경계에 걸치면 양쪽 카드 배열에 각각 넣으면 됨 — cross-output, 문서 §19.)
+ *   2) req.maxLayersPerOutput(한 카드 4K 레이어 수)가 있으면 카드당 4K 용량과 비교.
+ *   3) 배치 정보가 없으면: 이론상 분산 가능성만 본다(정밀 판정은 배치 입력 필요, 문서 §21).
+ *      per-board/카드 사양이 없으면 ok=null(확인 필요).
+ * 반환: 검사 객체 { name, need, have, unit, ok, note? } 또는 해당 없으면 null.
  */
 export function validateOutputCardLayers(proc, req) {
   const L = proc?.layers ?? {};
   if (L.model !== 'per_output_card' && L.model !== 'screen_group') return null;
   const cap2k = L.perOutputCard2k ?? L.perBoard2k ?? null;   // 카드 1장 2K 용량(예: 16)
   const per4k = L.perOutputCard4k ?? L.perBoard4k ?? null;   // 카드 1장 4K 용량(예: 4)
+  const boards = proc?.outputs?.maxOutputBoards ?? null;      // 출력카드/보드 수
 
-  // 1) 상세 레이어 배치(2K 환산): 한 카드에 몰리는 레이어 vs 카드 예산.
+  // 1) 상세 레이어 배치(2K 환산). 카드별로 몰린 레이어를 각각 검사(경계 걸침은 여러 카드에 중복 배치).
   if (req.perOutputCardDemand != null) {
-    const usage = outputCardUsage2kEq(req.perOutputCardDemand);
-    if (cap2k == null) return { name: '출력카드별 레이어(2K환산)', need: usage, have: null, unit: '', ok: null };
-    return { name: '출력카드별 레이어(2K환산)', need: usage, have: cap2k, unit: '', ok: cap2k >= usage };
+    const cards = Array.isArray(req.perOutputCardDemand) ? req.perOutputCardDemand : [req.perOutputCardDemand];
+    const maxUsage = cards.reduce((mx, c) => Math.max(mx, outputCardUsage2kEq(c)), 0);
+    if (cap2k == null) return { name: '출력카드별 레이어(2K환산)', need: maxUsage, have: null, unit: '', ok: null };
+    const okCap = cap2k >= maxUsage;
+    const okCount = boards == null ? true : boards >= cards.length;
+    return { name: '출력카드별 레이어(2K환산)', need: maxUsage, have: cap2k, unit: '', ok: okCap && okCount };
   }
 
   // 2) 한 카드 4K 레이어 수만 지정된 경우.
@@ -428,7 +434,13 @@ export function validateOutputCardLayers(proc, req) {
     return { name: '출력카드별 4K 레이어', need: req.maxLayersPerOutput, have: per4k, unit: '개', ok: per4k >= req.maxLayersPerOutput };
   }
 
-  // 레이어 배치 정보가 없으면 카드별 검사를 생략한다(장치 전역 레이어 검사로 갈음). null = 검사 없음.
+  // 3) 배치 정보 없음 — 이론적 분산 가능성만. (전체 총량 초과는 전역 레이어 검사가 FAIL로 잡음.)
+  if (req.simultaneous4kLayers > 0 || req.simultaneous2kLayers > 0) {
+    if (per4k == null || boards == null)
+      return { name: '카드/보드별 배치', need: '확인 필요', have: '—', unit: '', ok: null, note: 'per-board/카드 사양 미확인' };
+    if (req.simultaneous4kLayers > per4k * boards) return null;   // 총량 초과 → 전역 검사에서 FAIL
+    return { name: '카드/보드별 배치', need: '—', have: '이론상 가능', unit: '', ok: true, note: '실제 카드/보드 배치에 따라 달라질 수 있음(정밀 판정은 배치 입력 필요)' };
+  }
   return null;
 }
 

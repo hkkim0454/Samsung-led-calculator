@@ -173,7 +173,8 @@
 | P5-1 | **Video Processor Selector 1차(엔진+데이터+테스트)** — DEC-018. `processors.js`·`engine.js`(processorRequirements/validateProcessor/validateOutputCardLayers/rankProcessors)·`tests/processor.test.js` | AI | **완료(2026-09-12)** | 87/87 테스트 통과, 화면 무변경 |
 | P5-2 | Video Processor Selector 2차 — '05 비디오 프로세서' UI(요구 입력 + PASS/CONDITIONAL/FAIL·등급·근거 표시). 기존 id/data-* 불변, 05 신설·06/07 재번호 | AI | **완료(2026-09-12, v169)** | 헤드리스 렌더 확인(제품 20개, 권장 6·조건부 14), 기존 id 보존 |
 | P5-3 | 미확인 프로세서 스펙(NovaStar H·Colorlight PDF) 확정 → `verification.status='official'` 갱신 | 김현규 / AI | 진행 중 | **1차 반영 완료(2026-09-12, v170, DEC-019):** NovaStar H 7모델·U6 Max official, U9/U15 partial_official. 남은 확인: NovaStar 독립입력·4K출력 수, U9/U15 I/O·per-board |
-| P5-4 | (선택) 05 화면에 레이어 배치(카드별) 입력 추가 — NovaStar/Universe 카드 예산 정밀 판정용. 현재 엔진은 지원(`perOutputCardDemand`), UI 미노출 | 김현규 / AI | 검토 | 이사 요청 시 |
+| P5-4 | 05 화면에 레이어 배치(카드별) 입력 추가 — NovaStar/Universe 카드 예산·cross-output 정밀 판정용. **엔진 지원 완료(DEC-021, `perOutputCardDemand` 배열)**, UI 미노출 | 김현규 / AI | 검토 | 이사 요청 시 |
+| P5-5 | 05 화면 제조사별 의미·판정 이유 표시(자료문서 §24·§25) — 노바 "카드당 4×4K", X100 "독립4K 8/8·윈도우 16/64", AW "믹싱/분할" 등. DEC-021 2차 | AI | 진행 예정 | 이사 확인 |
 
 ## Notes
 

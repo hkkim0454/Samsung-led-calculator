@@ -99,10 +99,46 @@ test('NovaStar per-output-card: global OK but a card exceeds -> FAIL', () => {
   assert.equal(findCheck(v, '출력카드별 4K 레이어').ok, false); // 카드 한계 초과
   assert.equal(v.verdict, 'FAIL');
 });
-test('validateOutputCardLayers: no layer-placement info -> skipped (null)', () => {
+test('validateOutputCardLayers: no placement -> theoretical feasibility + note (§21)', () => {
+  const ns = getProcessor('ns-h9');   // per4k 4 × 5 boards = 20 total
+  const c = validateOutputCardLayers(ns, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 8 }));
+  assert.equal(c.ok, true);              // 8 <= 20, 이론상 분산 가능
+  assert.ok(c.note && c.note.includes('배치'));   // 배치 확인 안내
+});
+test('validateOutputCardLayers: unknown per-board (U9) -> null (확인 필요)', () => {
+  const u9 = getProcessor('cl-universe-u9max');   // perBoard4k null
+  const c = validateOutputCardLayers(u9, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 8 }));
+  assert.equal(c.ok, null);
+});
+
+// ── 문서 §26: NovaStar 카드 몰림 FAIL / 분산 PASS (배치도 배열) ───────────────────
+test('§26 NovaStar: 5×4K on one card -> FAIL, 4+4 distributed -> PASS', () => {
   const ns = getProcessor('ns-h9');
-  const req = processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 8 });
-  assert.equal(validateOutputCardLayers(ns, req), null);   // 배치 정보 없으면 카드별 검사 생략
+  const fail = validateOutputCardLayers(ns, processorRequirements({ resW: 7680, resH: 2160 }, { perOutputCardDemand: [{ layers4k: 5 }] }));
+  assert.equal(fail.ok, false);   // 5×4=20 > 16
+  const pass = validateOutputCardLayers(ns, processorRequirements({ resW: 7680, resH: 2160 }, { perOutputCardDemand: [{ layers4k: 4 }, { layers4k: 4 }] }));
+  assert.equal(pass.ok, true);    // 각 카드 16 ≤ 16, 2 카드 ≤ 5
+});
+
+// ── 문서 §26: X100 Pro 소스 복제 (독립입력 ≠ 윈도우) ─────────────────────────────
+test('§26 X100 Pro-7U: 8 sources × 2 windows(16) -> input OK; 9 sources -> FAIL', () => {
+  const x = getProcessor('cl-x100pro-7u');
+  const dup = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 8, simultaneous4kLayers: 16 }));
+  assert.equal(findCheck(dup, '독립 4K 입력').ok, true);   // 8 / 8
+  assert.equal(findCheck(dup, '최대 윈도우').ok, true);    // 16 / 64
+  assert.notEqual(dup.verdict, 'FAIL');
+  const over = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 9, simultaneous4kLayers: 9 }));
+  assert.equal(findCheck(over, '독립 4K 입력').ok, false); // 9 > 8, 윈도우 여유 있어도 FAIL
+  assert.equal(over.verdict, 'FAIL');
+});
+
+// ── 문서 §26: U6 Max 보드 몰림 FAIL / 분산 PASS ─────────────────────────────────
+test('§26 U6 Max: 5×4K on one board -> FAIL, 4+4 distributed -> PASS', () => {
+  const u6 = getProcessor('cl-universe-u6max');   // perBoard2k 16, perBoard4k 4, boards 5
+  const fail = validateOutputCardLayers(u6, processorRequirements({ resW: 7680, resH: 2160 }, { perOutputCardDemand: [{ layers4k: 5 }] }));
+  assert.equal(fail.ok, false);   // 5×4=20 > 16
+  const pass = validateOutputCardLayers(u6, processorRequirements({ resW: 7680, resH: 2160 }, { perOutputCardDemand: [{ layers4k: 4 }, { layers4k: 4 }] }));
+  assert.equal(pass.ok, true);
 });
 
 // ── 문서 §4 / TEST 7·8: 출력카드 2K 환산 예산 (카드 용량 16) ─────────────────────
