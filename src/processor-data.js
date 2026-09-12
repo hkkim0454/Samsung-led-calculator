@@ -21,7 +21,8 @@
 const AW = 'Analog Way', NS = 'NovaStar', CL = 'Colorlight';
 
 // 반복되는 빈 서브구조 기본값(누락 필드는 null = 확인 필요).
-const emptyInputs = () => ({ maxIndependent2k: null, maxIndependent4k: null, maxInputBoards: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null });
+// comboHdmi14Sdi3g: HDMI 1.4/3G SDI 겸용(둘 중 택일) 입력 포트 수(예: Midra·Alta 2개). 표시용(검증 미반영).
+const emptyInputs = () => ({ maxIndependent2k: null, maxIndependent4k: null, maxInputBoards: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null, comboHdmi14Sdi3g: null });
 const emptyOutputs = () => ({ max2k: null, max4k: null, maxOutputBoards: null });
 // monitoringPreview: 멀티뷰/프리뷰·모니터링 지원(≠ Analog Way식 Program/Preview 2-bus). previewProgram과 분리.
 const emptySwitching = () => ({ cut: null, fade: null, seamless: null, trueABMixing: null, previewProgram: null, monitoringPreview: null, transitionGrade: null });
@@ -55,7 +56,7 @@ export const PROCESSORS = [
   ...['Pulse 4K', 'Eikos 4K'].map(model => proc({
     id: 'aw-midra-' + model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,''),
     manufacturer: AW, family: 'Midra', model,
-    inputs: { maxIndependent4k: 8, maxIndependent2k: 2, hdmi20: 4, dp12: 2, sdi12g: 2 },
+    inputs: { maxIndependent4k: 8, maxIndependent2k: 2, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 겸용 HDMI1.4/3G SDI 2개(이사 제공 2026-09-12)
     outputs: { max4k: 2 },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },  // 최대 2×4K 믹싱 / 4×4K 분할(프로젝트 조사 기준)
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
@@ -69,7 +70,7 @@ export const PROCESSORS = [
   proc({
     id: 'aw-alta-zenith-200',
     manufacturer: AW, family: 'Alta', model: 'Alta 4K (Zenith 200)',
-    inputs: { maxIndependent4k: 14, maxIndependent2k: 2, hdmi20: 8, dp12: 4, sdi12g: 2 },
+    inputs: { maxIndependent4k: 14, maxIndependent2k: 2, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 겸용 HDMI1.4/3G SDI 2개(이사 제공 2026-09-12)
     outputs: { max4k: 4 },   // 최대 4×4K60 Program outputs (총 6 outputs)
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },

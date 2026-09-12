@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=219';
-import { MODELS } from './models.js?v=219';
-import { PROCESSORS } from './processor-data.js?v=219';
-import { processorRequirements } from './processor-limits.js?v=219';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=219';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=219';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=219';
-import { parseCasesText, normalizeDate } from './cases.js?v=219';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=220';
+import { MODELS } from './models.js?v=220';
+import { PROCESSORS } from './processor-data.js?v=220';
+import { processorRequirements } from './processor-limits.js?v=220';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=220';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=220';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=220';
+import { parseCasesText, normalizeDate } from './cases.js?v=220';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -601,7 +601,7 @@ function openPortPopup(id) {
   const nn = v => (v == null ? '<span class="muted-note">—</span>' : `<b>${v}</b>개`);
   const row = (label, v) => `<tr><td>${esc(label)}</td><td class="pp-n">${nn(v)}</td></tr>`;
   // 커넥터별 수량(고정형: Pulse/Eikos/Alta)이 있으면 그걸, 없으면 최대 독립 입력(카드형: Aquilon RS)을 보여줌.
-  const connRows = [['HDMI 1.4', p.inputs.hdmi14], ['HDMI 2.0', p.inputs.hdmi20], ['DisplayPort 1.2', p.inputs.dp12], ['SDI 3G', p.inputs.sdi3g], ['SDI 12G', p.inputs.sdi12g]]
+  const connRows = [['HDMI 1.4', p.inputs.hdmi14], ['HDMI 2.0', p.inputs.hdmi20], ['DisplayPort 1.2', p.inputs.dp12], ['SDI 3G', p.inputs.sdi3g], ['SDI 12G', p.inputs.sdi12g], ['HDMI 1.4 / 3G SDI 겸용', p.inputs.comboHdmi14Sdi3g]]
     .filter(([, v]) => v != null);
   const indepRows = [['독립 입력 · 4K', p.inputs.maxIndependent4k], ['독립 입력 · 2K', p.inputs.maxIndependent2k]]
     .filter(([, v]) => v != null);
