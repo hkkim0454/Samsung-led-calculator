@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=226';
-import { MODELS } from './models.js?v=226';
-import { PROCESSORS } from './processor-data.js?v=226';
-import { processorRequirements } from './processor-limits.js?v=226';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=226';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=226';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=226';
-import { parseCasesText, normalizeDate } from './cases.js?v=226';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=227';
+import { MODELS } from './models.js?v=227';
+import { PROCESSORS } from './processor-data.js?v=227';
+import { processorRequirements } from './processor-limits.js?v=227';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=227';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=227';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=227';
+import { parseCasesText, normalizeDate } from './cases.js?v=227';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -321,6 +321,10 @@ function renderPreview() {
   const fH = Math.max(0.5, Math.min(fFront, (CY - visT - padH) / vEye, (visB - padH - CY) / (SHp - vEye)));
   const dHeight = P + ZW - P / fH;
   const uHeight = Math.max(0, (SWp / 2) + (((36 - tx) / effFit) - CX) / fH);   // 왼쪽에서 36px 안쪽(가장자리 잘림 방지)
+  // 사람을 '벽 공간 치수선(dHeight)'보다 30cm 안쪽(뒤)에 세워 앞으로 튀어나오지 않게(이사 요청: 눈높이가 어색).
+  //   → 벽과 치수선 사이에 위치. 눈높이선·라벨·사람 모두 이 깊이(personDeff)를 공유해 정렬 유지.
+  const personDeff = Math.max(px(400), Math.min(personD, dHeight - px(300)));
+  const personFoot = proj(personX, SHp, personDeff);
 
   let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
 
@@ -369,9 +373,9 @@ function renderPreview() {
   for (const g of [{ mm: 1600, t: '눈높이(서) 1.6 m' }, { mm: 1200, t: '눈높이(앉) 1.2 m' }]) {
     if (g.mm > sH) continue;
     const v = SHp - px(g.mm);
-    const eyeY = proj(personX, v, personD).y;                     // 눈높이 화면 y(수평선)
-    const xL = Math.max(visL + 6, proj(Lx, v, personD).x);        // 왼쪽 끝(LED 왼쪽 부근, 화면 안)
-    const xR = Math.min(visR - 6, proj(SWp, v, personD).x);       // 오른쪽 끝(측벽 부근, 화면 안)
+    const eyeY = proj(personX, v, personDeff).y;                  // 눈높이 화면 y(수평선, 사람 깊이=personDeff)
+    const xL = Math.max(visL + 6, proj(Lx, v, personDeff).x);     // 왼쪽 끝(LED 왼쪽 부근, 화면 안)
+    const xR = Math.min(visR - 6, proj(SWp, v, personDeff).x);    // 오른쪽 끝(측벽 부근, 화면 안)
     eyeLines += `<div class="rs3Eye" style="left:${xL}px;top:${eyeY}px;width:${Math.max(0, xR - xL)}px"></div>`
       + `<span class="rs3EyeLbl r" style="left:${xR}px;top:${cly(eyeY)}px">${g.t}</span>`;
   }
@@ -451,7 +455,7 @@ function renderPreview() {
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person" style="left:${personX}px;top:${SHp - px(1700)}px;width:${px(320)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${personD}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
+          <div class="rs3Person" style="left:${personX}px;top:${SHp - px(1700)}px;width:${px(320)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${personDeff}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
         </div>
       </div>
       <div class="rs3EdgeLayer">${roomEdges}</div>
@@ -459,7 +463,7 @@ function renderPreview() {
       <div class="rs3Overlay">
         ${dims.join('')}
         ${numHTML}
-        <div class="rs3Dlbl person" style="left:${clx(personLbl.x)}px;top:${cly(personLbl.y + 14)}px;transform:translate(-50%,-50%)">키 170 cm</div>
+        <div class="rs3Dlbl person" style="left:${clx(personFoot.x)}px;top:${cly(personFoot.y + 14)}px;transform:translate(-50%,-50%)">키 170 cm</div>
       </div>
     </div>
   </div>`;
