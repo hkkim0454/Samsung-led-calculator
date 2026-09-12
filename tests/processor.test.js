@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   processorRequirements, validateProcessor, validateOutputCardLayers, rankProcessors, regionTiles,
-  outputCardUsage2kEq, outputs4kCapacity,
+  outputCardUsage2kEq, outputs4kCapacity, inputsCapacity,
 } from '../src/engine.js';
 import { PROCESSORS, getProcessor } from '../src/processors.js';
 
@@ -274,6 +274,31 @@ test('Aquilon hidden when required 4K outputs <= 2, shown when >= 3', () => {
   // 예외 없음: 방송급(공연·방송급) 요구여도 소형이면 숨김
   const show = processorRequirements({ resW: 3840, resH: 2160 }, { advancedTransitionRequired: true, trueABRequired: true });
   assert.equal(has(rankProcessors(PROCESSORS, show)), false);
+});
+
+// ── 이사 지침: 입력카드 '슬롯 1개 = 4K 1개 또는 2K 4개' 모델 ──────────────────────
+test('inputsCapacity: NovaStar derived from slots, X100 uses explicit', () => {
+  // NovaStar H9: 입력슬롯 15 → 4K 15, 2K 60 (가정)
+  assert.deepEqual(inputsCapacity(getProcessor('ns-h9')), { max4k: 15, max2k: 60, slots: 15, assumed4k: true, assumed2k: true });
+  // X100 Pro 7U: 공식값(8 / 32) 유지, 가정 아님
+  assert.deepEqual(inputsCapacity(getProcessor('cl-x100pro-7u')), { max4k: 8, max2k: 32, slots: 8, assumed4k: false, assumed2k: false });
+});
+test('input slot budget: 4K + ceil(2K/4) <= slots (shared)', () => {
+  const h2 = getProcessor('ns-h2');   // 입력슬롯 4
+  // 3×4K + 4×2K = 3 + 1 = 4 슬롯 ≤ 4 → PASS
+  const ok = validateProcessor(h2, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 3, independent2kInputs: 4 }));
+  assert.equal(findCheck(ok, '입력 슬롯').ok, true);
+  // 3×4K + 8×2K = 3 + 2 = 5 슬롯 > 4 → FAIL
+  const over = validateProcessor(h2, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 3, independent2kInputs: 8 }));
+  assert.equal(findCheck(over, '입력 슬롯').ok, false);
+  assert.equal(over.verdict, 'FAIL');
+});
+test('X100 Pro-7U input slot budget: 4×4K + 16×2K fits 8 slots, 5×4K + 16×2K does not', () => {
+  const x = getProcessor('cl-x100pro-7u');   // 슬롯 8
+  const ok = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 4, independent2kInputs: 16 }));
+  assert.equal(findCheck(ok, '입력 슬롯').ok, true);   // 4 + 4 = 8
+  const over = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 5, independent2kInputs: 16 }));
+  assert.equal(findCheck(over, '입력 슬롯').ok, false); // 5 + 4 = 9 > 8
 });
 
 // ── QuickVu / QuickMatrix 단종 삭제 확인 ────────────────────────────────────────
