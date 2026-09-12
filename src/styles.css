@@ -277,7 +277,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Glow{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(47,127,246,.22),transparent 60%);animation:rs3Breathe 6s ease-in-out infinite;pointer-events:none}
 /* 캐비닛 번호(2D 오버레이, v2 1-2): 열=캐비닛 위(밝은 글자+그림자), 행=벽(어두운 글자).
    오버레이는 스케일 캔버스 안이라 글자를 1/fit로 역보정 → 화면상 항상 14px(v2 1-1 B안). */
-.rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:calc(14px / var(--fit,1));font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
+.rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:calc(7px / var(--fit,1));font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
 .rs3Num.col{color:#EDEEF4;text-shadow:0 1px 2px rgba(0,0,0,.7)}
 .rs3Num.row{color:#6B7178}
 .rs3Sig{position:absolute;box-sizing:border-box;border:2px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}
