@@ -445,6 +445,24 @@ export function validateOutputCardLayers(proc, req) {
 }
 
 /**
+ * 4K 출력 커버리지(HDMI 2.0 4K@60 포트 수 기준).
+ * 공식 outputs.max4k가 있으면 그대로. 없고 per_output_card/screen_group이면
+ * **"출력카드는 모두 HDMI 2.0을 쓴다" 가정**으로 카드당 4K(perOutputCard4k/perBoard4k) × 출력보드 수로 추정
+ * (이사 지침 2026-09-12). 유도값은 assumed=true로 표시. 근거 없으면 value=null(확인 필요).
+ * 반환: { value, assumed }.
+ */
+export function outputs4kCapacity(proc) {
+  const o = proc?.outputs ?? {};
+  if (o.max4k != null) return { value: o.max4k, assumed: false };
+  const L = proc?.layers ?? {};
+  if (L.model === 'per_output_card' || L.model === 'screen_group') {
+    const per4k = L.perOutputCard4k ?? L.perBoard4k ?? null;
+    if (per4k != null && o.maxOutputBoards != null) return { value: per4k * o.maxOutputBoards, assumed: true };
+  }
+  return { value: null, assumed: false };
+}
+
+/**
  * 하드 제약 검사. proc(제품) vs req(processorRequirements 결과).
  * 각 검사 ok: true(충족)/false(미달)/null(사양 미확인). 요구하지 않은 항목은 검사 생략.
  * 종합 verdict: 하나라도 false면 FAIL, false는 없고 null 있으면 CONDITIONAL, 모두 true면 PASS.
@@ -468,8 +486,11 @@ export function validateProcessor(proc, req) {
   if (req.independent4kInputs > 0) numCheck('독립 4K 입력', req.independent4kInputs, proc.inputs?.maxIndependent4k);
   if (req.independent2kInputs > 0) numCheck('독립 2K 입력', req.independent2kInputs, proc.inputs?.maxIndependent2k);
 
-  // 2) 필요 출력 수(4K).
-  if (req.required4kOutputs > 0) numCheck('4K 출력', req.required4kOutputs, proc.outputs?.max4k);
+  // 2) 필요 출력 수(4K) — HDMI 2.0(4K@60) 포트 기준. 출력카드 HDMI 2.0 가정 시 유도값 사용.
+  if (req.required4kOutputs > 0) {
+    const cap4k = outputs4kCapacity(proc);
+    numCheck(cap4k.assumed ? '4K 출력(HDMI2.0 가정)' : '4K 출력', req.required4kOutputs, cap4k.value);
+  }
 
   // 3) 레이어 용량 — capacityModel별로 다르게 산출(문서 §5).
   const L = proc.layers ?? {};
@@ -586,7 +607,7 @@ export function rankProcessors(procs, req) {
     .filter(proc => !isExpensiveOverspec(proc, req))
     .map(proc => {
       const v = validateProcessor(proc, req);
-      const out4k = v?.checks.find(c => c.name === '4K 출력');
+      const out4k = v?.checks.find(c => c.name.startsWith('4K 출력'));
       const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
       return { proc, ...v, label: gradeLabel(v), appPreferred: pref.includes(proc.family), _headroom: headroom };
     })

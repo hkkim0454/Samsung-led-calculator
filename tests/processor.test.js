@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   processorRequirements, validateProcessor, validateOutputCardLayers, rankProcessors, regionTiles,
-  outputCardUsage2kEq,
+  outputCardUsage2kEq, outputs4kCapacity,
 } from '../src/engine.js';
 import { PROCESSORS, getProcessor } from '../src/processors.js';
 
@@ -208,11 +208,26 @@ test('unknown required feature yields CONDITIONAL, not PASS', () => {
   assert.equal(v.verdict, 'CONDITIONAL');
 });
 test('output capacity unknown (null) is never auto-PASS', () => {
-  const ns = getProcessor('ns-h5');          // outputs.max4k = null
+  const x = getProcessor('cl-x100pro-7u');   // global_window, 출력보드 미상 → 유도 불가
   const req = processorRequirements({ resW: 7680, resH: 4320 });  // 4K 출력 4 요구
-  const v = validateProcessor(ns, req);
+  const v = validateProcessor(x, req);
   assert.equal(findCheck(v, '4K 출력').ok, null);
   assert.notEqual(v.verdict, 'PASS');
+});
+
+// ── 이사 지침: 출력카드 HDMI 2.0 가정 → NovaStar 4K 출력 유도 ─────────────────────
+test('outputs4kCapacity: HDMI 2.0 assumption derives NovaStar 4K outputs', () => {
+  assert.deepEqual(outputs4kCapacity(getProcessor('ns-h9')), { value: 20, assumed: true });   // 4×5
+  assert.deepEqual(outputs4kCapacity(getProcessor('ns-h20')), { value: 80, assumed: true });  // 4×20
+  assert.deepEqual(outputs4kCapacity(getProcessor('cl-universe-u6max')), { value: 10, assumed: false }); // 공식값 유지
+  assert.deepEqual(outputs4kCapacity(getProcessor('cl-x100pro-7u')), { value: null, assumed: false });   // 유도 불가
+});
+test('NovaStar 4K output check uses HDMI 2.0 assumption (labeled)', () => {
+  const v = validateProcessor(getProcessor('ns-h9'), processorRequirements({ resW: 7680, resH: 4320 })); // 필요 4
+  const c = findCheck(v, '4K 출력(HDMI2.0 가정)');
+  assert.ok(c);
+  assert.equal(c.have, 20);
+  assert.equal(c.ok, true);   // 필요 4 / 지원 20(가정)
 });
 
 // ── 문서 §3: Aquilon RS4 예시 (필요 충족 시 PASS/권장) ──────────────────────────
