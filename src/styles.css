@@ -312,6 +312,13 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Dln{position:absolute;pointer-events:none}
 .rs3Dln.h{border-top:1px solid rgba(16,18,22,.5);transform:translateY(-50%)}
 .rs3Dln.v{border-left:1px solid rgba(16,18,22,.5);transform:translateX(-50%)}
+/* 치수선 끝 눈금(I자) — 아주 작게(이사 요청). 화면 기준 4px 고정(1/fit 역보정). */
+.rs3Dln.h::before,.rs3Dln.h::after{content:"";position:absolute;top:calc(-2px / var(--fit,1));height:calc(4px / var(--fit,1));border-left:1px solid rgba(16,18,22,.5)}
+.rs3Dln.h::before{left:0}
+.rs3Dln.h::after{right:0}
+.rs3Dln.v::before,.rs3Dln.v::after{content:"";position:absolute;left:calc(-2px / var(--fit,1));width:calc(4px / var(--fit,1));border-top:1px solid rgba(16,18,22,.5)}
+.rs3Dln.v::before{top:0}
+.rs3Dln.v::after{bottom:0}
 .rs3Dlbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-family:var(--mono);pointer-events:none}
 /* 치수 라벨 크기 0.7배(이사 요청). base = 원래값×0.7. */
 .rs3Dlbl.key{background:#14161a;color:#fff;font-size:calc(8.4px / var(--fit,1));font-weight:600;padding:2px 6px;border-radius:6px}
