@@ -94,7 +94,12 @@ LED 산출 스펙(§3)과 사용자 요구를 받아 Analog Way / NovaStar / Col
 3. **NovaStar는 전체 레이어 합이 충분해도 특정 출력카드 한계를 넘으면 FAIL/조건부**(문서 §5.2).
 4. **S-Box 이중화 ≠ 프로세서 출력 이중화** — required 출력을 자동으로 2배로 만들지 않음(문서 §13).
 5. **확인되지 않은 값(null)은 임의 PASS 처리 금지** — 해당 검사는 null → 종합 CONDITIONAL, UI는 "확인 필요"(문서 §15).
+6. **NovaStar 레이어 경계 걸침(cross-output) 이중 소모 — Colorlight는 아님** (이사 확인 2026-09-12, 문서 §5).
+   - NovaStar H: 레이어(윈도우)가 출력카드 A·B 경계에 걸쳐 배치되면 **A·B 카드에서 각각 레이어 예산을 1개씩 소모**한다(한 레이어가 점유한 카드마다 비용을 더함: `occupiedOutputCardIds`). 따라서 실효 용량은 **배치 위치에 좌우**된다.
+   - Colorlight(X100 Pro `global_window`·Universe `screen_group`): 전역 풀 방식이라 경계에 걸쳐도 **이중 소모 없음**(1회만 카운트). 여기선 독립 입력·윈도우 총량이 한계.
+   - **현재 구현 상태:** 엔진은 "한 카드에 몰린 레이어" 예산(2K 환산 16)까지만 자동 검사(`outputCardUsage2kEq`). **경계 걸침 이중 소모는 레이어 배치도(어느 카드에 걸치는지) 입력이 필요**하므로 아직 자동 계산하지 않는다(→ 7.4 후속, P5-4). 기록만 반영(이사 지침: 지금은 메모).
 
 ### 7.4 미확정/후속
 - NovaStar H·Colorlight의 모델별 슬롯·출력·독립입력 수는 공식 PDF 사양서 값 확인 필요(현재 null). 확보 시 `verification.status='official'`로 갱신.
+- **레이어 배치도 입력(P5-4):** 각 레이어가 점유하는 출력카드 목록을 받아 NovaStar cross-output 이중 소모를 정밀 계산(위 규칙 6). Colorlight는 전역 1회 카운트. 엔진에 `perOutputCardDemand`(카드별 2K 환산 예산) 기반은 준비됨 — 배치도 UI/집계만 추가하면 됨.
 - 후속: 운용 환경별 정밀 랭킹, 레이어 드래그 시뮬레이션 연동, 가격/가성비 랭킹, 견적 연동(DEC-017 로드맵).
