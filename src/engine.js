@@ -506,7 +506,10 @@ export function validateProcessor(proc, req) {
   if (req.independent4kInputs > 0) numCheck('독립 4K 입력', req.independent4kInputs, inCap.max4k, '개', inCap.assumed4k ? '입력카드 가정(슬롯=4K1)' : undefined);
   if (req.independent2kInputs > 0) numCheck('독립 2K 입력', req.independent2kInputs, inCap.max2k, '개', inCap.assumed2k ? '입력카드 가정(슬롯=2K4)' : undefined);
   // 4K·2K 입력이 동시에 필요하면 슬롯을 나눠 쓴다: 필요 4K + 올림(필요 2K/4) ≤ 슬롯 수.
-  if (req.independent4kInputs > 0 && req.independent2kInputs > 0 && inCap.slots != null) {
+  // 단, '슬롯 1개=4K1 또는 2K4' 비율이 맞는 X100(global_window)·NovaStar(per_output_card)에만 적용.
+  // Universe(screen_group)는 입력카드 밀도가 달라(예: U9 보드당 2×4K) 이 비율을 쓰지 않는다.
+  if (req.independent4kInputs > 0 && req.independent2kInputs > 0 && inCap.slots != null
+      && (proc.layers?.model === 'global_window' || proc.layers?.model === 'per_output_card')) {
     const need = req.independent4kInputs + Math.ceil(req.independent2kInputs / INPUT_2K_PER_CARD);
     numCheck('입력 슬롯', need, inCap.slots, '슬롯', '4K 1개=슬롯 1, 2K 4개=슬롯 1');
   }

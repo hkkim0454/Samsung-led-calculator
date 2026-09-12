@@ -105,9 +105,9 @@ test('validateOutputCardLayers: no placement -> theoretical feasibility + note (
   assert.equal(c.ok, true);              // 8 <= 20, 이론상 분산 가능
   assert.ok(c.note && c.note.includes('배치'));   // 배치 확인 안내
 });
-test('validateOutputCardLayers: unknown per-board (U9) -> null (확인 필요)', () => {
-  const u9 = getProcessor('cl-universe-u9max');   // perBoard4k null
-  const c = validateOutputCardLayers(u9, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 8 }));
+test('validateOutputCardLayers: unknown per-board (U15) -> null (확인 필요)', () => {
+  const u15 = getProcessor('cl-universe-u15max');   // perBoard4k null, boards null
+  const c = validateOutputCardLayers(u15, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 8 }));
   assert.equal(c.ok, null);
 });
 
@@ -299,6 +299,32 @@ test('X100 Pro-7U input slot budget: 4×4K + 16×2K fits 8 slots, 5×4K + 16×2K
   assert.equal(findCheck(ok, '입력 슬롯').ok, true);   // 4 + 4 = 8
   const over = validateProcessor(x, processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 5, independent2kInputs: 16 }));
   assert.equal(findCheck(over, '입력 슬롯').ok, false); // 5 + 4 = 9 > 8
+});
+
+// ── handoff §2/§6: Midra 레이어 & U9 Max 확정값 반영 ─────────────────────────────
+test('Midra Pulse/Eikos: mixing 2 / split 4 layers filled', () => {
+  for (const id of ['aw-midra-pulse-4k', 'aw-midra-eikos-4k']) {
+    const p = getProcessor(id);
+    assert.equal(p.layers.mixing4k, 2);
+    assert.equal(p.layers.split4k, 4);
+  }
+});
+test('U9 Max: official I/O + per-board layers filled', () => {
+  const u9 = getProcessor('cl-universe-u9max');
+  assert.deepEqual(
+    { in4: u9.inputs.maxIndependent4k, in2: u9.inputs.maxIndependent2k, inB: u9.inputs.maxInputBoards,
+      o4: u9.outputs.max4k, o2: u9.outputs.max2k, oB: u9.outputs.maxOutputBoards,
+      g4: u9.layers.global4k, pb4: u9.layers.perBoard4k },
+    { in4: 36, in2: 108, inB: 18, o4: 20, o2: 60, oB: 10, g4: 40, pb4: 4 });
+  assert.equal(u9.verification.status, 'official');
+});
+test('Universe does NOT use the 1:4 input-slot budget (density differs)', () => {
+  // U9: 독립 4K 36·2K 108 (explicit). 4K+2K 동시 요구여도 screen_group이라 '입력 슬롯' 검사 없음.
+  const v = validateProcessor(getProcessor('cl-universe-u9max'),
+    processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 10, independent2kInputs: 20 }));
+  assert.equal(findCheck(v, '입력 슬롯'), undefined);
+  assert.equal(findCheck(v, '독립 4K 입력').ok, true);   // 10 ≤ 36
+  assert.equal(findCheck(v, '독립 2K 입력').ok, true);   // 20 ≤ 108
 });
 
 // ── QuickVu / QuickMatrix 단종 삭제 확인 ────────────────────────────────────────
