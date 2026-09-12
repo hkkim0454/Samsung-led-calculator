@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=203';
-import { MODELS } from './models.js?v=203';
-import { PROCESSORS } from './processor-data.js?v=203';
-import { processorRequirements } from './processor-limits.js?v=203';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=203';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=203';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=203';
-import { parseCasesText, normalizeDate } from './cases.js?v=203';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=204';
+import { MODELS } from './models.js?v=204';
+import { PROCESSORS } from './processor-data.js?v=204';
+import { processorRequirements } from './processor-limits.js?v=204';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=204';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=204';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=204';
+import { parseCasesText, normalizeDate } from './cases.js?v=204';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -308,20 +308,20 @@ function renderPreview() {
     }
   }
 
-  // 캐비닛 번호(2D 오버레이) — 열=맨 윗줄 칸 위쪽, 행=맨 왼쪽 칸 왼쪽(둘 다 캐비닛 안, 밝은 글자). 코너 겹침 방지 오프셋.
+  // 캐비닛 번호(2D 오버레이) — 열=맨 윗줄 칸, 행=맨 왼쪽 칸. 둘 다 칸의 '가운데'에 정렬(이사 요청).
   const dNum = Math.min(px(20), Dp * 0.02);
   let numHTML = '';
   {
-    const c0 = proj(Lx + colWp * 0.5, Ly + rowHp * 0.32, dNum), c1 = proj(Lx + colWp * 1.5, Ly + rowHp * 0.32, dNum);
+    const c0 = proj(Lx + colWp * 0.5, Ly + rowHp * 0.5, dNum), c1 = proj(Lx + colWp * 1.5, Ly + rowHp * 0.5, dNum);
     const spCol = Math.abs(c1.x - c0.x), stepC = spCol >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spCol)));
     for (let c = 0; c < r.cols; c++) {
       if (stepC > 1 && c % stepC !== 0 && c !== r.cols - 1) continue;
-      const p = proj(Lx + colWp * (c + 0.5), Ly + rowHp * 0.32, dNum);   // 윗줄 칸 위쪽
+      const p = proj(Lx + colWp * (c + 0.5), Ly + rowHp * 0.5, dNum);   // 윗줄 칸 가운데
       numHTML += `<span class="rs3Num col" style="left:${p.x}px;top:${p.y}px">${c + 1}</span>`;
     }
-    // 행 번호: 맨 왼쪽 칸 안쪽. 단, 첫 행(ri=0)은 좌상단에서 열 번호 '1'과 겹쳐 '1 1'로 보이므로 생략.
+    // 행 번호: 맨 왼쪽 칸 가운데. 단, 첫 행(ri=0)은 좌상단에서 열 번호 '1'과 겹쳐 '1 1'로 보이므로 생략.
     //   → 좌상단 '1' 하나가 가로·세로 1을 겸함(왼쪽은 1,2,3,4로 읽힘). (이사 요청)
-    const rowU = Lx + colWp * 0.28;
+    const rowU = Lx + colWp * 0.5;
     const r0 = proj(rowU, Ly + rowHp * 0.5, dNum), r1 = proj(rowU, Ly + rowHp * 1.5, dNum);
     const spRow = Math.abs(r1.y - r0.y), stepR = spRow >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spRow)));
     for (let ri = 1; ri < r.rows; ri++) {

@@ -271,13 +271,27 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* 깊이 단서 높이·offset은 mm 환산값을 인라인으로 넘긴다(v2 2-3) — CSS 고정 px 제거. */
 .rs3Ao{position:absolute;left:0;right:0;top:0;background:linear-gradient(to bottom,rgba(16,18,22,.22),transparent)}
 .rs3FloorGlow{position:absolute;top:0;background:radial-gradient(120% 100% at 50% 0%,rgba(47,127,246,.20),transparent 70%)}
+/* 다크(블랙) 테마: 방 면을 밝은색 하나만 쓰면 모바일 다크모드가 통째로 눌러 명암이 사라진다.
+   면마다 밝기 차이를 준 어두운 톤 + 밝은 모서리선으로 깊이감(명암)이 살게 재정의. only dark로 브라우저 강제 어둡게 방지. */
+@media (prefers-color-scheme: dark){
+  .rs3Frame,.rs3Frame *{color-scheme:only dark}
+  .rs3Frame{background:linear-gradient(170deg,#12141a,#0a0b0f);border-color:rgba(255,255,255,.08)}
+  .rs3Face.front{background:linear-gradient(160deg,#232937,#1a1f2a);box-shadow:inset 0 0 60px rgba(0,0,0,.45)}
+  .rs3Face.ceil{background:linear-gradient(#2c3341,#212734)}      /* 천장: 가장 밝은 어두움 */
+  .rs3Face.floor{background:linear-gradient(#171c26,#0d1016)}     /* 바닥: 가장 어두움 */
+  .rs3Face.wallL{background:linear-gradient(to left,#1a1f2b,#232a38)}  /* 좌우벽: 중간, 안쪽(소실점)으로 살짝 밝게 */
+  .rs3Face.wallR{background:linear-gradient(to left,#232a38,#1a1f2b)}
+  .rs3Edge{border-top-color:rgba(200,208,226,.32)}               /* 모서리선: 어두운 배경 위 밝게 */
+  .rs3FloorGrid{background-image:linear-gradient(to right,rgba(150,162,190,.14) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(150,162,190,.26) 0 1.5px,transparent 1.5px)}
+  .rs3Ao{background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent)}
+}
 .rs3Led{position:absolute;transform:translateZ(10px);border-radius:2px;background:#14161a}
 .rs3Grid{position:absolute;inset:0;display:grid;box-sizing:border-box}
 .rs3Grid>i{background:linear-gradient(160deg,#2b3037,#1e2228 60%,#23272d);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);border-radius:1px}
 .rs3Glow{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(47,127,246,.22),transparent 60%);animation:rs3Breathe 6s ease-in-out infinite;pointer-events:none}
 /* 캐비닛 번호(2D 오버레이, v2 1-2): 열=캐비닛 위(밝은 글자+그림자), 행=벽(어두운 글자).
    오버레이는 스케일 캔버스 안이라 글자를 1/fit로 역보정 → 화면상 항상 14px(v2 1-1 B안). */
-.rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:calc(7px / var(--fit,1));font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
+.rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:calc(8.4px / var(--fit,1));font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
 .rs3Num.col{color:#EDEEF4;text-shadow:0 1px 2px rgba(0,0,0,.7)}
 .rs3Num.row{color:#6B7178}
 .rs3Sig{position:absolute;box-sizing:border-box;border:2px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}
