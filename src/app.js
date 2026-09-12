@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=188';
-import { MODELS } from './models.js?v=188';
-import { PROCESSORS } from './processor-data.js?v=188';
-import { processorRequirements } from './processor-limits.js?v=188';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=188';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=188';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=188';
-import { parseCasesText, normalizeDate } from './cases.js?v=188';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=189';
+import { MODELS } from './models.js?v=189';
+import { PROCESSORS } from './processor-data.js?v=189';
+import { processorRequirements } from './processor-limits.js?v=189';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=189';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=189';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=189';
+import { parseCasesText, normalizeDate } from './cases.js?v=189';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -305,12 +305,17 @@ function renderPreview() {
     }
   }
 
-  // 눈높이선(좌측벽 자식): 로컬 x=깊이(0..Dp), 세로 위치 = 벽 상단 기준 v. 소실점으로 수렴.
+  // 눈높이선: 좌측벽 위 해당 높이를 2D 오버레이(투영)로 그린다(회전 자식 렌더 이슈 회피 → 바닥에 걸치지 않음).
+  //   뒷벽쪽(d=0) ~ 앞쪽(d=Dp) 두 점을 이어 좌측벽을 따라 소실점으로 수렴시킨다.
   let eyeLines = '';
   for (const g of [{ mm: 1600, t: '선 1.6 m' }, { mm: 1200, t: '앉음 1.2 m' }]) {
     if (g.mm > sH) continue;
-    const vy = SHp - px(g.mm);   // 벽 상단 기준 세로 위치
-    eyeLines += `<div class="rs3Eye" style="top:${vy}px"></div><span class="rs3EyeLbl" style="top:${vy}px">${g.t}</span>`;
+    const v = SHp - px(g.mm);
+    const aP = proj(0, v, 0), cP = proj(0, v, Dp);
+    const len = Math.hypot(cP.x - aP.x, cP.y - aP.y);
+    const ang = Math.atan2(cP.y - aP.y, cP.x - aP.x) * 180 / Math.PI;
+    eyeLines += `<div class="rs3Eye" style="left:${aP.x}px;top:${aP.y}px;width:${len}px;transform:rotate(${ang}deg)"></div>`
+      + `<span class="rs3EyeLbl" style="left:${cP.x + 5}px;top:${cP.y}px">${g.t}</span>`;
   }
 
   // 바닥 1 m 그리드 라인 수
@@ -365,9 +370,7 @@ function renderPreview() {
             <div class="rs3Ao"></div>
             <div class="rs3FloorGlow" style="left:${Lx}px;width:${Lw}px"></div>
           </div>
-          <div class="rs3Face wallL" style="left:0;top:0;width:${Dp}px;height:${SHp}px">
-            ${eyeLines}
-          </div>
+          <div class="rs3Face wallL" style="left:0;top:0;width:${Dp}px;height:${SHp}px"></div>
           <div class="rs3Face wallR" style="left:${SWp}px;top:0;width:${Dp}px;height:${SHp}px"></div>
           <div class="rs3Face front" style="${faceStyle}">
             <div class="rs3Led" style="left:${Lx}px;top:${Ly}px;width:${Lw}px;height:${Lh}px">
@@ -381,6 +384,7 @@ function renderPreview() {
           <div class="rs3Person" style="left:${SWp - px(600)}px;top:${SHp - px(1700)}px;width:${px(300)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${px(600)}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
         </div>
       </div>
+      <div class="rs3EyeLayer">${eyeLines}</div>
       <div class="rs3Overlay">
         ${dims.join('')}
         <div class="rs3Dlbl person" style="left:14px;top:${CH - 16}px;transform:translate(0,-50%)">키 170 cm</div>
