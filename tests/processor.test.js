@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   processorRequirements, validateProcessor, validateOutputCardLayers, rankProcessors, regionTiles,
+  outputCardUsage2kEq,
 } from '../src/engine.js';
 import { PROCESSORS, getProcessor } from '../src/processors.js';
 
@@ -98,12 +99,68 @@ test('NovaStar per-output-card: global OK but a card exceeds -> FAIL', () => {
   assert.equal(findCheck(v, '출력카드별 4K 레이어').ok, false); // 카드 한계 초과
   assert.equal(v.verdict, 'FAIL');
 });
-test('validateOutputCardLayers: unknown maxLayersPerOutput -> null (확인 필요)', () => {
+test('validateOutputCardLayers: no layer-placement info -> skipped (null)', () => {
   const ns = getProcessor('ns-h9');
   const req = processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 8 });
-  const c = validateOutputCardLayers(ns, req);
-  assert.ok(c);
-  assert.equal(c.ok, null);
+  assert.equal(validateOutputCardLayers(ns, req), null);   // 배치 정보 없으면 카드별 검사 생략
+});
+
+// ── 문서 §4 / TEST 7·8: 출력카드 2K 환산 예산 (카드 용량 16) ─────────────────────
+test('outputCardUsage2kEq: 4K×3 + 2K×4 = 16 (PASS), 4K×4 + 2K×1 = 17 (FAIL)', () => {
+  assert.equal(outputCardUsage2kEq({ layers4k: 3, layers2k: 4 }), 16);
+  assert.equal(outputCardUsage2kEq({ layers4k: 4, layers2k: 1 }), 17);
+  assert.equal(outputCardUsage2kEq({ layers4k: 2, layersDL: 3, layers2k: 2 }), 16); // 8+6+2
+});
+test('NovaStar per-card budget: 2K환산 16 PASS / 17 FAIL', () => {
+  const ns = getProcessor('ns-h9');   // perOutputCard2k = 16
+  const pass = validateOutputCardLayers(ns, processorRequirements({ resW: 3840, resH: 2160 }, { perOutputCardDemand: { layers4k: 3, layers2k: 4 } }));
+  assert.equal(pass.have, 16); assert.equal(pass.need, 16); assert.equal(pass.ok, true);
+  const fail = validateOutputCardLayers(ns, processorRequirements({ resW: 3840, resH: 2160 }, { perOutputCardDemand: { layers4k: 4, layers2k: 1 } }));
+  assert.equal(fail.need, 17); assert.equal(fail.ok, false);
+});
+// TEST 5·6: 한 카드 4K 레이어 4 PASS / 5 FAIL
+test('NovaStar per-card 4K layers: 4 PASS / 5 FAIL', () => {
+  const ns = getProcessor('ns-h9');   // perOutputCard4k = 4
+  const pass = validateOutputCardLayers(ns, processorRequirements({ resW: 3840, resH: 2160 }, { maxLayersPerOutput: 4 }));
+  assert.equal(pass.ok, true);
+  const fail = validateOutputCardLayers(ns, processorRequirements({ resW: 3840, resH: 2160 }, { maxLayersPerOutput: 5 }));
+  assert.equal(fail.ok, false);
+});
+
+// ── 문서 §12 / TEST 3·4: Colorlight U6 Max 전역 4K 레이어 20 PASS / 21 FAIL ──────
+test('U6 Max: 4K input 20 / output 4 / layer 20 -> PASS', () => {
+  const u6 = getProcessor('cl-universe-u6max');
+  assert.deepEqual(
+    { in: u6.inputs.maxIndependent4k, out: u6.outputs.max4k, g4: u6.layers.global4k, pb4: u6.layers.perBoard4k },
+    { in: 20, out: 10, g4: 20, pb4: 4 });
+  const req = processorRequirements({ resW: 7680, resH: 4320 }, { independent4kInputs: 8, simultaneous4kLayers: 20 });
+  const v = validateProcessor(u6, req);
+  assert.equal(findCheck(v, '독립 4K 입력').ok, true);
+  assert.equal(findCheck(v, '4K 출력').ok, true);   // 필요 4 / 지원 10
+  assert.equal(findCheck(v, '4K 레이어').ok, true);  // 필요 20 / 지원 20
+  assert.equal(v.verdict, 'PASS');
+});
+test('U6 Max: 4K layer 21 -> FAIL (global 20)', () => {
+  const u6 = getProcessor('cl-universe-u6max');
+  const req = processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 21 });
+  const v = validateProcessor(u6, req);
+  assert.equal(findCheck(v, '4K 레이어').ok, false);
+  assert.equal(v.verdict, 'FAIL');
+});
+
+// ── NovaStar 라인업 & 출력카드 정정 확인 ────────────────────────────────────────
+test('NovaStar lineup: 7 models with corrected output-card counts', () => {
+  const ns = PROCESSORS.filter(p => p.manufacturer === 'NovaStar');
+  assert.equal(ns.length, 7);
+  const byId = id => getProcessor(id);
+  assert.equal(byId('ns-h5').outputs.maxOutputBoards, 3);   // (정정: 이전 10은 입력카드 수였음)
+  assert.equal(byId('ns-h9').outputs.maxOutputBoards, 5);   // (정정: 이전 15)
+  assert.equal(byId('ns-h20').outputs.maxOutputBoards, 20);
+  assert.ok(byId('ns-h9e') && byId('ns-h15e') && byId('ns-h20'));
+  // 카드당 레이어(2K/DL/4K)
+  assert.deepEqual(
+    { a: byId('ns-h9').layers.perOutputCard2k, b: byId('ns-h9').layers.perOutputCardDL, c: byId('ns-h9').layers.perOutputCard4k },
+    { a: 16, b: 8, c: 4 });
 });
 
 // ── 문서 §15: 확인되지 않은 사양은 PASS가 아니라 CONDITIONAL ────────────────────
@@ -161,6 +218,6 @@ test('every processor has a valid layer model and id', () => {
     assert.ok(p.id && !ids.has(p.id), `unique id: ${p.id}`);
     ids.add(p.id);
     assert.ok(valid.has(p.layers.model), `${p.id} layer model`);
-    assert.ok(['official', 'needs_verification'].includes(p.verification.status), `${p.id} status`);
+    assert.ok(['official', 'partial_official', 'needs_verification'].includes(p.verification.status), `${p.id} status`);
   }
 });
