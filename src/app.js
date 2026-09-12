@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=212';
-import { MODELS } from './models.js?v=212';
-import { PROCESSORS } from './processor-data.js?v=212';
-import { processorRequirements } from './processor-limits.js?v=212';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=212';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=212';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=212';
-import { parseCasesText, normalizeDate } from './cases.js?v=212';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=213';
+import { MODELS } from './models.js?v=213';
+import { PROCESSORS } from './processor-data.js?v=213';
+import { processorRequirements } from './processor-limits.js?v=213';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=213';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=213';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=213';
+import { parseCasesText, normalizeDate } from './cases.js?v=213';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -317,7 +317,7 @@ function renderPreview() {
   const cly = y => { const p = 18 / effFit; return Math.max(visT + p, Math.min(visB - p, y)); };
   // 벽 세로(높이) 치수 라벨: 줌 후에도 왼쪽 화면 안(≥18px)에 남는 '가장 바깥' u(제일 밖에 유지).
   const fdFront = P / (P + ZW - dFront);
-  const uHeight = Math.max(0, (SWp / 2) + (((18 - tx) / effFit) - CX) / fdFront);
+  const uHeight = Math.max(0, (SWp / 2) + (((36 - tx) / effFit) - CX) / fdFront);   // 왼쪽에서 36px 안쪽(가장자리 잘림 방지)
 
   let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
 
@@ -360,18 +360,17 @@ function renderPreview() {
     }
   }
 
-  // 눈높이선: 사람이 서 있는 '우측벽'(u=SWp) 위 해당 높이를 2D 오버레이(투영)로. 뒷벽쪽(d=0)~앞쪽(d=Dp)을 이어 소실점 수렴.
-  //   라벨은 앞쪽(우측 끝) 코너에서 안쪽(왼쪽)으로 읽히게 오른쪽 정렬(.r) — 캔버스 밖으로 안 나감(이사 요청: 눈높이선을 사람 쪽에).
+  // 눈높이선: 사람 눈높이(1.6/1.2 m)를 사람 깊이(personD) 기준 '수평 점선'으로 그림.
+  //   이전엔 우측벽을 따라 그려 줌 후 화면 밖으로 잘렸음 → 수평선이라 항상 보이고, 라벨은 오른쪽 끝.(이사 요청: 가로선이 안 보임)
   let eyeLines = '';
   for (const g of [{ mm: 1600, t: '눈높이(서) 1.6 m' }, { mm: 1200, t: '눈높이(앉) 1.2 m' }]) {
     if (g.mm > sH) continue;
     const v = SHp - px(g.mm);
-    const aP = proj(SWp, v, 0), cP = proj(SWp, v, Dp);
-    const len = Math.hypot(cP.x - aP.x, cP.y - aP.y);
-    const ang = Math.atan2(cP.y - aP.y, cP.x - aP.x) * 180 / Math.PI;
-    const elx = Math.max(visL + 70, Math.min(cP.x - 5, visR - 6));   // 줌 후에도 오른쪽 화면 안에 남게(잘림 방지)
-    eyeLines += `<div class="rs3Eye" style="left:${aP.x}px;top:${aP.y}px;width:${len}px;transform:rotate(${ang}deg)"></div>`
-      + `<span class="rs3EyeLbl r" style="left:${elx}px;top:${cly(cP.y)}px">${g.t}</span>`;
+    const eyeY = proj(personX, v, personD).y;                     // 눈높이 화면 y(수평선)
+    const xL = Math.max(visL + 6, proj(Lx, v, personD).x);        // 왼쪽 끝(LED 왼쪽 부근, 화면 안)
+    const xR = Math.min(visR - 6, proj(SWp, v, personD).x);       // 오른쪽 끝(측벽 부근, 화면 안)
+    eyeLines += `<div class="rs3Eye" style="left:${xL}px;top:${eyeY}px;width:${Math.max(0, xR - xL)}px"></div>`
+      + `<span class="rs3EyeLbl r" style="left:${xR}px;top:${cly(eyeY)}px">${g.t}</span>`;
   }
 
   // 방 모서리(구조 edge)를 2D 오버레이 선으로. 깊이 4모서리 + 뒷벽 둘레 4변.
