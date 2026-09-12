@@ -327,13 +327,13 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Canvas{position:absolute;top:0;left:0;transform-origin:top left}
 .rs3Persp{position:absolute;inset:0}
 .rs3Scene{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
-.rs3Face{position:absolute;transform-style:preserve-3d;backface-visibility:hidden}
-/* 면별 명도차로 방(모서리)이 또렷이 읽히게: 천장(가장 밝음) > 정면벽 > 옆벽 > 바닥(가장 어둡고 안쪽이 더 어둡다). */
-.rs3Face.front{background:linear-gradient(160deg,#e7eaf0,#dce1e8)}
-.rs3Face.ceil{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#f7f9fc,#e4e8ee)}
-.rs3Face.floor{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#d3d8e0,#c2c8d2);overflow:hidden}
-.rs3Face.wallL{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to right,#d7dbe3,#edeff4)}
-.rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#d7dbe3,#edeff4)}
+.rs3Face{position:absolute;transform-style:preserve-3d;backface-visibility:hidden;box-sizing:border-box}
+/* 면별 명도차 + 뒷벽쪽 경계선으로 방(천장·좌우벽·바닥)이 배경과 구분되어 또렷이 읽히게. */
+.rs3Face.front{background:linear-gradient(160deg,#dde2e9,#d2d8e1);box-shadow:inset 0 0 60px rgba(16,18,40,.06)}
+.rs3Face.ceil{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#dfe4ec,#f3f5f9);border-top:1.5px solid rgba(16,18,40,.14)}
+.rs3Face.floor{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#cdd3dc,#bcc3ce);overflow:hidden;border-top:1.5px solid rgba(16,18,40,.16)}
+.rs3Face.wallL{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to right,#ccd1da,#eceef3);border-left:1.5px solid rgba(16,18,40,.12)}
+.rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#ccd1da,#eceef3);border-left:1.5px solid rgba(16,18,40,.12)}
 .rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.22) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.22) 0 1px,transparent 1px);background-repeat:repeat}
 .rs3Ao{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(to bottom,rgba(16,18,22,.22),transparent)}
 .rs3FloorGlow{position:absolute;top:0;height:420px;background:radial-gradient(120% 100% at 50% 0%,rgba(47,127,246,.20),transparent 70%)}
