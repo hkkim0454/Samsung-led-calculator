@@ -1,10 +1,10 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm, processorRequirements, rankProcessors } from './engine.js?v=181';
-import { MODELS } from './models.js?v=181';
-import { PROCESSORS } from './processors.js?v=181';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=181';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=181';
-import { parseCasesText, normalizeDate } from './cases.js?v=181';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm, processorRequirements, rankProcessors, validateBuild } from './engine.js?v=182';
+import { MODELS } from './models.js?v=182';
+import { PROCESSORS } from './processors.js?v=182';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=182';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=182';
+import { parseCasesText, normalizeDate } from './cases.js?v=182';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -13,7 +13,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=181')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=182')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -478,6 +478,37 @@ function renderProcessors() {
     (good.length ? good.map(vpItemHTML).join('')
       : '<div class="notice warn">지금 요구 조건을 만족하는 프로세서가 없습니다. 입력 수·레이어 수·운용 방식을 조정해 보세요.</div>')
     + (bad.length ? `<details class="vpFail"><summary>부적합 ${bad.length}개 보기</summary>${bad.map(vpItemHTML).join('')}</details>` : '');
+  renderBuild(req, ranked);
+}
+
+// 05 '내 장비 구성으로 검증': 사용자가 계획한 카드 수가 이 LED에 충분한지 확인.
+let vpBuildProcInit = false;
+function renderBuild(req, ranked) {
+  const sel = $('#vpBuildProc'), out = $('#vpBuildResult');
+  if (!sel || !out) return;
+  if (!vpBuildProcInit) {   // 드롭다운을 제품 목록으로 1회 채운다.
+    sel.innerHTML = PROCESSORS.map(p => `<option value="${p.id}">${esc(p.manufacturer)} · ${esc(p.model)}</option>`).join('');
+    // 기본값: 현재 최상위 추천 제품
+    if (ranked && ranked[0]) sel.value = ranked[0].proc.id;
+    vpBuildProcInit = true;
+  }
+  const proc = PROCESSORS.find(p => p.id === sel.value) ?? PROCESSORS[0];
+  const build = {
+    out4kCards: $('#vpBuildOut4k')?.value.trim() ? num($('#vpBuildOut4k').value) : null,
+    in4kPorts: $('#vpBuildIn4k')?.value.trim() ? num($('#vpBuildIn4k').value) : null,
+    in2kPorts: $('#vpBuildIn2k')?.value.trim() ? num($('#vpBuildIn2k').value) : null,
+  };
+  if (build.out4kCards == null && build.in4kPorts == null && build.in2kPorts == null) {
+    out.innerHTML = '<div class="hint">카드 수를 입력하면 이 구성이 충분한지 판정합니다.</div>';
+    return;
+  }
+  const v = validateBuild(proc, req, build);
+  const label = v.verdict === 'PASS' ? '충분' : v.verdict === 'FAIL' ? '부족/초과' : '확인 필요';
+  const cls = v.verdict === 'PASS' ? 'ok' : v.verdict === 'FAIL' ? 'no' : 'cond';
+  out.innerHTML = `<div class="vpItem ${cls}">
+    <div class="vpHead"><span class="vpBadge">${label}</span><span class="vpName">${esc(proc.manufacturer)} · ${esc(proc.model)} — 내 구성</span></div>
+    <ul class="vpChecksList">${v.checks.map(vpCheckHTML).join('')}</ul>
+  </div>`;
 }
 
 function renderCompare() {
@@ -648,6 +679,9 @@ $('#sboxSpare')?.addEventListener('input', renderAll);
 ['vpGenlock', 'vpHdr', 'vp10bit', 'vpCtrl'].forEach(id => $('#' + id)?.addEventListener('change', renderProcessors));
 // 필요 4K 출력 수: 직접 기입하면 그 값 사용, 비우면 자동값으로 복귀.
 $('#vpOut4k')?.addEventListener('input', () => { vpOut4kEdited = $('#vpOut4k').value.trim() !== ''; renderProcessors(); });
+// 내 장비 구성 검증: 입력/선택 시 다시 판정.
+['vpBuildOut4k', 'vpBuildIn4k', 'vpBuildIn2k'].forEach(id => $('#' + id)?.addEventListener('input', renderProcessors));
+$('#vpBuildProc')?.addEventListener('change', renderProcessors);
 setLedMax();   // 초기 max 속성 설정
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
 // 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).
