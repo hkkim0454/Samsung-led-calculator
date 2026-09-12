@@ -56,13 +56,13 @@ export const PROCESSORS = [
   ...['Pulse 4K', 'Eikos 4K'].map(model => proc({
     id: 'aw-midra-' + model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,''),
     manufacturer: AW, family: 'Midra', model,
-    inputs: { maxIndependent4k: 8, maxIndependent2k: 2, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 겸용 HDMI1.4/3G SDI 2개(이사 제공 2026-09-12)
+    inputs: { maxIndependent4k: 8, maxIndependent2k: 10, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // EKS-4K 데이터시트(이사 제공 2026-09-12): 10 SEAMLESS INPUTS(8×4K + IN1·2 HDMI1.4/3G-SDI 겸용 2K), 2K는 10입력 모두 가능
     outputs: { max4k: 2 },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },  // 최대 2×4K 믹싱 / 4×4K 분할(프로젝트 조사 기준)
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
     control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/pulse-4k', sourceVersion: 'AW 공식 페이지(handoff v2 §J)', notes: '믹싱 2×4K / 분할 4×4K 공식 확인. Eikos Wide Canvas(single_wide)는 별도 PR' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/pulse-4k', sourceVersion: 'AW 공식 페이지(handoff v2 §J) + EKS-4K 뒷면 데이터시트(이사 제공 2026-09-12)', notes: '믹싱 2×4K / 분할 4×4K 공식 확인. I/O: 10입력(IN1·2 HDMI1.4/3G-SDI 겸용 2K·유저선택, IN3·4 12G-SDI, IN5-8 HDMI2.0, IN9·10 DP1.2), 4K 8 / 2K 10, 출력 2×4K+MVW. Eikos Wide Canvas(single_wide)는 별도 PR' },
   })),
 
   // ── Analog Way · Alta 4K (Zenith 200 기준) ────────────────────────────────
