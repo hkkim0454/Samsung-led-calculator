@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=208';
-import { MODELS } from './models.js?v=208';
-import { PROCESSORS } from './processor-data.js?v=208';
-import { processorRequirements } from './processor-limits.js?v=208';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=208';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=208';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=208';
-import { parseCasesText, normalizeDate } from './cases.js?v=208';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=209';
+import { MODELS } from './models.js?v=209';
+import { PROCESSORS } from './processor-data.js?v=209';
+import { processorRequirements } from './processor-limits.js?v=209';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=209';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=209';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=209';
+import { parseCasesText, normalizeDate } from './cases.js?v=209';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -296,8 +296,8 @@ function renderPreview() {
   // ── 줌인(이사 요청: 20% 이상 크게) + 라벨 화면 안 clamp 준비 ─────────────────
   //   방+오버레이가 모두 rs3Canvas 안이라, 캔버스에 zoom(scale)+이동만 주면 정렬이 유지된다.
   const personLbl = proj(personX, SHp, personD);
-  const topDimGap = px(400);
-  const topDimV = Ly - topDimGap;                 // 상단 가로 치수선 높이(캐비닛 번호와 안 겹치게 위로)
+  const topDimGap = px(700);
+  const topDimV = Ly - topDimGap;                 // 상단 가로 치수선 높이(캐비닛 번호와 넉넉히 떨어지게 위로, 이사 요청)
   let dFront = Dp * 0.98;                          // 벽 치수선 앞면 깊이
   while (dFront > px(500) && proj(0, SHp, dFront).x < 26) dFront -= Dp * 0.03;
   const yTopC = Math.min(proj(0, 0, Dp).y, proj(Lx, topDimV, 0).y) - 8;   // 콘텐츠 세로 범위(캔버스 좌표)
