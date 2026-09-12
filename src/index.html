@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=168"/>
+<link rel="stylesheet" href="./styles.css?v=169"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -134,8 +134,46 @@
         <div id="notices"></div>
       </div>
 
+      <div class="card" id="vpCard">
+        <h2><span class="idx">05</span> 비디오 프로세서 <span class="muted-note">— 04 산출값 기반 자동 추천</span></h2>
+        <div id="vpAuto" class="vpAuto"></div>
+        <div class="vpInputs">
+          <label class="field"><span class="lab">독립 4K 입력 소스 수</span><input type="number" id="vpIn4k" value="1" min="0" step="1"/></label>
+          <label class="field"><span class="lab">독립 2K(FHD) 입력 소스 수</span><input type="number" id="vpIn2k" value="0" min="0" step="1"/></label>
+          <label class="field"><span class="lab">동시 표시 레이어 수 (4K)</span><input type="number" id="vpLayers4k" value="1" min="0" step="1"/></label>
+          <label class="field"><span class="lab">운용 방식</span>
+            <select id="vpMode">
+              <option value="split">단순 화면 분할</option>
+              <option value="fade">프리셋 + 페이드</option>
+              <option value="seamless">Seamless A/B (무손실 전환)</option>
+              <option value="show">공연 · 방송급 (고급 트랜지션)</option>
+            </select>
+          </label>
+          <label class="field"><span class="lab">운용 환경</span>
+            <select id="vpApp">
+              <option value="other">선택 안 함</option>
+              <option value="conference">회의실</option>
+              <option value="auditorium">강당</option>
+              <option value="event">공연 · 이벤트</option>
+              <option value="control_room">관제실</option>
+            </select>
+          </label>
+        </div>
+        <details class="vpAdv">
+          <summary>추가 필수 조건 (선택)</summary>
+          <div class="vpChecks">
+            <label class="checkline"><input type="checkbox" id="vpGenlock"/><span>Genlock 필요</span></label>
+            <label class="checkline"><input type="checkbox" id="vpHdr"/><span>HDR 필요</span></label>
+            <label class="checkline"><input type="checkbox" id="vp10bit"/><span>10-bit 필요</span></label>
+            <label class="checkline"><input type="checkbox" id="vpCtrl"/><span>AMX / Crestron 외부제어 필요</span></label>
+          </div>
+        </details>
+        <div id="vpResult" class="vpResult"></div>
+        <div class="hint" style="margin-top:10px">판정: <b>PASS</b>(됨) · <b>CONDITIONAL</b>(일부 사양 확인 필요) · <b>FAIL</b>(안 됨). "확인 필요"는 공식 사양이 미확인이라 추정하지 않은 항목입니다.</div>
+      </div>
+
       <div class="card">
-        <h2><span class="idx">05</span> 모델별 비교 <span class="muted-note">— 행 클릭 시 위 미리보기 반영</span></h2>
+        <h2><span class="idx">06</span> 모델별 비교 <span class="muted-note">— 행 클릭 시 위 미리보기 반영</span></h2>
         <div class="tableWrap">
           <table id="cmpTable">
             <thead><tr>
@@ -149,7 +187,7 @@
       </div>
 
       <div class="card" id="quoteCard">
-        <h2><span class="idx">06</span> 원가 / 견적 <span class="muted-note">— 사내 전용</span>
+        <h2><span class="idx">07</span> 원가 / 견적 <span class="muted-note">— 사내 전용</span>
           <span class="priceCtl">
             <button class="tiny primary" id="btnPriceLoad">가격표 불러오기</button>
             <button class="tiny ghost" id="btnPriceClear" hidden>삭제</button>
@@ -175,7 +213,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v168</span>
+        <span class="verTag">화면 버전 v169</span>
       </div>
     </div>
   </div>
@@ -269,6 +307,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=168"></script>
+<script type="module" src="./app.js?v=169"></script>
 </body>
 </html>

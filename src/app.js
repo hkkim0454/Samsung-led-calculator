@@ -1,9 +1,10 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=168';
-import { MODELS } from './models.js?v=168';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=168';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=168';
-import { parseCasesText, normalizeDate } from './cases.js?v=168';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm, processorRequirements, rankProcessors } from './engine.js?v=169';
+import { MODELS } from './models.js?v=169';
+import { PROCESSORS } from './processors.js?v=169';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=169';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=169';
+import { parseCasesText, normalizeDate } from './cases.js?v=169';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -12,7 +13,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=168')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=169')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -404,6 +405,73 @@ function renderReadout() {
     nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
 }
 
+// 05 비디오 프로세서 — 04 산출값 + 사용자 요구를 engine에 넘겨 제품별 판정·추천을 그린다(계산 없음).
+const VP_MODE_FLAGS = {
+  split:    {},
+  fade:     { fadeRequired: true },
+  seamless: { seamlessSwitching: true, trueABRequired: true, previewProgramRequired: true, fadeRequired: true },
+  show:     { seamlessSwitching: true, trueABRequired: true, previewProgramRequired: true, fadeRequired: true, advancedTransitionRequired: true },
+};
+function vpReqOpts() {
+  const flags = VP_MODE_FLAGS[$('#vpMode')?.value] ?? {};
+  return {
+    independent4kInputs: num($('#vpIn4k')?.value),
+    independent2kInputs: num($('#vpIn2k')?.value),
+    simultaneous4kLayers: num($('#vpLayers4k')?.value),
+    application: $('#vpApp')?.value ?? 'other',
+    genlockRequired: $('#vpGenlock')?.checked ?? false,
+    hdrRequired: $('#vpHdr')?.checked ?? false,
+    tenBitRequired: $('#vp10bit')?.checked ?? false,
+    externalControlRequired: $('#vpCtrl')?.checked ?? false,
+    ...flags,
+  };
+}
+const VP_BADGE_CLASS = { '권장': 'rec', '적합': 'ok', '조건부 적합': 'cond', '한계 구성': 'edge', '부적합': 'no' };
+function vpCheckHTML(c) {
+  const cls = c.ok === true ? 'ok' : (c.ok === false ? 'no' : 'unk');
+  const icon = c.ok === true ? '✓' : (c.ok === false ? '✗' : '?');
+  const isNum = typeof c.need === 'number' || typeof c.have === 'number';
+  const val = isNum
+    ? `필요 ${c.need ?? '—'} / 지원 ${c.have ?? '확인 필요'}${c.unit || ''}`
+    : `${c.have}`;
+  return `<li class="vc ${cls}"><span class="ic">${icon}</span><span class="cn">${esc(c.name)}</span><span class="cv">${esc(String(val))}</span></li>`;
+}
+function vpItemHTML(item) {
+  const p = item.proc;
+  const needsVer = p.verification?.status !== 'official';
+  const checks = item.checks.length ? item.checks.map(vpCheckHTML).join('') : '<li class="vc unk"><span class="cn muted-note">검사할 요구 조건이 없습니다</span></li>';
+  return `<div class="vpItem ${VP_BADGE_CLASS[item.label] || ''}">
+    <div class="vpHead">
+      <span class="vpBadge">${item.label}</span>
+      <span class="vpName">${esc(p.manufacturer)} · ${esc(p.model)}</span>
+      ${needsVer ? '<span class="vpVer" title="일부 사양이 공식 확인 전입니다">확인 필요 사양 포함</span>' : ''}
+    </div>
+    <ul class="vpChecksList">${checks}</ul>
+  </div>`;
+}
+function renderProcessors() {
+  const auto = $('#vpAuto'), out = $('#vpResult');
+  if (!auto || !out) return;
+  const m = models.find(x => x.id === selectedId);
+  if (!m) { auto.innerHTML = '<div class="previewEmpty">모델을 선택하면 추천이 표시됩니다.</div>'; out.innerHTML = ''; return; }
+  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const r = computeConfig(m, sW, sH, opts());
+  if (!r.fits || !(r.resW > 0)) { auto.innerHTML = '<div class="previewEmpty">배열이 없어 추천을 계산할 수 없습니다.</div>'; out.innerHTML = ''; return; }
+  const req = processorRequirements(r, vpReqOpts());
+  auto.innerHTML = `<div class="vpAutoRow">
+    <span>전체 해상도 <b>${fmt(r.resW)} × ${fmt(r.resH)}</b> px</span>
+    <span>필요 4K 출력 <b>${req.required4kOutputs ?? '—'}</b> 개</span>
+    <span>필요 2K 출력 <b>${req.required2kOutputs ?? '—'}</b> 개</span>
+  </div>`;
+  const ranked = rankProcessors(PROCESSORS, req);
+  const good = ranked.filter(x => x.label !== '부적합');
+  const bad = ranked.filter(x => x.label === '부적합');
+  out.innerHTML =
+    (good.length ? good.map(vpItemHTML).join('')
+      : '<div class="notice warn">지금 요구 조건을 만족하는 프로세서가 없습니다. 입력 수·레이어 수·운용 방식을 조정해 보세요.</div>')
+    + (bad.length ? `<details class="vpFail"><summary>부적합 ${bad.length}개 보기</summary>${bad.map(vpItemHTML).join('')}</details>` : '');
+}
+
 function renderCompare() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const cs4b = $('#useCS4B')?.checked ?? false;
@@ -515,7 +583,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderCompare(); renderQuote(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -566,6 +634,10 @@ function clampManualArray() {
 // LED 크기 직접 입력: 벽면 한계로 값 제한.
 ['ledW', 'ledH'].forEach(id => $('#' + id)?.addEventListener('input', () => { clampLedInputs(); renderAll(); }));
 $('#sboxSpare')?.addEventListener('input', renderAll);
+// 05 비디오 프로세서 입력 — 05 결과만 다시 그린다(다른 산출엔 영향 없음).
+['vpIn4k', 'vpIn2k', 'vpLayers4k'].forEach(id => $('#' + id)?.addEventListener('input', renderProcessors));
+['vpMode', 'vpApp'].forEach(id => $('#' + id)?.addEventListener('change', renderProcessors));
+['vpGenlock', 'vpHdr', 'vp10bit', 'vpCtrl'].forEach(id => $('#' + id)?.addEventListener('change', renderProcessors));
 setLedMax();   // 초기 max 속성 설정
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
 // 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).
