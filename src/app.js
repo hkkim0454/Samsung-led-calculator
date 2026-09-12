@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=183';
-import { MODELS } from './models.js?v=183';
-import { PROCESSORS } from './processor-data.js?v=183';
-import { processorRequirements } from './processor-limits.js?v=183';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=183';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=183';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=183';
-import { parseCasesText, normalizeDate } from './cases.js?v=183';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=184';
+import { MODELS } from './models.js?v=184';
+import { PROCESSORS } from './processor-data.js?v=184';
+import { processorRequirements } from './processor-limits.js?v=184';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=184';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=184';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=184';
+import { parseCasesText, normalizeDate } from './cases.js?v=184';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -266,10 +266,10 @@ function renderPreview() {
   const topGap = Math.max(0, 100 - pb - ph);                           // 위 남는 공간 %
   const topGapMM = Math.round(sH - mount - r.actualH);
   const personH = Math.min(100, 1700 / sH * 100), personW = Math.min(12, 25600 / sW);  // 사람 1.7m(실측)
-  const rowNL = Math.max(0, pl - 3.6);
+  const rowH = ph / Math.max(1, r.rows), colW = pw / Math.max(1, r.cols);  // 한 행/열의 벽 대비 %(번호를 캐비닛 안쪽에 배치)
   const mmL = v => fmt(Math.round(v)) + 'mm';
 
-  // 캐비닛 셀 / 열·행 번호(번호는 패널 바깥: 위=열, 왼쪽=행)
+  // 캐비닛 셀 / 열·행 번호(번호는 캐비닛 안쪽: 위=맨 윗줄에 열 번호, 왼쪽=맨 왼쪽 칸에 행 번호)
   let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
   let colN = ''; if (r.cols <= 30) for (let c = 0; c < r.cols; c++) colN += `<span>${c + 1}</span>`;
   let rowN = ''; if (r.rows <= 20) for (let ri = 0; ri < r.rows; ri++) rowN += `<span>${ri + 1}</span>`;
@@ -321,8 +321,8 @@ function renderPreview() {
         <div class="rsGlow"></div><div class="rsHi"></div>
       </div>
       <div class="rsSigWrap">${sigHTML}</div>
-      <div class="rsColN" style="left:${pl}%;width:${pw}%;bottom:${pb + ph}%;height:${Math.min(topGap, 5)}%;align-items:end;grid-template-columns:repeat(${r.cols},1fr)">${colN}</div>
-      <div class="rsRowN" style="left:${rowNL}%;width:2.6%;bottom:${pb}%;height:${ph}%;grid-template-rows:repeat(${r.rows},1fr)">${rowN}</div>
+      <div class="rsColN inGrid" style="left:${pl}%;width:${pw}%;bottom:${pb + ph - rowH}%;height:${rowH}%;grid-template-columns:repeat(${r.cols},1fr)">${colN}</div>
+      <div class="rsRowN inGrid" style="left:${pl}%;width:${colW}%;bottom:${pb}%;height:${ph}%;grid-template-rows:repeat(${r.rows},1fr)">${rowN}</div>
       <div class="rsDim" style="left:${pl}%;width:${pw}%;top:-1%;transform:translateY(-100%)"><div class="ln"></div><span class="tx">${mmL(r.actualW)}</span><div class="ln"></div></div>
       <div class="rsDim v" style="left:${pl + pw}%;transform:translateX(8px);bottom:${pb}%;height:${ph}%"><div class="ln"></div><span class="tx">${mmL(r.actualH)}</span><div class="ln"></div></div>
       ${regions}
