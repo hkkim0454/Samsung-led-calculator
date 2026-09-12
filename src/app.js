@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=194';
-import { MODELS } from './models.js?v=194';
-import { PROCESSORS } from './processor-data.js?v=194';
-import { processorRequirements } from './processor-limits.js?v=194';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=194';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=194';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=194';
-import { parseCasesText, normalizeDate } from './cases.js?v=194';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=195';
+import { MODELS } from './models.js?v=195';
+import { PROCESSORS } from './processor-data.js?v=195';
+import { processorRequirements } from './processor-limits.js?v=195';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=195';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=195';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=195';
+import { parseCasesText, normalizeDate } from './cases.js?v=195';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -262,36 +262,34 @@ function renderPreview() {
   const mount = Math.min(Math.max(0, baseH), Math.max(0, sH - r.actualH));   // 바닥에서 LED 아래까지(mm)
   const topGapMM = Math.max(0, Math.round(sH - mount - r.actualH));          // LED 위 남는 높이(mm)
 
-  // ── 가상 캔버스(고정 좌표계) + 실크기 맞춤 스케일 ────────────────────────────────
-  // 가상 캔버스 CW×CH 안에 정면벽이 폭 ≤86%·높이 ≤62%가 되도록 S(px/mm)를 잡는다.
-  // 바깥은 stage 실제 폭에 맞춰 통째로 축소(내부 좌표는 안 건드림) → 어떤 화면에서도 비율 유지.
+  // ── 가상 캔버스(고정 좌표계) + 실크기 맞춤 스케일 (v2 보완) ────────────────────────
   const CW = 1000, CH = 470;
-  const depthMM = Math.min(Math.max(Math.round(sW * 0.85), 4500), 12000);  // 방 깊이(가정, 원근감용)
-  // 방 앞면(카메라 쪽 개구부)을 화면에 꽉 채워 원근감을 살린다. 뒷벽(LED)은 자연히 안쪽에 작게 앉는다.
-  //   (벽을 채우면 방 깊이가 안 보여 원근감이 사라짐 — 앞면 기준으로 맞춘다.)
-  const fFront = (depthMM + 2000) / (depthMM + 4000);         // 방 앞면 투영배율
+  const fit = (stage.clientWidth || CW) / CW;   // stage 실폭에 맞춰 통째 축소(먼저 계산 — 라벨 좌표에 곱함)
+  const depthMM = Math.min(Math.max(Math.round(sW * 0.85), 4500), 12000);   // 방 깊이(가정)
+  const camMM = Math.max(depthMM + 2000, sW * 0.9, 6000);   // 카메라 거리(폭도 반영, v2 2-2)
+  const fFront = camMM / (2 * camMM - depthMM);             // 방 앞면 투영배율(P=ZW, camMM 반영)
   const S = Math.min((CW * 0.99) / (sW * fFront), (CH * 0.97) / (sH * fFront));   // px per mm
   const px = mm => mm * S;
-  const SWp = px(sW), SHp = px(sH);                           // 정면(뒷)벽 px
-  const Dp = px(depthMM);                                     // 방 깊이 px
-  const eyeMM = 1600;                                         // 카메라 눈높이(바닥 1.6 m)
-  const eyePx = px(eyeMM);
-  const vEye = SHp - eyePx;                                   // 벽 상단 기준 눈높이 위치
-  const camMM = depthMM + 2000;                              // 카메라 거리(방 깊이 + 2 m 여유)
-  const ZW = px(camMM), P = ZW;                               // perspective = 카메라 거리
+  const SWp = px(sW), SHp = px(sH), Dp = px(depthMM);
+  const eyePx = px(1600), vEye = SHp - eyePx;               // 카메라 눈높이 1.6 m
+  const ZW = px(camMM), P = ZW;
   const CX = CW / 2, CY = CH / 2;
-
-  // 씬 좌표(u:벽 왼→오, v:벽 위→아래, d:벽에서 앞쪽 깊이) → 화면 px 투영.
-  const proj = (u, v, d = 0) => { const f = P / (P + ZW - d); return { x: CX + (u - SWp / 2) * f, y: CY + (v - vEye) * f }; };
+  // 씬 좌표(u,v,d) → 화면 px. 오버레이는 스케일 캔버스 밖이므로 fit을 곱해 실화면 좌표로(라벨이 안 줄어듦, v2 1-1).
+  const proj = (u, v, d = 0) => { const f = P / (P + ZW - d); return { x: (CX + (u - SWp / 2) * f) * fit, y: (CY + (v - vEye) * f) * fit }; };
 
   // LED 월(정면벽 로컬 좌표, px)
   const Lx = px(r.marginW), Ly = px(topGapMM), Lw = px(r.actualW), Lh = px(r.actualH);
-
-  // 캐비닛 셀 + 열/행 번호(캐비닛 안쪽, 치수 토글로 함께 표시)
-  let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
-  let colN = ''; if (r.cols <= 30) for (let c = 0; c < r.cols; c++) colN += `<span>${c + 1}</span>`;
-  let rowN = ''; if (r.rows <= 20) for (let ri = 0; ri < r.rows; ri++) rowN += `<span>${ri + 1}</span>`;
   const rowHp = Lh / Math.max(1, r.rows), colWp = Lw / Math.max(1, r.cols);
+  const cellPx = Math.min(colWp, rowHp);
+  const gap = Math.max(1, cellPx * 0.02);                   // 배열 많을 때 gap이 셀을 잡아먹지 않게(v2 2-3)
+
+  // 사람: 벽에서 3.5 m, 측벽에서 1.5 m(여백 쪽). LED를 가리지 않게(v2 1-3).
+  const personD = Math.min(px(3500), Dp * 0.45);
+  const personU = Math.min(px(1500), SWp * 0.12);
+  const personX = SWp - personU;                            // 우측(측벽에서 1.5 m)
+  const personFf = P / (P + ZW - personD);                  // 사람 깊이 투영배율(3D 자동 축소)
+
+  let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
 
   // 신호 오버레이(FHD/UHD) — LED 좌상단 기준 실제 신호 크기(px). 정면벽 자식.
   let sigHTML = '';
@@ -309,8 +307,30 @@ function renderPreview() {
     }
   }
 
-  // 눈높이선: 좌측벽 위 해당 높이를 2D 오버레이(투영)로 그린다(회전 자식 렌더 이슈 회피 → 바닥에 걸치지 않음).
-  //   뒷벽쪽(d=0) ~ 앞쪽(d=Dp) 두 점을 이어 좌측벽을 따라 소실점으로 수렴시킨다.
+  // 캐비닛 번호(2D 오버레이) — 투시·스케일 축소 없이 판독(v2 1-2). 열=윗줄 셀 중심(밝은 글자), 행=LED 왼쪽 바깥.
+  const dNum = Math.min(px(20), Dp * 0.02);
+  let numHTML = '';
+  {
+    const c0 = proj(Lx + colWp * 0.5, Ly + rowHp * 0.5, dNum), c1 = proj(Lx + colWp * 1.5, Ly + rowHp * 0.5, dNum);
+    const spCol = Math.abs(c1.x - c0.x), stepC = spCol >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spCol)));
+    for (let c = 0; c < r.cols; c++) {
+      if (stepC > 1 && c % stepC !== 0 && c !== r.cols - 1) continue;
+      const p = proj(Lx + colWp * (c + 0.5), Ly + rowHp * 0.5, dNum);
+      numHTML += `<span class="rs3Num col" style="left:${p.x}px;top:${p.y}px">${c + 1}</span>`;
+    }
+    // 행 번호: 여백 있으면 벽(왼쪽 바깥·어두운 글자), 없으면 LED 안 왼쪽(밝은 글자).
+    const outside = Lx > px(400);
+    const rowU = outside ? Lx - px(200) : Lx + colWp * 0.5;
+    const r0 = proj(rowU, Ly + rowHp * 0.5, 0), r1 = proj(rowU, Ly + rowHp * 1.5, 0);
+    const spRow = Math.abs(r1.y - r0.y), stepR = spRow >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spRow)));
+    for (let ri = 0; ri < r.rows; ri++) {
+      if (stepR > 1 && ri % stepR !== 0 && ri !== r.rows - 1) continue;
+      const p = proj(rowU, Ly + rowHp * (ri + 0.5), 0);
+      numHTML += `<span class="rs3Num ${outside ? 'row' : 'col'}" style="left:${p.x}px;top:${p.y}px">${ri + 1}</span>`;
+    }
+  }
+
+  // 눈높이선: 좌측벽 위 해당 높이를 2D 오버레이(투영)로. 뒷벽쪽(d=0)~앞쪽(d=Dp)을 이어 소실점 수렴.
   let eyeLines = '';
   for (const g of [{ mm: 1600, t: '선 1.6 m' }, { mm: 1200, t: '앉음 1.2 m' }]) {
     if (g.mm > sH) continue;
@@ -322,8 +342,7 @@ function renderPreview() {
       + `<span class="rs3EyeLbl" style="left:${cP.x + 5}px;top:${cP.y}px">${g.t}</span>`;
   }
 
-  // 방 모서리(구조 edge)를 2D 오버레이 선으로 확실히 그린다(3D 면 테두리는 렌더가 불안정 → 좌측벽↔천장 경계가 안 잡히던 문제 해결).
-  //   4개 깊이 모서리(앞면 개구부↔뒷벽): 천장·바닥 ↔ 좌우벽. + 뒷벽 둘레 4변.
+  // 방 모서리(구조 edge)를 2D 오버레이 선으로. 깊이 4모서리 + 뒷벽 둘레 4변.
   const edgeSeg = (u1, v1, d1, u2, v2, d2) => {
     const a = proj(u1, v1, d1), b = proj(u2, v2, d2);
     const len = Math.hypot(b.x - a.x, b.y - a.y);
@@ -331,28 +350,21 @@ function renderPreview() {
     return `<div class="rs3Edge" style="left:${a.x}px;top:${a.y}px;width:${len}px;transform:rotate(${ang}deg)"></div>`;
   };
   const roomEdges =
-    edgeSeg(0, 0, 0, 0, 0, Dp)         // 천장↔좌측벽
-    + edgeSeg(SWp, 0, 0, SWp, 0, Dp)   // 천장↔우측벽
-    + edgeSeg(0, SHp, 0, 0, SHp, Dp)   // 바닥↔좌측벽
-    + edgeSeg(SWp, SHp, 0, SWp, SHp, Dp) // 바닥↔우측벽
-    + edgeSeg(0, 0, 0, SWp, 0, 0)      // 뒷벽 상단(천장↔뒷벽)
-    + edgeSeg(0, SHp, 0, SWp, SHp, 0)  // 뒷벽 하단(바닥↔뒷벽)
-    + edgeSeg(0, 0, 0, 0, SHp, 0)      // 뒷벽 좌변(좌측벽↔뒷벽)
-    + edgeSeg(SWp, 0, 0, SWp, SHp, 0); // 뒷벽 우변(우측벽↔뒷벽)
+    edgeSeg(0, 0, 0, 0, 0, Dp) + edgeSeg(SWp, 0, 0, SWp, 0, Dp)
+    + edgeSeg(0, SHp, 0, 0, SHp, Dp) + edgeSeg(SWp, SHp, 0, SWp, SHp, Dp)
+    + edgeSeg(0, 0, 0, SWp, 0, 0) + edgeSeg(0, SHp, 0, SWp, SHp, 0)
+    + edgeSeg(0, 0, 0, 0, SHp, 0) + edgeSeg(SWp, 0, 0, SWp, SHp, 0);
 
-  // 바닥 1 m 그리드 라인 수
   const gridMM = 1000;
 
-  // ── 2D 치수 오버레이(투영식으로 좌표만 계산; 글자는 안 찌그러지게 3D 밖) ──
+  // ── 2D 치수 오버레이 ──
   const dims = [];
-  // 수평 치수(같은 v,d → 화면 y 동일): 두 점 사이 선 + 가운데 라벨.
   const hDim = (u1, u2, v, d, label, cls = '') => {
     const a = proj(u1, v, d), b = proj(u2, v, d);
     const x = Math.min(a.x, b.x), w = Math.abs(b.x - a.x);
     dims.push(`<div class="rs3Dln h" style="left:${x}px;top:${a.y}px;width:${w}px"></div>`
       + `<div class="rs3Dlbl ${cls}" style="left:${(a.x + b.x) / 2}px;top:${a.y}px">${label}</div>`);
   };
-  // 수직 치수(같은 u,d → 화면 x 동일).
   const vDim = (u, v1, v2, d, label, cls = '') => {
     const a = proj(u, v1, d), b = proj(u, v2, d);
     const y = Math.min(a.y, b.y), h = Math.abs(b.y - a.y);
@@ -361,27 +373,27 @@ function renderPreview() {
   };
   const pt = (u, v, d, label, cls = '') => { const p = proj(u, v, d); dims.push(`<div class="rs3Dlbl ${cls}" style="left:${p.x}px;top:${p.y}px">${label}</div>`); };
 
-  // LED 폭 / 높이 (핵심)
   hDim(Lx, Lx + Lw, Ly - px(120), 0, mmL(r.actualW), 'key');
   vDim(Lx + Lw + px(140), Ly, Ly + Lh, 0, mmL(r.actualH), 'key');
-  // 위 남는 높이 / 하단 높이(방 모드)
   if (mount > 0) {
     if (topGapMM > 40) vDim(Lx + Lw + px(140), 0, Ly, 0, mmL(topGapMM), 'sub');
     vDim(Lx + Lw + px(140), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
-  // 좌우 여백
-  // 좌우 여백 치수를 캐비닛(LED) 좌우 옆(세로 중앙)에 배치.
   if (r.marginW > 40) { pt(Lx / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); pt(Lx + Lw + (SWp - Lx - Lw) / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); }
-  // 벽 전체 폭(바닥 앞쪽) / 벽 높이(우측벽) / 캐비닛 수 배지
-  hDim(0, SWp, SHp, Dp * 0.82, mL(sW), 'sub');
+  // 벽 전체 폭: 앞쪽 치수선이 캔버스 밖으로 나가거나 사람과 겹치지 않게 clamp(v2 2-4).
+  let dFront = Dp * 0.82;
+  while (dFront > px(500) && proj(0, SHp, dFront).x < 8) dFront -= Dp * 0.04;
+  dFront = Math.min(dFront, Math.max(px(1000), personD - px(800)));
+  hDim(0, SWp, SHp, dFront, mL(sW), 'sub');
   vDim(-px(140), 0, SHp, px(500), mL(sH), 'sub');
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
-  const fit = (stage.clientWidth || CW) / CW;   // stage 실폭에 맞춰 통째 축소
-
   const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims'].filter(Boolean).join(' ');
+  // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
+  const ledGlow = `box-shadow:0 0 0 2px #2f7ff6,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
+  const personLbl = proj(personX, SHp, personD);
 
   stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${Math.round(CH * fit)}px">
     <div class="rs3Canvas" style="width:${CW}px;height:${CH}px;transform:scale(${fit});">
@@ -390,28 +402,27 @@ function renderPreview() {
           <div class="rs3Face ceil" style="left:0;top:0;width:${SWp}px;height:${Dp}px"></div>
           <div class="rs3Face floor" style="left:0;top:${SHp}px;width:${SWp}px;height:${Dp}px">
             <div class="rs3FloorGrid" style="background-size:${px(gridMM)}px ${px(gridMM)}px"></div>
-            <div class="rs3Ao"></div>
-            <div class="rs3FloorGlow" style="left:${Lx}px;width:${Lw}px"></div>
+            <div class="rs3Ao" style="height:${px(1500)}px"></div>
+            <div class="rs3FloorGlow" style="left:${Lx}px;width:${Lw}px;height:${px(4000)}px"></div>
           </div>
           <div class="rs3Face wallL" style="left:0;top:0;width:${Dp}px;height:${SHp}px"></div>
           <div class="rs3Face wallR" style="left:${SWp}px;top:0;width:${Dp}px;height:${SHp}px"></div>
           <div class="rs3Face front" style="${faceStyle}">
-            <div class="rs3Led" style="left:${Lx}px;top:${Ly}px;width:${Lw}px;height:${Lh}px">
-              <div class="rs3Grid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr)">${cells}</div>
+            <div class="rs3Led" style="left:${Lx}px;top:${Ly}px;width:${Lw}px;height:${Lh}px;${ledGlow}">
+              <div class="rs3Grid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr);gap:${gap}px;padding:${gap}px">${cells}</div>
               <div class="rs3Glow"></div>
-              <div class="rs3ColN" style="left:0;top:0;width:${Lw}px;height:${rowHp}px;grid-template-columns:repeat(${r.cols},1fr)">${colN}</div>
-              <div class="rs3RowN" style="left:0;top:0;width:${colWp}px;height:${Lh}px;grid-template-rows:repeat(${r.rows},1fr)">${rowN}</div>
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person" style="left:${SWp - px(600)}px;top:${SHp - px(1700)}px;width:${px(300)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${px(600)}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
+          <div class="rs3Person" style="left:${personX}px;top:${SHp - px(1700)}px;width:${px(320)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${personD}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
         </div>
       </div>
       <div class="rs3EdgeLayer">${roomEdges}</div>
       <div class="rs3EyeLayer">${eyeLines}</div>
       <div class="rs3Overlay">
         ${dims.join('')}
-        <div class="rs3Dlbl person" style="left:${proj(SWp - px(600), SHp, px(600)).x}px;top:${proj(SWp - px(600), SHp, px(600)).y + 7}px;transform:translate(-50%,0)">키 170 cm</div>
+        ${numHTML}
+        <div class="rs3Dlbl person" style="left:${personLbl.x}px;top:${personLbl.y + 14 * fit}px;transform:translate(-50%,0)">키 170 cm</div>
       </div>
     </div>
   </div>`;
