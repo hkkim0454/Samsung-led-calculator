@@ -37,7 +37,7 @@ function proc(p) {
     model: p.model,
     inputs: { ...emptyInputs(), ...(p.inputs ?? {}) },
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
-    layers: { model: p.layers.model, maxWindows: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, ...p.layers },
+    layers: { model: p.layers.model, maxWindows: null, maxLayers: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, ...p.layers },
     switching: { ...emptySwitching(), ...(p.switching ?? {}) },
     latency: { ...emptyLatency(), ...(p.latency ?? {}) },
     features: { ...emptyFeatures(), ...(p.features ?? {}) },
@@ -127,15 +127,16 @@ export const PROCESSORS = [
   // 오너 문서 §6 표(2U/4U/7U): 독립 2K/4K 입력, Max Window. 출력 수·기능은 확인 필요.
   // 출력: 4K 출력보드 1장=1×4K, 2K 출력보드 1장=4×2K. 4K/2K 출력보드는 혼용 불가 → max4k와 max2k를 동시 사용으로 계산 금지.
   ...[
-    { model: 'X100 Pro 2U', boards: 2, in2k: 8,  in4k: 2, win: 32, outB: 4, out4k: 4, out2k: 16, slug: '2u' },
-    { model: 'X100 Pro 4U', boards: 4, in2k: 16, in4k: 4, win: 32, outB: 4, out4k: 4, out2k: 16, slug: '4u' },
-    { model: 'X100 Pro 7U', boards: 8, in2k: 32, in4k: 8, win: 64, outB: 8, out4k: 8, out2k: 32, slug: '7u' },
+    { model: 'X100 Pro 2U', boards: 2, in2k: 8,  in4k: 2, win: 32, lay: 32, outB: 4, out4k: 4, out2k: 16, slug: '2u' },
+    { model: 'X100 Pro 4U', boards: 4, in2k: 16, in4k: 4, win: 32, lay: 32, outB: 4, out4k: 4, out2k: 16, slug: '4u' },
+    { model: 'X100 Pro 7U', boards: 8, in2k: 32, in4k: 8, win: 64, lay: 64, outB: 8, out4k: 8, out2k: 32, slug: '7u' },
   ].map(m => proc({
     id: 'cl-x100pro-' + m.slug,
     manufacturer: CL, family: 'X100 Pro', model: m.model,
     inputs: { maxIndependent2k: m.in2k, maxIndependent4k: m.in4k, maxInputBoards: m.boards },
     outputs: { max4k: m.out4k, max2k: m.out2k, maxOutputBoards: m.outB },
-    layers: { model: 'global_window', maxWindows: m.win },  // global2k/4k 확인 필요(윈도우≠레이어)
+    // maxLayers = 공식 "Max. layers"(해상도 무관 총 레이어). 4K/2K로 쪼개지 않음(global4k/2k=null).
+    layers: { model: 'global_window', maxWindows: m.win, maxLayers: m.lay },
     switching: { monitoringPreview: true },        // 멀티스크린 프리뷰·모니터링 공식(≠ A/B PVW/PGM). seamless/fade/trueAB 확인 필요
     features: { genlock: true, tenBit: true },      // Genlock 공식, 10bit는 4K 출력보드 기준. HDR 확인 필요
     control: {},                                   // AMX/Crestron 확인 필요
