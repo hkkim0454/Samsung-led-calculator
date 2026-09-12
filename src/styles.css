@@ -265,7 +265,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#ccd1da,#eceef3)}
 /* 방 모서리(구조 edge) — 2D 오버레이 선으로 확실히(3D 면 테두리 대체). */
 .rs3EdgeLayer{position:absolute;inset:0;pointer-events:none}
-.rs3Edge{position:absolute;height:0;border-top:1px solid rgba(16,18,40,.26);transform-origin:left center;pointer-events:none}
+.rs3Edge{position:absolute;height:0;border-top:1px solid rgba(243,245,249,.75);transform-origin:left center;pointer-events:none}  /* 경계선: 천장 그라데이션 밝은 톤(#f3f5f9)으로 아주 은은하게 */
 /* 바닥 격자: 가로 격자(깊이로 물러나는 좌우 방향 선 = to bottom)를 더 진하게, 세로(수렴) 선은 은은하게. */
 .rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat}
 /* 깊이 단서 높이·offset은 mm 환산값을 인라인으로 넘긴다(v2 2-3) — CSS 고정 px 제거. */
@@ -282,7 +282,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
   .rs3Face.floor{background:linear-gradient(#28303f,#1a2130)}     /* 바닥: 가장 어두움(그래도 배경과 확실히 구분) */
   .rs3Face.wallL{background:linear-gradient(to left,#2a3344,#354056)}  /* 좌우벽: 중간, 안쪽(소실점)으로 살짝 밝게 */
   .rs3Face.wallR{background:linear-gradient(to left,#354056,#2a3344)}
-  .rs3Edge{border-top-color:rgba(210,220,240,.55)}               /* 모서리선: 어두운 배경 위 또렷하게 */
+  .rs3Edge{border-top-color:rgba(61,71,89,.85)}                  /* 모서리선: 다크 천장 밝은 톤(#3d4759)으로 은은하게 */
   .rs3FloorGrid{background-image:linear-gradient(to right,rgba(160,174,205,.22) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(160,174,205,.4) 0 1.5px,transparent 1.5px)}
   .rs3Ao{background:linear-gradient(to bottom,rgba(0,0,0,.4),transparent)}
 }
