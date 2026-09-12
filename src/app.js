@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=189';
-import { MODELS } from './models.js?v=189';
-import { PROCESSORS } from './processor-data.js?v=189';
-import { processorRequirements } from './processor-limits.js?v=189';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=189';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=189';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=189';
-import { parseCasesText, normalizeDate } from './cases.js?v=189';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=190';
+import { MODELS } from './models.js?v=190';
+import { PROCESSORS } from './processor-data.js?v=190';
+import { processorRequirements } from './processor-limits.js?v=190';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=190';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=190';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=190';
+import { parseCasesText, normalizeDate } from './cases.js?v=190';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -803,14 +803,28 @@ $('#signalMode').addEventListener('click', e => {
   $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   renderPreview(); renderReadout();
 });
-// 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수).
+// 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 버튼 표시를 실제 상태와 일치시킨다.
+//   눈높이선은 사람에 종속 — 사람이 꺼지면 눈높이선도 꺼진 것으로 표시(비활성)하고 클릭도 막는다.
+function syncPvToggles() {
+  const set = (tog, on, dim) => {
+    const b = document.querySelector(`#pvToggles button[data-tog="${tog}"]`); if (!b) return;
+    b.classList.toggle('on', !!on);
+    b.classList.toggle('pvTogDim', !!dim);
+  };
+  set('person', pvShow.person);
+  set('grid', pvShow.grid);
+  set('dims', pvShow.dims);
+  set('eye', pvShow.eye && pvShow.person, !pvShow.person);   // 사람 꺼지면 눈높이선 버튼도 꺼짐 표시
+}
 $('#pvToggles')?.addEventListener('click', e => {
   const b = e.target.closest('button[data-tog]'); if (!b) return;
-  const key = { person: 'person', eye: 'eye', grid: 'grid', dims: 'dims' }[b.dataset.tog];
+  const key = b.dataset.tog;
+  if (key === 'eye' && !pvShow.person) return;   // 사람 꺼진 상태에선 눈높이선 버튼 동작 안 함
   pvShow[key] = !pvShow[key];
-  b.classList.toggle('on', pvShow[key]);
+  syncPvToggles();
   renderPreview();
 });
+syncPvToggles();
 $('#lineFilter').addEventListener('change', e => {
   const cb = e.target.closest('input[data-line]'); if (!cb) return;
   if (cb.checked) visibleLines.add(cb.dataset.line); else visibleLines.delete(cb.dataset.line);
