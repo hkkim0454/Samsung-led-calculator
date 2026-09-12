@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=199';
-import { MODELS } from './models.js?v=199';
-import { PROCESSORS } from './processor-data.js?v=199';
-import { processorRequirements } from './processor-limits.js?v=199';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=199';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=199';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=199';
-import { parseCasesText, normalizeDate } from './cases.js?v=199';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=200';
+import { MODELS } from './models.js?v=200';
+import { PROCESSORS } from './processor-data.js?v=200';
+import { processorRequirements } from './processor-limits.js?v=200';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=200';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=200';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=200';
+import { parseCasesText, normalizeDate } from './cases.js?v=200';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -383,12 +383,14 @@ function renderPreview() {
   // 좌우 여백 치수: 양쪽 여백 공간의 '중앙'·같은 높이(LED 세로 중앙)에 대칭 배치.
   //   → 좌우 대칭(좌우정렬)·상하정렬, 오른쪽 높이 치수선(2,160mm)과도 멀어져 안 겹침(이사 피드백).
   if (r.marginW > 40) { pt(Lx / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); pt(Lx + Lw + (SWp - Lx - Lw) / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); }
-  // 벽 전체 폭: 앞쪽 치수선이 캔버스 밖으로 나가거나 사람과 겹치지 않게 clamp(v2 2-4).
+  // 벽 크기(가로·세로)를 방 '앞쪽 면(near plane)'으로 모아 L자로 정렬(이사 요청).
+  //   가로=앞쪽 바닥 모서리, 세로=앞쪽 좌측 모서리 — 같은 깊이(dFront)라 서로 정렬됨.
+  //   앞쪽 치수선이 캔버스 밖으로 나가거나 사람과 겹치지 않게 clamp(세로 라벨 여유 위해 24px).
   let dFront = Dp * 0.82;
-  while (dFront > px(500) && proj(0, SHp, dFront).x < 8) dFront -= Dp * 0.04;
+  while (dFront > px(500) && proj(0, SHp, dFront).x < 24) dFront -= Dp * 0.04;
   dFront = Math.min(dFront, Math.max(px(1000), personD - px(800)));
-  hDim(0, SWp, SHp, dFront, mL(sW), 'sub');
-  vDim(-px(140), 0, SHp, px(500), mL(sH), 'sub');
+  hDim(0, SWp, SHp, dFront, mL(sW), 'sub');   // 가로: 앞쪽 바닥 모서리
+  vDim(0, 0, SHp, dFront, mL(sH), 'sub');      // 세로: 앞쪽 좌측 모서리(가로와 같은 앞면에서 정렬)
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
