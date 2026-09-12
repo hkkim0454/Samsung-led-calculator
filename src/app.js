@@ -1,10 +1,10 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm, processorRequirements, rankProcessors } from './engine.js?v=180';
-import { MODELS } from './models.js?v=180';
-import { PROCESSORS } from './processors.js?v=180';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=180';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=180';
-import { parseCasesText, normalizeDate } from './cases.js?v=180';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm, processorRequirements, rankProcessors } from './engine.js?v=181';
+import { MODELS } from './models.js?v=181';
+import { PROCESSORS } from './processors.js?v=181';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=181';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=181';
+import { parseCasesText, normalizeDate } from './cases.js?v=181';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -13,7 +13,7 @@ const PRICES_KEY = 'svtled_prices_v1';
 let PRICES = null;
 function readStoredPrices() { try { const s = localStorage.getItem(PRICES_KEY); return s ? JSON.parse(s) : null; } catch { return null; } }
 PRICES = readStoredPrices();
-if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=180')).PRICES; } catch { PRICES = null; } }
+if (!PRICES) { try { PRICES = (await import('./prices.local.js?v=181')).PRICES; } catch { PRICES = null; } }
 
 // 사용자가 고른 가격표 파일(prices.local.js 등)을 읽어 브라우저에 저장한다. 파일은 업로드되지 않고 로컬에서만 처리.
 async function importPriceFile(file) {
@@ -406,6 +406,7 @@ function renderReadout() {
 }
 
 // 05 비디오 프로세서 — 04 산출값 + 사용자 요구를 engine에 넘겨 제품별 판정·추천을 그린다(계산 없음).
+let vpOut4kEdited = false;   // '필요 4K 출력 수'를 사용자가 직접 기입했는지(비우면 자동값 복귀)
 const VP_MODE_FLAGS = {
   split:    {},
   fade:     { fadeRequired: true },
@@ -457,10 +458,17 @@ function renderProcessors() {
   const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits || !(r.resW > 0)) { auto.innerHTML = '<div class="previewEmpty">배열이 없어 추천을 계산할 수 없습니다.</div>'; out.innerHTML = ''; return; }
-  const req = processorRequirements(r, vpReqOpts());
+  const o = vpReqOpts();
+  // 필요 4K 출력 수: 사용자가 기입하면 그 값, 안 했으면 자동값을 칸에 표시(비우면 자동).
+  const autoReq = processorRequirements(r);
+  const out4kEl = $('#vpOut4k');
+  if (out4kEl && !vpOut4kEdited) out4kEl.value = autoReq.required4kOutputs ?? '';
+  if (vpOut4kEdited) { const v = num(out4kEl?.value); if (v > 0) o.required4kOutputs = v; }
+  const req = processorRequirements(r, o);
+  const out4kAuto = req.required4kOutputs === autoReq.required4kOutputs;
   auto.innerHTML = `<div class="vpAutoRow">
     <span>전체 해상도 <b>${fmt(r.resW)} × ${fmt(r.resH)}</b> px</span>
-    <span>필요 4K 출력 <b>${req.required4kOutputs ?? '—'}</b> 개</span>
+    <span>필요 4K 출력 <b>${req.required4kOutputs ?? '—'}</b> 개${out4kAuto ? '' : ' <em class="muted-note">(직접 입력)</em>'}</span>
     <span>필요 2K 출력 <b>${req.required2kOutputs ?? '—'}</b> 개</span>
   </div>`;
   const ranked = rankProcessors(PROCESSORS, req);
@@ -638,6 +646,8 @@ $('#sboxSpare')?.addEventListener('input', renderAll);
 ['vpIn4k', 'vpIn2k', 'vpLayers4k'].forEach(id => $('#' + id)?.addEventListener('input', renderProcessors));
 ['vpMode', 'vpApp'].forEach(id => $('#' + id)?.addEventListener('change', renderProcessors));
 ['vpGenlock', 'vpHdr', 'vp10bit', 'vpCtrl'].forEach(id => $('#' + id)?.addEventListener('change', renderProcessors));
+// 필요 4K 출력 수: 직접 기입하면 그 값 사용, 비우면 자동값으로 복귀.
+$('#vpOut4k')?.addEventListener('input', () => { vpOut4kEdited = $('#vpOut4k').value.trim() !== ''; renderProcessors(); });
 setLedMax();   // 초기 max 속성 설정
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
 // 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).

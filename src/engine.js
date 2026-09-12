@@ -361,9 +361,12 @@ function maxNullable(...vals) {
 export function processorRequirements(config, o = {}) {
   const resW = config?.resW, resH = config?.resH;
   const int = (v) => Math.max(0, Math.floor(v ?? 0));
+  // 필요 4K 출력 수: 기본은 자동(⌈resW/3840⌉×⌈resH/2160⌉). o.required4kOutputs가 있으면 사용자 지정값으로 덮어씀.
+  const required4kOutputs = (o.required4kOutputs != null && o.required4kOutputs > 0)
+    ? Math.floor(o.required4kOutputs) : regionTiles(resW, resH, TILE_4K_W, TILE_4K_H);
   return {
     resW: resW ?? null, resH: resH ?? null,
-    required4kOutputs: regionTiles(resW, resH, TILE_4K_W, TILE_4K_H),
+    required4kOutputs,
     required2kOutputs: regionTiles(resW, resH, TILE_2K_W, TILE_2K_H),
     independent4kInputs: int(o.independent4kInputs),
     independent2kInputs: int(o.independent2kInputs),

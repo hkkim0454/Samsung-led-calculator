@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=180"/>
+<link rel="stylesheet" href="./styles.css?v=181"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -141,6 +141,7 @@
           <label class="field"><span class="lab">독립 4K 입력 소스 수</span><input type="number" id="vpIn4k" value="1" min="0" step="1"/></label>
           <label class="field"><span class="lab">독립 2K(FHD) 입력 소스 수</span><input type="number" id="vpIn2k" value="0" min="0" step="1"/></label>
           <label class="field"><span class="lab">동시 표시 레이어 수 (4K)</span><input type="number" id="vpLayers4k" value="1" min="0" step="1"/></label>
+          <label class="field"><span class="lab">필요 4K 출력 수 <span class="muted-note">(비우면 자동)</span></span><input type="number" id="vpOut4k" min="0" step="1" placeholder="자동"/></label>
           <label class="field"><span class="lab">운용 방식</span>
             <select id="vpMode">
               <option value="split">단순 화면 분할</option>
@@ -214,7 +215,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v180</span>
+        <span class="verTag">화면 버전 v181</span>
       </div>
     </div>
   </div>
@@ -308,6 +309,6 @@
 </dialog>
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록). engine.js/models.js import의 v=도 함께 올릴 것 -->
-<script type="module" src="./app.js?v=180"></script>
+<script type="module" src="./app.js?v=181"></script>
 </body>
 </html>
