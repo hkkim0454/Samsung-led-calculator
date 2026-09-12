@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=186';
-import { MODELS } from './models.js?v=186';
-import { PROCESSORS } from './processor-data.js?v=186';
-import { processorRequirements } from './processor-limits.js?v=186';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=186';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=186';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=186';
-import { parseCasesText, normalizeDate } from './cases.js?v=186';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=187';
+import { MODELS } from './models.js?v=187';
+import { PROCESSORS } from './processor-data.js?v=187';
+import { processorRequirements } from './processor-limits.js?v=187';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=187';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=187';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=187';
+import { parseCasesText, normalizeDate } from './cases.js?v=187';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -262,12 +262,13 @@ function renderPreview() {
   // 가상 캔버스 CW×CH 안에 정면벽이 폭 ≤86%·높이 ≤62%가 되도록 S(px/mm)를 잡는다.
   // 바깥은 stage 실제 폭에 맞춰 통째로 축소(내부 좌표는 안 건드림) → 어떤 화면에서도 비율 유지.
   const CW = 1000, CH = 470;
-  // 정면벽(d=0)은 화면에 f0=0.5(P=ZW)로 줄어들어 보이므로, 목표 화면크기를 f0로 나눠 씬을 크게 잡는다.
-  const f0 = 0.5;
-  const S = Math.min((CW * 0.82) / (sW * f0), (CH * 0.52) / (sH * f0));   // px per mm
+  const depthMM = Math.min(Math.max(Math.round(sW * 0.85), 4500), 12000);  // 방 깊이(가정, 원근감용)
+  // 방 앞면(카메라 쪽 개구부)을 화면에 꽉 채워 원근감을 살린다. 뒷벽(LED)은 자연히 안쪽에 작게 앉는다.
+  //   (벽을 채우면 방 깊이가 안 보여 원근감이 사라짐 — 앞면 기준으로 맞춘다.)
+  const fFront = (depthMM + 2000) / (depthMM + 4000);         // 방 앞면 투영배율
+  const S = Math.min((CW * 0.99) / (sW * fFront), (CH * 0.97) / (sH * fFront));   // px per mm
   const px = mm => mm * S;
-  const SWp = px(sW), SHp = px(sH);                           // 정면벽 px
-  const depthMM = Math.min(Math.max(Math.round(sW * 0.8), 4000), 11000);  // 방 깊이(가정, 원근감용)
+  const SWp = px(sW), SHp = px(sH);                           // 정면(뒷)벽 px
   const Dp = px(depthMM);                                     // 방 깊이 px
   const eyeMM = 1600;                                         // 카메라 눈높이(바닥 1.6 m)
   const eyePx = px(eyeMM);
@@ -377,12 +378,12 @@ function renderPreview() {
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person" style="left:${SWp - px(600)}px;top:${SHp - px(1700)}px;width:${px(450)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${px(600)}px)"><div class="h"></div><div class="b"></div></div>
+          <div class="rs3Person" style="left:${SWp - px(600)}px;top:${SHp - px(1700)}px;width:${px(300)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${px(600)}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
         </div>
       </div>
       <div class="rs3Overlay">
         ${dims.join('')}
-        <div class="rs3Dlbl person" style="left:${proj(SWp - px(600), SHp - px(1780), px(600)).x}px;top:${proj(SWp - px(600), SHp - px(1780), px(600)).y}px">키 170 cm</div>
+        <div class="rs3Dlbl person" style="left:14px;top:${CH - 16}px;transform:translate(0,-50%)">키 170 cm</div>
       </div>
     </div>
   </div>`;
