@@ -48,9 +48,10 @@ function proc(p) {
 export const PROCESSORS = [
 
   // ── Analog Way · Midra 4K ─────────────────────────────────────────────────
-  // I/O는 공식 페이지 확인(8×4K + 2×2K 입력, 2×4K 출력, 4종 공통). 레이어(믹싱/분할)는
+  // I/O는 공식 페이지 확인(8×4K + 2×2K 입력, 2×4K 출력, 공통). 레이어(믹싱/분할)는
   // 모델별 정확값이 공식 텍스트에 없어 null(확인 필요). 성격상 프레젠테이션 스위처.
-  ...['QuickVu 4K', 'QuickMatrix 4K', 'Pulse 4K', 'Eikos 4K'].map(model => proc({
+  // (QuickVu 4K·QuickMatrix 4K는 단종 — 이사 확인 2026-09-12, 삭제.)
+  ...['Pulse 4K', 'Eikos 4K'].map(model => proc({
     id: 'aw-midra-' + model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,''),
     manufacturer: AW, family: 'Midra', model,
     inputs: { maxIndependent4k: 8, maxIndependent2k: 2, hdmi20: 4, dp12: 2, sdi12g: 2 },

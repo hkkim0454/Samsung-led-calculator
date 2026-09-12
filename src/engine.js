@@ -566,14 +566,24 @@ function gradeLabel(v) {
 
 const GRADE_ORDER = Object.freeze({ '권장': 0, '적합': 1, '조건부 적합': 2, '한계 구성': 3, '부적합': 4 });
 
+// 소형 작업(필요 4K 출력이 이 값 이하)에서는 고가의 Aquilon을 추천 목록에서 제외한다.
+// (이사 지침 2026-09-12: "4K 2개 출력엔 Aquilon 절대 사용 안 함(가격). 예외 없음.")
+export const AQUILON_HIDE_MAX_4K_OUTPUTS = 2;
+const isExpensiveOverspec = (proc, req) =>
+  proc.family === 'Aquilon' &&
+  req.required4kOutputs != null &&
+  req.required4kOutputs <= AQUILON_HIDE_MAX_4K_OUTPUTS;
+
 /**
  * 제품 목록을 평가·정렬한다. 반환: [{ proc, verdict, checks, label, appPreferred }] (좋은 등급 먼저).
  * 동급이면 (1) 운용 환경 우선 제품군, (2) 4K 출력 여유 큰 순.
+ * 소형 작업에서는 Aquilon(고가)을 목록에서 숨긴다(위 규칙, 예외 없음).
  */
 export function rankProcessors(procs, req) {
   if (!Array.isArray(procs) || !req) return [];
   const pref = APPLICATION_PREFERRED[req.application] ?? [];
   return procs
+    .filter(proc => !isExpensiveOverspec(proc, req))
     .map(proc => {
       const v = validateProcessor(proc, req);
       const out4k = v?.checks.find(c => c.name === '4K 출력');
