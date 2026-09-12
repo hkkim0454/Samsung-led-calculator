@@ -377,6 +377,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .pvTog .dot{width:7px;height:7px;border-radius:50%;background:#d5d8dd}
 .pvTog.on .dot{background:#2f7ff6}
 .pvTog.on{color:var(--ink)}
+.pvTog.pvTogDim{opacity:.45;cursor:default}
+.pvTog.pvTogDim:hover{border-color:rgba(16,18,22,.12);color:var(--muted)}
 
 /* Samsung-configurator style preview */
 /* 설치 공간(선언한 벽면). 얇은 회색 윤곽 + 은은한 그림자 — FHD(파랑) 신호와 색이 겹치지 않게 */
