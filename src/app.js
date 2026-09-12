@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=198';
-import { MODELS } from './models.js?v=198';
-import { PROCESSORS } from './processor-data.js?v=198';
-import { processorRequirements } from './processor-limits.js?v=198';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=198';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=198';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=198';
-import { parseCasesText, normalizeDate } from './cases.js?v=198';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=199';
+import { MODELS } from './models.js?v=199';
+import { PROCESSORS } from './processor-data.js?v=199';
+import { processorRequirements } from './processor-limits.js?v=199';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=199';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=199';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=199';
+import { parseCasesText, normalizeDate } from './cases.js?v=199';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -330,16 +330,17 @@ function renderPreview() {
     }
   }
 
-  // 눈높이선: 좌측벽 위 해당 높이를 2D 오버레이(투영)로. 뒷벽쪽(d=0)~앞쪽(d=Dp)을 이어 소실점 수렴.
+  // 눈높이선: 사람이 서 있는 '우측벽'(u=SWp) 위 해당 높이를 2D 오버레이(투영)로. 뒷벽쪽(d=0)~앞쪽(d=Dp)을 이어 소실점 수렴.
+  //   라벨은 앞쪽(우측 끝) 코너에서 안쪽(왼쪽)으로 읽히게 오른쪽 정렬(.r) — 캔버스 밖으로 안 나감(이사 요청: 눈높이선을 사람 쪽에).
   let eyeLines = '';
   for (const g of [{ mm: 1600, t: '선 1.6 m' }, { mm: 1200, t: '앉음 1.2 m' }]) {
     if (g.mm > sH) continue;
     const v = SHp - px(g.mm);
-    const aP = proj(0, v, 0), cP = proj(0, v, Dp);
+    const aP = proj(SWp, v, 0), cP = proj(SWp, v, Dp);
     const len = Math.hypot(cP.x - aP.x, cP.y - aP.y);
     const ang = Math.atan2(cP.y - aP.y, cP.x - aP.x) * 180 / Math.PI;
     eyeLines += `<div class="rs3Eye" style="left:${aP.x}px;top:${aP.y}px;width:${len}px;transform:rotate(${ang}deg)"></div>`
-      + `<span class="rs3EyeLbl" style="left:${cP.x + 5}px;top:${cP.y}px">${g.t}</span>`;
+      + `<span class="rs3EyeLbl r" style="left:${cP.x - 5}px;top:${cP.y}px">${g.t}</span>`;
   }
 
   // 방 모서리(구조 edge)를 2D 오버레이 선으로. 깊이 4모서리 + 뒷벽 둘레 4변.
