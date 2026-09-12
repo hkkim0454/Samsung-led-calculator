@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=222';
-import { MODELS } from './models.js?v=222';
-import { PROCESSORS } from './processor-data.js?v=222';
-import { processorRequirements } from './processor-limits.js?v=222';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=222';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=222';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=222';
-import { parseCasesText, normalizeDate } from './cases.js?v=222';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=223';
+import { MODELS } from './models.js?v=223';
+import { PROCESSORS } from './processor-data.js?v=223';
+import { processorRequirements } from './processor-limits.js?v=223';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=223';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=223';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=223';
+import { parseCasesText, normalizeDate } from './cases.js?v=223';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -623,7 +623,7 @@ function openPortPopup(id) {
   }
   el.innerHTML = `<div class="portPopCard" role="dialog" aria-modal="true" aria-label="포트별 입출력 수량">
     <div class="ppHead">
-      <div class="ppTitle">${esc(p.manufacturer)} · ${esc(p.family || '')} ${esc(p.model)}</div>
+      <div class="ppTitle">${esc(p.manufacturer)} · ${esc(p.model)}</div>
       <button type="button" class="ppClose" data-portclose aria-label="닫기">✕</button>
     </div>
     <div class="ppBody">
