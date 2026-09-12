@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=193';
-import { MODELS } from './models.js?v=193';
-import { PROCESSORS } from './processor-data.js?v=193';
-import { processorRequirements } from './processor-limits.js?v=193';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=193';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=193';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=193';
-import { parseCasesText, normalizeDate } from './cases.js?v=193';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=194';
+import { MODELS } from './models.js?v=194';
+import { PROCESSORS } from './processor-data.js?v=194';
+import { processorRequirements } from './processor-limits.js?v=194';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=194';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=194';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=194';
+import { parseCasesText, normalizeDate } from './cases.js?v=194';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -370,7 +370,8 @@ function renderPreview() {
     vDim(Lx + Lw + px(140), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
   // 좌우 여백
-  if (r.marginW > 40) { pt(Lx / 2, SHp - px(80), 0, mL(r.marginW), 'sub'); pt(Lx + Lw + (SWp - Lx - Lw) / 2, SHp - px(80), 0, mL(r.marginW), 'sub'); }
+  // 좌우 여백 치수를 캐비닛(LED) 좌우 옆(세로 중앙)에 배치.
+  if (r.marginW > 40) { pt(Lx / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); pt(Lx + Lw + (SWp - Lx - Lw) / 2, Ly + Lh / 2, 0, mL(r.marginW), 'sub'); }
   // 벽 전체 폭(바닥 앞쪽) / 벽 높이(우측벽) / 캐비닛 수 배지
   hDim(0, SWp, SHp, Dp * 0.82, mL(sW), 'sub');
   vDim(-px(140), 0, SHp, px(500), mL(sH), 'sub');
@@ -410,7 +411,7 @@ function renderPreview() {
       <div class="rs3EyeLayer">${eyeLines}</div>
       <div class="rs3Overlay">
         ${dims.join('')}
-        <div class="rs3Dlbl person" style="left:14px;top:${CH - 16}px;transform:translate(0,-50%)">키 170 cm</div>
+        <div class="rs3Dlbl person" style="left:${proj(SWp - px(600), SHp, px(600)).x}px;top:${proj(SWp - px(600), SHp, px(600)).y + 7}px;transform:translate(-50%,0)">키 170 cm</div>
       </div>
     </div>
   </div>`;
