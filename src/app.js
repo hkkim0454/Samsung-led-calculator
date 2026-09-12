@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=214';
-import { MODELS } from './models.js?v=214';
-import { PROCESSORS } from './processor-data.js?v=214';
-import { processorRequirements } from './processor-limits.js?v=214';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=214';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=214';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=214';
-import { parseCasesText, normalizeDate } from './cases.js?v=214';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=215';
+import { MODELS } from './models.js?v=215';
+import { PROCESSORS } from './processor-data.js?v=215';
+import { processorRequirements } from './processor-limits.js?v=215';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=215';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=215';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=215';
+import { parseCasesText, normalizeDate } from './cases.js?v=215';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -419,12 +419,9 @@ function renderPreview() {
     hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
     hDim(Lx + Lw, SWp, topDimV, 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
   }
-  // 벽 크기(가로·세로): 방 바깥쪽 앞 모서리에(이사 요청). 가로=앞 바닥, 세로=앞 좌측 세로 모서리.
-  //   가로 치수선은 화면 맨 아래 경계에 딱 붙으면 프레임에 가려 안 보이므로, 바닥에서 22px 위까지만 내림.
-  const yWidthMax = visB - 22 / effFit;
-  let dWidth = dFront;
-  if (proj(0, SHp, dFront).y > yWidthMax) dWidth = P + ZW - P / ((yWidthMax - CY) / (SHp - vEye));
-  hDim(0, SWp, SHp, dWidth, mL(sW), 'sub');
+  // 벽 크기(가로·세로): 가로 치수선을 세로 치수선과 '같은 바닥 레벨(깊이 dHeight)'에 그려,
+  //   좌하단 모서리에서 두 선이 만나(겹치)도록 함(이사 요청). 둘 다 화면 안에 보임.
+  hDim(0, SWp, SHp, dHeight, mL(sW), 'sub');
   vDim(uHeight, 0, SHp, dHeight, mL(sH), 'sub');
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
