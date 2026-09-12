@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=201';
-import { MODELS } from './models.js?v=201';
-import { PROCESSORS } from './processor-data.js?v=201';
-import { processorRequirements } from './processor-limits.js?v=201';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=201';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=201';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=201';
-import { parseCasesText, normalizeDate } from './cases.js?v=201';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=202';
+import { MODELS } from './models.js?v=202';
+import { PROCESSORS } from './processor-data.js?v=202';
+import { processorRequirements } from './processor-limits.js?v=202';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=202';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=202';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=202';
+import { parseCasesText, normalizeDate } from './cases.js?v=202';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -319,11 +319,12 @@ function renderPreview() {
       const p = proj(Lx + colWp * (c + 0.5), Ly + rowHp * 0.32, dNum);   // 윗줄 칸 위쪽
       numHTML += `<span class="rs3Num col" style="left:${p.x}px;top:${p.y}px">${c + 1}</span>`;
     }
-    // 행 번호: 항상 맨 왼쪽 칸 안쪽(왼쪽으로 치우쳐 열 번호와 안 겹침).
+    // 행 번호: 맨 왼쪽 칸 안쪽. 단, 첫 행(ri=0)은 좌상단에서 열 번호 '1'과 겹쳐 '1 1'로 보이므로 생략.
+    //   → 좌상단 '1' 하나가 가로·세로 1을 겸함(왼쪽은 1,2,3,4로 읽힘). (이사 요청)
     const rowU = Lx + colWp * 0.28;
     const r0 = proj(rowU, Ly + rowHp * 0.5, dNum), r1 = proj(rowU, Ly + rowHp * 1.5, dNum);
     const spRow = Math.abs(r1.y - r0.y), stepR = spRow >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spRow)));
-    for (let ri = 0; ri < r.rows; ri++) {
+    for (let ri = 1; ri < r.rows; ri++) {
       if (stepR > 1 && ri % stepR !== 0 && ri !== r.rows - 1) continue;
       const p = proj(rowU, Ly + rowHp * (ri + 0.5), dNum);
       numHTML += `<span class="rs3Num col" style="left:${p.x}px;top:${p.y}px">${ri + 1}</span>`;
