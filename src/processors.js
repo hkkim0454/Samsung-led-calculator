@@ -1,0 +1,177 @@
+// processors.js — 비디오 프로세서(영상 스위처/스플라이서) 순수 스펙 데이터.
+// 계산 로직 없음(모든 판정은 engine.js). 스키마는 컨텍스트 문서(2026-09-12) §9 기준.
+//
+// 데이터 신뢰성 원칙(문서 §15, CLAUDE.md 규칙 2):
+//   - 공식 자료/오너 제공 문서로 "확인된 값"만 채운다.
+//   - 확인되지 않은 값은 절대 추정하지 않고 null + verification.status='needs_verification'.
+//   - UI에서 null은 "확인 필요"로 표시하고, 하드 제약에서 임의 PASS 처리하지 않는다.
+//
+// 출처 표기:
+//   - 오너 제공 컨텍스트 문서(2026-09-12): X100 Pro 표(§6), U6 Max(§7), Alta Zenith 200(§5.2),
+//     Aquilon RS 예시(§3 예제, RS4). 이 값들은 문서에 명시된 것만 반영.
+//   - Analog Way 공식 제품 페이지(2026-09-12 조사): Midra 4K I/O, Aquilon RS 믹싱/분할 레이어.
+//   - NovaStar H / Colorlight 세부 수치는 대부분 PDF 사양서에만 있어 이 환경에서 열람 불가 → 확인 필요.
+//
+// layers.model:
+//   'mixing_split'    Analog Way — 믹싱 레이어(True A/B용) vs 분할 레이어를 구분.
+//   'per_output_card' NovaStar H — 레이어 자원이 출력카드 단위(카드당 한계 검증 필요).
+//   'global_window'   Colorlight X100 Pro — 전체 윈도우 상한 + 독립 입력 상한이 별개.
+//   'screen_group'    Colorlight Universe — 전역 레이어 + 출력보드/스크린그룹 단위.
+
+const AW = 'Analog Way', NS = 'NovaStar', CL = 'Colorlight';
+
+// 반복되는 빈 서브구조 기본값(누락 필드는 null = 확인 필요).
+const emptyInputs = () => ({ maxIndependent2k: null, maxIndependent4k: null, maxInputBoards: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null });
+const emptyOutputs = () => ({ max2k: null, max4k: null, maxOutputBoards: null });
+const emptySwitching = () => ({ cut: null, fade: null, seamless: null, trueABMixing: null, previewProgram: null, transitionGrade: null });
+const emptyLatency = () => ({ frames: null, milliseconds: null });
+const emptyFeatures = () => ({ genlock: null, hdr: null, tenBit: null, multiview: null, redundancy: null });
+const emptyControl = () => ({ rs232: null, tcp: null, restApi: null, amxCompatible: null, crestronCompatible: null });
+
+function proc(p) {
+  return {
+    id: p.id,
+    manufacturer: p.manufacturer,
+    family: p.family,
+    model: p.model,
+    inputs: { ...emptyInputs(), ...(p.inputs ?? {}) },
+    outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
+    layers: { model: p.layers.model, maxWindows: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCard4k: null, perOutputBoard2k: null, perOutputBoard4k: null, ...p.layers },
+    switching: { ...emptySwitching(), ...(p.switching ?? {}) },
+    latency: { ...emptyLatency(), ...(p.latency ?? {}) },
+    features: { ...emptyFeatures(), ...(p.features ?? {}) },
+    control: { ...emptyControl(), ...(p.control ?? {}) },
+    verification: { status: 'needs_verification', sourceUrl: null, sourceVersion: null, verifiedAt: null, notes: null, ...(p.verification ?? {}) },
+  };
+}
+
+export const PROCESSORS = [
+
+  // ── Analog Way · Midra 4K ─────────────────────────────────────────────────
+  // I/O는 공식 페이지 확인(8×4K + 2×2K 입력, 2×4K 출력, 4종 공통). 레이어(믹싱/분할)는
+  // 모델별 정확값이 공식 텍스트에 없어 null(확인 필요). 성격상 프레젠테이션 스위처.
+  ...['QuickVu 4K', 'QuickMatrix 4K', 'Pulse 4K', 'Eikos 4K'].map(model => proc({
+    id: 'aw-midra-' + model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,''),
+    manufacturer: AW, family: 'Midra', model,
+    inputs: { maxIndependent4k: 8, maxIndependent2k: 2, hdmi20: 4, dp12: 2, sdi12g: 2 },
+    outputs: { max4k: 2 },
+    layers: { model: 'mixing_split', mixing4k: null, split4k: null },  // 확인 필요
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true },
+    control: { tcp: true, crestronCompatible: true },
+    verification: { status: 'needs_verification', sourceUrl: 'https://www.analogway.com/midra-4k-presentation-switchers', notes: 'I/O 공식 확인, 레이어 수 확인 필요' },
+  })),
+
+  // ── Analog Way · Alta 4K (Zenith 200 기준) ────────────────────────────────
+  // 오너 문서 §5.2: 16입력(14×4K + 2×2K), 6출력(최대 4×4K Program), 8×4K 분할 / 4×4K 믹싱.
+  proc({
+    id: 'aw-alta-zenith-200',
+    manufacturer: AW, family: 'Alta', model: 'Alta 4K (Zenith 200)',
+    inputs: { maxIndependent4k: 14, maxIndependent2k: 2, hdmi20: 8, dp12: 4, sdi12g: 2 },
+    outputs: { max4k: 4 },   // 최대 4×4K60 Program outputs (총 6 outputs)
+    layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
+    latency: { frames: 1 },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true },
+    control: { tcp: true },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/alta-4k-presentation-switchers', sourceVersion: 'owner-doc 2026-09-12 §5.2', notes: '총 6출력 중 4×4K Program 기준' },
+  }),
+
+  // ── Analog Way · Aquilon (LivePremier RS) ─────────────────────────────────
+  // 입력/출력/믹싱·분할 레이어: 공식 제품 페이지 조사값(오너 문서 §3 RS4 예시와 일치).
+  ...[
+    { model: 'Aquilon RS1', in4k: 16, out4k: 8,  mix: 4,  split: 8,  slug: 'rs1' },
+    { model: 'Aquilon RS2', in4k: 16, out4k: 12, mix: 8,  split: 16, slug: 'rs2' },
+    { model: 'Aquilon RS3', in4k: 24, out4k: 12, mix: 8,  split: 16, slug: 'rs3' },
+    { model: 'Aquilon RS4', in4k: 24, out4k: 16, mix: 12, split: 24, slug: 'rs4' },
+    { model: 'Aquilon RS6', in4k: 32, out4k: 20, mix: 16, split: 32, slug: 'rs6' },
+  ].map(m => proc({
+    id: 'aw-aquilon-' + m.slug,
+    manufacturer: AW, family: 'Aquilon', model: m.model,
+    inputs: { maxIndependent4k: m.in4k },
+    outputs: { max4k: m.out4k },
+    layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
+    features: { hdr: true, tenBit: true, multiview: true, redundancy: true },  // genlock 확인 필요
+    control: { tcp: true, restApi: true },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/' + m.slug.replace('rs','aquilon-rs'), sourceVersion: '2026-09-12 조사', notes: 'I/O·믹싱/분할 확인. Genlock/AMX/Crestron 확인 필요' },
+  })),
+
+  // ── NovaStar · H Series ───────────────────────────────────────────────────
+  // 레이어 자원은 출력카드 단위(카드 1장 = 16×2K / 8×DL / 4×4K, 문서 §5.2).
+  // 모델별 슬롯·출력카드 수·독립 입력 수는 PDF에만 있어 대부분 확인 필요.
+  ...[
+    { model: 'H2',  boards: null, slug: 'h2' },
+    { model: 'H5',  boards: 10,   slug: 'h5' },   // 조사: 최대 10 출력카드
+    { model: 'H9',  boards: 15,   slug: 'h9' },   // 조사: 최대 15 출력카드
+    { model: 'H15', boards: null, slug: 'h15' },
+  ].map(m => proc({
+    id: 'ns-' + m.slug,
+    manufacturer: NS, family: 'H', model: 'H Series ' + m.model,
+    inputs: {},                                   // 독립 입력 수 확인 필요(구성 의존)
+    outputs: { maxOutputBoards: m.boards },        // max4k/max2k 확인 필요
+    layers: { model: 'per_output_card', perOutputCard2k: 16, perOutputCard4k: 4 },
+    switching: {},                                 // A/B 믹서 아님 — 스위칭 세부 확인 필요
+    features: { hdr: true, tenBit: true, redundancy: true },
+    control: { tcp: true, rs232: true },
+    verification: { status: 'needs_verification', sourceUrl: 'https://www.novastar.tech/product/detail.html?catid=3&id=39', notes: '카드당 레이어는 문서 §5.2 기준. 슬롯/출력/독립입력 수는 공식 PDF 확인 필요' },
+  })),
+
+  // ── Colorlight · X100 Pro ─────────────────────────────────────────────────
+  // 오너 문서 §6 표(2U/4U/7U): 독립 2K/4K 입력, Max Window. 출력 수·기능은 확인 필요.
+  ...[
+    { model: 'X100 Pro 2U', boards: 2, in2k: 8,  in4k: 2, win: 32, slug: '2u' },
+    { model: 'X100 Pro 4U', boards: 4, in2k: 16, in4k: 4, win: 32, slug: '4u' },
+    { model: 'X100 Pro 7U', boards: 8, in2k: 32, in4k: 8, win: 64, slug: '7u' },
+  ].map(m => proc({
+    id: 'cl-x100pro-' + m.slug,
+    manufacturer: CL, family: 'X100 Pro', model: m.model,
+    inputs: { maxIndependent2k: m.in2k, maxIndependent4k: m.in4k, maxInputBoards: m.boards },
+    outputs: {},                                   // 출력 수 확인 필요
+    layers: { model: 'global_window', maxWindows: m.win },  // global2k/4k 확인 필요
+    switching: {},                                 // 스위칭 기능 확인 필요
+    features: {},                                  // HDR/10bit/genlock 확인 필요
+    control: {},
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceVersion: 'owner-doc 2026-09-12 §6', notes: '독립 입력·윈도우 오너 문서 확인. 출력 수·기능 확인 필요' },
+  })),
+
+  // ── Colorlight · Universe (U Series) ──────────────────────────────────────
+  // U6 Max: 오너 문서 §7 확인 값. U9 Max: 레이어만(160×2K / 40×4K). U15 Max: 확인 필요.
+  proc({
+    id: 'cl-universe-u6max',
+    manufacturer: CL, family: 'Universe', model: 'Universe U6 Max',
+    inputs: { maxIndependent4k: 20, maxIndependent2k: 60, maxInputBoards: 10 },
+    outputs: { max4k: 10, max2k: 30, maxOutputBoards: 5 },
+    layers: { model: 'screen_group', global2k: 80 },  // "Max Layer 80"(2K 기준으로 봄), 4K 세분 확인 필요
+    switching: { fade: true },                        // seamless/A-B 확인 필요
+    features: { hdr: true, tenBit: true, redundancy: true },
+    control: { tcp: true },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceVersion: 'owner-doc 2026-09-12 §7', notes: 'I/O·출력 확인. 레이어 4K 세분·per-board 확인 필요' },
+  }),
+  proc({
+    id: 'cl-universe-u9max',
+    manufacturer: CL, family: 'Universe', model: 'Universe U9 Max',
+    inputs: {},                                        // 독립 입력 수 확인 필요
+    outputs: {},
+    layers: { model: 'screen_group', global2k: 160, global4k: 40 },
+    switching: { fade: true },
+    features: { hdr: true, tenBit: true, redundancy: true },
+    control: { tcp: true },
+    verification: { status: 'needs_verification', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceVersion: 'owner-doc 2026-09-12 §7', notes: '레이어(160×2K/40×4K)만 확인. I/O·출력 확인 필요' },
+  }),
+  proc({
+    id: 'cl-universe-u15max',
+    manufacturer: CL, family: 'Universe', model: 'Universe U15 Max',
+    layers: { model: 'screen_group' },                 // 전부 확인 필요
+    features: { hdr: true, redundancy: true },
+    verification: { status: 'needs_verification', sourceUrl: 'https://en.colorlightinside.com/product/special/111', notes: '공식 U15 Max 사양 확인 필요' },
+  }),
+
+];
+
+/** id로 프로세서 1개 조회. */
+export function getProcessor(id) {
+  return PROCESSORS.find(p => p.id === id) ?? null;
+}
+
+export default PROCESSORS;

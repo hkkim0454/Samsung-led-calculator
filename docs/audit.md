@@ -96,6 +96,7 @@
 | DEC-013 | 2026-07-24 | MM009F·MM012F를 삼성 configurator export로 검증·확정(dataStatus derived→verified). 무게 5.1kg 공통, 최대/평균전력(W/캐비닛) 009F 94.6/37·012F 92.8/41.5, OVD 009F 3.2m·012F 4.3m 반영. **009F 최대전력 85.8W→94.6W 정정**(이전 세일즈 시트 423.47 W/m² 값 오류, export 6811.2W/72=94.6 기준) | 삼성 공식 export가 진실 소스. 검증: 009F 12×6(367.2kg·6811.2W·2664W·2 S-Box)·012F 8×8(326.4kg·5939.2W·2656W·1 S-Box) 전 항목 일치. 참고: 두 export 모두 광 지빅(GBIC) 부품 미표기 → CS4BPGS는 별도 지빅 불필요 확인 | 김현규 | Approved |
 
 | DEC-017 | 2026-09-11 | (로드맵/Proposed) 소프트웨어 범위 확장 방향 채택 — 단순 치수 계산기 → **LED 연출 시뮬레이션 + 프로세서 자동 추천 + 견적 연동**. (a) LED 캔버스 위 레이어 드래그 배치·리사이즈(ICS/Analog Way "세미 버전"), 배경/격자벽 샘플 이미지로 룩앤필, (b) 공간·해상도별 레이어/분할 한계 분석 → 프로세서(Aquilon C ~ NovaStar) 자동 리커맨드, (c) 연출 확정 시 추천 프로세서 + 장비금액 포함 최종 견적. **시인성 규칙(오너):** 분할 창은 130인치 4분할=65인치까지 실효성 있음, 그보다 작으면 시인성 저하 → 분할 창 대각 하한 ≈ **65인치**를 추천 기준으로 사용. 프로세서 제품별 최대 레이어·분할·입력해상도 데이터는 오너가 정리해 제공 예정(그 전엔 규칙/엔진 미구현) | 현장 구축 단계 설계오류·시공 리스크 사전 차감, 초기 LED 사이즈 확정 후 AV/비디오 설계 검증 속도 단축 | 김현규 | Proposed |
+| DEC-018 | 2026-09-12 | **Video Processor Selector 1차(엔진+데이터+테스트) 착수·승인.** 오너 컨텍스트 문서(Samsung_LED_Processor_Selector_Claude_Context.md) 스키마·규칙 채택: (1) `src/processors.js` 순수 데이터(문서 §9 스키마), (2) `engine.js`에 `processorRequirements`·`validateProcessor`·`validateOutputCardLayers`·`rankProcessors` 추가, (3) 2단계 판정(하드제약 PASS/CONDITIONAL/FAIL → 등급 권장/적합/조건부/한계/부적합, **근거 표시**). 확정 규칙: `required4kOutputs=⌈resW/3840⌉×⌈resH/2160⌉`; **독립입력 ≠ 레이어 ≠ 윈도우 ≠ 출력**(문서 §4); True A/B는 믹싱 레이어만 사용(분할 대체 불가); NovaStar는 출력카드별 레이어 검증; **S-Box 이중화 ≠ 프로세서 출력 이중화**(문서 §13). 데이터: Analog Way(Midra I/O·Aquilon RS 믹싱/분할) 및 오너 문서 표(X100 Pro 2U/4U/7U·U6 Max·Alta Zenith 200)만 채우고 **미확인 값은 전부 null + needs_verification**(문서 §15, PDF 사양서 이 환경 열람 불가). 화면 변화 없음(2차 PR에서 '05 비디오 프로세서' UI 추가) | 문서 §16 우선순위대로 "정확한 PASS/FAIL 판정" 먼저. 추정 스펙 금지(CLAUDE.md 규칙 2). 화면 무변경으로 디자인 작업과 충돌 회피 | 김현규 | Approved |
 
 ## Approval Log
 
@@ -104,6 +105,7 @@
 | 2026-07-23 | 브라우저 접속(삼성 도구) | 김현규 | Approved | Browser 1 선택 |
 | 2026-07-23 | 프로토타입 v0.1 | 김현규 | Pending | 리뷰 대기 |
 | 2026-07-23 | SPEC.md 확정(예정) | 김현규 | Pending | Construction 착수 게이트 |
+| 2026-09-12 | Video Processor Selector 계획(6항목) + 진행 방식(2 PR 분할, 데이터=문서표+확실값) | 김현규 | Approved | 1차: 엔진+데이터+테스트(화면 무변경), 2차: 05 UI |
 
 ## Verification Log
 
@@ -111,3 +113,4 @@
 |---|---|---|---|---|
 | 2026-07-23 | 계산 엔진(충진·크기·해상도·중량·전력) | Node 수동 실행 | Pass | 세션 실행 로그 |
 | 2026-07-23 | 삼성 도구 대조(MP012F / 6×3.4m) | 브라우저 화면 수기 대조 | Partial | 산출값 일치, 세로 행수 불일치(6 vs 7) |
+| 2026-09-12 | 프로세서 선정 엔진(요구산출·PASS/FAIL·카드별 레이어·랭킹) | node:test (`tests/processor.test.js`) | Pass | 87/87 통과(기존 71 + 신규 16). 문서 §12 케이스(출력량·X100 입력 8/9·A/B 믹싱·NovaStar 카드한계·미확인=CONDITIONAL) 포함 |
