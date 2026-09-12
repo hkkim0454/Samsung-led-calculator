@@ -23,7 +23,8 @@ const AW = 'Analog Way', NS = 'NovaStar', CL = 'Colorlight';
 // 반복되는 빈 서브구조 기본값(누락 필드는 null = 확인 필요).
 const emptyInputs = () => ({ maxIndependent2k: null, maxIndependent4k: null, maxInputBoards: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null });
 const emptyOutputs = () => ({ max2k: null, max4k: null, maxOutputBoards: null });
-const emptySwitching = () => ({ cut: null, fade: null, seamless: null, trueABMixing: null, previewProgram: null, transitionGrade: null });
+// monitoringPreview: 멀티뷰/프리뷰·모니터링 지원(≠ Analog Way식 Program/Preview 2-bus). previewProgram과 분리.
+const emptySwitching = () => ({ cut: null, fade: null, seamless: null, trueABMixing: null, previewProgram: null, monitoringPreview: null, transitionGrade: null });
 const emptyLatency = () => ({ frames: null, milliseconds: null });
 const emptyFeatures = () => ({ genlock: null, hdr: null, tenBit: null, multiview: null, redundancy: null });
 const emptyControl = () => ({ rs232: null, tcp: null, restApi: null, amxCompatible: null, crestronCompatible: null });
@@ -60,7 +61,7 @@ export const PROCESSORS = [
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
     control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'partial_official', sourceUrl: 'https://www.analogway.com/midra-4k-presentation-switchers', sourceVersion: 'handoff 2026-09-12 §2', notes: 'I/O 공식. 믹싱2/분할4는 프로젝트 조사 기준. Eikos Wide Canvas는 별도(미반영)' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/pulse-4k', sourceVersion: 'AW 공식 페이지(handoff v2 §J)', notes: '믹싱 2×4K / 분할 4×4K 공식 확인. Eikos Wide Canvas(single_wide)는 별도 PR' },
   })),
 
   // ── Analog Way · Alta 4K (Zenith 200 기준) ────────────────────────────────
@@ -74,8 +75,8 @@ export const PROCESSORS = [
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
-    control: { tcp: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/alta-4k-presentation-switchers', sourceVersion: 'owner-doc 2026-09-12 §5.2', notes: '총 6출력 중 4×4K Program 기준' },
+    control: { tcp: true, crestronCompatible: true },   // AMX는 공식 미확인(null 유지)
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceVersion: 'Zenith 200 datasheet + Alta 4K brochure(handoff v2 §G)', notes: '총 6출력 중 4×4K Program. Genlock·Crestron 공식. AMX 확인 필요' },
   }),
 
   // ── Analog Way · Aquilon (LivePremier RS) ─────────────────────────────────
@@ -93,9 +94,9 @@ export const PROCESSORS = [
     outputs: { max4k: m.out4k },
     layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
-    features: { hdr: true, tenBit: true, multiview: true, redundancy: true },  // genlock 확인 필요
-    control: { tcp: true, restApi: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/' + m.slug.replace('rs','aquilon-rs'), sourceVersion: '2026-09-12 조사', notes: 'I/O·믹싱/분할 확인. Genlock/AMX/Crestron 확인 필요' },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
+    control: { tcp: true, restApi: true, amxCompatible: true, crestronCompatible: true },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/' + m.slug.replace('rs','aquilon-rs'), sourceVersion: 'AW LivePremier 공식(handoff v2 §F)', notes: 'I/O·믹싱/분할·Genlock/Framelock·True A/B·AMX/Crestron 공식 확인' },
   })),
 
   // ── NovaStar · H Series ───────────────────────────────────────────────────
@@ -116,10 +117,10 @@ export const PROCESSORS = [
     inputs: { maxInputBoards: m.inCards },          // 독립 4K/2K 입력 수는 카드 종류 의존 → null(확인 필요)
     outputs: { maxOutputBoards: m.outCards },        // 4K 출력 커버리지 = 카드당 4K(4) × 출력카드 수
     layers: { model: 'per_output_card', perOutputCard2k: 16, perOutputCardDL: 8, perOutputCard4k: 4, chassisMaxLayers2k: m.maxLayers },
-    switching: {},                                 // A/B 믹서 아님 — 스위칭 세부 확인 필요
-    features: { hdr: true, tenBit: true, redundancy: true },
-    control: { tcp: true, rs232: true },
-    verification: { status: 'official', sourceUrl: 'https://www.novastar.tech/tpl/H_SERIES.html', sourceVersion: 'Claude 자료문서 2026-09-12 §3·§4', notes: `${m.u}U. 카드당 16×2K/8×DL/4×4K. 독립 입력 수는 장착 카드 의존(확인 필요)` },
+    switching: { seamless: true, fade: true },      // 공식: seamless switching + fade. True A/B·PVW/PGM은 확인 필요(null)
+    features: { genlock: true, hdr: true, tenBit: true, redundancy: true },
+    control: { tcp: true, rs232: true },            // AMX/Crestron 확인 필요(null)
+    verification: { status: 'official', sourceUrl: 'https://www.novastar.tech/tpl/H_SERIES.html', sourceVersion: 'H Series User Manual V1.12.0 / H5·H9 Spec V1.2.0(handoff v2 §C)', notes: `${m.u}U. 카드당 16×2K/8×DL/4×4K. Seamless·Fade·Genlock·HDR·10bit 공식. True A/B·PVW/PGM·AMX/Crestron 확인 필요. 독립 입력 수는 장착 카드 의존` },
   })),
 
   // ── Colorlight · X100 Pro ─────────────────────────────────────────────────
@@ -133,11 +134,11 @@ export const PROCESSORS = [
     manufacturer: CL, family: 'X100 Pro', model: m.model,
     inputs: { maxIndependent2k: m.in2k, maxIndependent4k: m.in4k, maxInputBoards: m.boards },
     outputs: {},                                   // 출력 수 확인 필요
-    layers: { model: 'global_window', maxWindows: m.win },  // global2k/4k 확인 필요
-    switching: {},                                 // 스위칭 기능 확인 필요
-    features: {},                                  // HDR/10bit/genlock 확인 필요
-    control: {},
-    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/service/download/', sourceVersion: 'X100 Pro-' + m.slug.toUpperCase() + ' Specification V2.0', notes: '독립 입력·윈도우 공식 확인(문서 §9). 독립 입력 ≠ 윈도우 수. 출력 수·기능 확인 필요' },
+    layers: { model: 'global_window', maxWindows: m.win },  // global2k/4k 확인 필요(윈도우≠레이어)
+    switching: { monitoringPreview: true },        // 멀티스크린 프리뷰·모니터링 공식(≠ A/B PVW/PGM). seamless/fade/trueAB 확인 필요
+    features: { genlock: true, tenBit: true },      // Genlock 공식, 10bit는 4K 출력보드 기준. HDR 확인 필요
+    control: {},                                   // AMX/Crestron 확인 필요
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/service/download/', sourceVersion: 'X100 Pro-' + m.slug.toUpperCase() + ' Specification V2.0', notes: '독립 입력·윈도우 공식. Genlock·10bit(출력보드) 공식. 출력 수·전역 레이어·HDR·스위칭 확인 필요' },
   })),
 
   // ── Colorlight · Universe (U Series) ──────────────────────────────────────
@@ -150,10 +151,10 @@ export const PROCESSORS = [
     outputs: { max4k: 10, max2k: 30, maxOutputBoards: 5 },
     // 장치 전체 80×2K 또는 20×4K, 보드 1장 16×2K 또는 4×4K.
     layers: { model: 'screen_group', global2k: 80, global4k: 20, perBoard2k: 16, perBoard4k: 4 },
-    switching: { cut: true, fade: true, trueABMixing: false },
+    switching: { cut: true, fade: true, monitoringPreview: true },   // True A/B는 공식 미확인(null). 프리뷰·모니터링은 공식
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U6 Max Specification V1.0 (문서 §12)', notes: 'I/O·출력·전역/보드 레이어 공식 확인' },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U6 Max Specification V1.0 (문서 §12)', notes: 'I/O·출력·전역/보드 레이어·Fade·HDR·10bit 공식. True A/B·Seamless·Genlock 확인 필요' },
   }),
   proc({
     id: 'cl-universe-u9max',
@@ -161,21 +162,21 @@ export const PROCESSORS = [
     inputs: { maxIndependent4k: 36, maxIndependent2k: 108, maxInputBoards: 18 },
     outputs: { max4k: 20, max2k: 60, maxOutputBoards: 10 },
     layers: { model: 'screen_group', global2k: 160, global4k: 40, perBoard2k: 16, perBoard4k: 4 },
-    switching: { fade: true },
+    switching: { fade: true, monitoringPreview: true },   // True A/B·Seamless는 공식 미확인(null)
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U9 Max Specification V1.1 (handoff 2026-09-12 §6)', notes: 'I/O·출력·전역/보드 레이어 공식(V1.1)' },
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/2033', sourceVersion: 'U9 Max Specification V1.1 (handoff 2026-09-12 §6)', notes: 'I/O·출력·전역/보드 레이어·Fade·HDR·10bit 공식(V1.1). True A/B·Seamless·Genlock 확인 필요' },
   }),
   proc({
     id: 'cl-universe-u15max',
     manufacturer: CL, family: 'Universe', model: 'Universe U15 Max',
     inputs: {},                                        // I/O 확인 필요. 카드당 최대 8K 입력(문서 §14)
     outputs: {},
-    layers: { model: 'screen_group', global2k: 320, global4k: 80 },  // per-board 확인 필요
-    switching: { fade: true },
+    layers: { model: 'screen_group', global2k: 320, global4k: 80 },  // per-board 확인 필요(U6/U9 규칙 자동적용 금지)
+    switching: { fade: true, monitoringPreview: true },
     features: { hdr: true, tenBit: true, redundancy: true },
     control: { tcp: true },
-    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/service/download/', sourceVersion: 'U15 Max Specification V1.0 (문서 §14)', notes: '전역 레이어(320×2K/80×4K) 공식. 최대 5.2억 화소·슬롯 40·카드당 8K 입력. I/O·per-board 확인 필요' },
+    verification: { status: 'partial_official', sourceUrl: 'https://en.colorlightinside.com/product/special///2376', sourceVersion: 'U15 Max Specification V1.0 (handoff v2 §B)', notes: '전역 레이어(320×2K/80×4K)·HDR·10bit·Fade 공식. 최대 5.2억 화소·슬롯 40·카드당 8K 입력. I/O·출력·per-board 확인 필요' },
   }),
 
 ];
