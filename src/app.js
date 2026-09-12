@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=216';
-import { MODELS } from './models.js?v=216';
-import { PROCESSORS } from './processor-data.js?v=216';
-import { processorRequirements } from './processor-limits.js?v=216';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=216';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=216';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=216';
-import { parseCasesText, normalizeDate } from './cases.js?v=216';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=217';
+import { MODELS } from './models.js?v=217';
+import { PROCESSORS } from './processor-data.js?v=217';
+import { processorRequirements } from './processor-limits.js?v=217';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=217';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=217';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=217';
+import { parseCasesText, normalizeDate } from './cases.js?v=217';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -570,18 +570,61 @@ function vpCheckHTML(c) {
     : `${c.have}`;
   return `<li class="vc ${cls}"><span class="ic">${icon}</span><span class="cn">${esc(c.name)}</span><span class="cv">${esc(String(val))}</span></li>`;
 }
+// 입출력 포트가 '고정형'(커넥터 수량이 명시된 제품, 예: Analog Way)인지. 카드 증설형은 포트 고정 수량이 없어 제외.
+function procHasFixedPorts(p) {
+  return ['hdmi14', 'hdmi20', 'dp12', 'sdi3g', 'sdi12g'].some(k => p.inputs?.[k] != null);
+}
 function vpItemHTML(item) {
   const p = item.proc;
   const needsVer = p.verification?.status !== 'official';
   const checks = item.checks.length ? item.checks.map(vpCheckHTML).join('') : '<li class="vc unk"><span class="cn muted-note">검사할 요구 조건이 없습니다</span></li>';
+  // 포트 고정형 제품은 이름을 누르면 포트별 입출력 수량 팝업(이사 요청).
+  const fixed = procHasFixedPorts(p);
+  const nameAttr = fixed ? ` class="vpName vpNameClickable" data-portproc="${esc(p.id)}" role="button" tabindex="0" title="포트별 입출력 수량 보기"` : ' class="vpName"';
   return `<div class="vpItem ${VP_BADGE_CLASS[item.label] || ''}">
     <div class="vpHead">
       <span class="vpBadge">${item.label}</span>
-      <span class="vpName">${esc(p.manufacturer)} · ${esc(p.model)}</span>
+      <span${nameAttr}>${esc(p.manufacturer)} · ${esc(p.model)}${fixed ? ' <span class="vpPortHint">포트▾</span>' : ''}</span>
       ${needsVer ? '<span class="vpVer" title="일부 사양이 공식 확인 전입니다">확인 필요 사양 포함</span>' : ''}
     </div>
     <ul class="vpChecksList">${checks}</ul>
   </div>`;
+}
+// 포트별 입출력 수량 팝업. index.html 마크업을 건드리지 않게 동적으로 생성.
+function openPortPopup(id) {
+  const p = PROCESSORS.find(x => x.id === id);
+  if (!p) return;
+  const nn = v => (v == null ? '<span class="muted-note">—</span>' : `<b>${v}</b>개`);
+  const inRows = [['HDMI 1.4', p.inputs.hdmi14], ['HDMI 2.0', p.inputs.hdmi20], ['DisplayPort 1.2', p.inputs.dp12], ['SDI 3G', p.inputs.sdi3g], ['SDI 12G', p.inputs.sdi12g]]
+    .filter(([, v]) => v != null);
+  const outRows = [['4K 출력', p.outputs.max4k], ['2K 출력', p.outputs.max2k]].filter(([, v]) => v != null);
+  const row = (label, v) => `<tr><td>${esc(label)}</td><td class="pp-n">${nn(v)}</td></tr>`;
+  const inHTML = inRows.length ? inRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요(데이터시트 미확보)</td></tr>`;
+  const outHTML = outRows.length ? outRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요</td></tr>`;
+  const needsVer = p.verification?.status !== 'official';
+  let el = document.querySelector('#portPop');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'portPop';
+    el.hidden = true;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-portclose]')) el.hidden = true; });
+  }
+  el.innerHTML = `<div class="portPopCard" role="dialog" aria-modal="true" aria-label="포트별 입출력 수량">
+    <div class="ppHead">
+      <div class="ppTitle">${esc(p.manufacturer)} · ${esc(p.family || '')} ${esc(p.model)}</div>
+      <button type="button" class="ppClose" data-portclose aria-label="닫기">✕</button>
+    </div>
+    <div class="ppBody">
+      <div class="ppSec"><div class="ppSecTitle">입력 포트</div><table class="ppTable">${inHTML}</table>
+        ${(p.inputs.maxIndependent4k != null || p.inputs.maxIndependent2k != null)
+          ? `<div class="ppNote">독립 입력 최대 · 4K ${p.inputs.maxIndependent4k ?? '—'} / 2K ${p.inputs.maxIndependent2k ?? '—'}</div>` : ''}
+      </div>
+      <div class="ppSec"><div class="ppSecTitle">출력</div><table class="ppTable">${outHTML}</table></div>
+    </div>
+    ${needsVer ? '<div class="ppVer">※ 일부 값은 공식 확인 전이라 “—(확인 필요)”로 표시됩니다.</div>' : ''}
+  </div>`;
+  el.hidden = false;
 }
 // 추천 결과를 제조사별로 묶어 접이식(details)으로 그린다. 순서는 전체 추천 순위를 유지
 //   (=제일 좋은 모델을 가진 제조사가 맨 위, 그 제조사 그룹만 기본 펼침). 나머지는 제조사명을 눌러 펼친다.
@@ -841,6 +884,12 @@ $('#vpOut4k')?.addEventListener('input', () => { vpOut4kEdited = $('#vpOut4k').v
 // 내 장비 구성 검증: 입력/선택 시 다시 판정.
 ['vpBuildOut4k', 'vpBuildIn4k', 'vpBuildIn2k'].forEach(id => $('#' + id)?.addEventListener('input', renderProcessors));
 $('#vpBuildProc')?.addEventListener('change', renderProcessors);
+// 포트 고정형 프로세서 이름 클릭/엔터 → 포트별 입출력 수량 팝업. Esc로 닫기.
+document.addEventListener('click', e => { const t = e.target.closest('[data-portproc]'); if (t) openPortPopup(t.dataset.portproc); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { const el = document.querySelector('#portPop'); if (el && !el.hidden) el.hidden = true; }
+  else if ((e.key === 'Enter' || e.key === ' ') && e.target?.matches?.('[data-portproc]')) { e.preventDefault(); openPortPopup(e.target.dataset.portproc); }
+});
 setLedMax();   // 초기 max 속성 설정
 const EDGE_MARGIN = 100;   // 설치 공간 가장자리 여유(mm, 각 변) — 사례 등록/불러오기 등에서 사용
 // 화면(Screen) 배열 열·행을 직접 입력하면 '배열 직접 지정' 모드로 전환한다(벽면은 선언값 그대로 유지 → 여백 표시).
