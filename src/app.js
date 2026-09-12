@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=190';
-import { MODELS } from './models.js?v=190';
-import { PROCESSORS } from './processor-data.js?v=190';
-import { processorRequirements } from './processor-limits.js?v=190';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=190';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=190';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=190';
-import { parseCasesText, normalizeDate } from './cases.js?v=190';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=191';
+import { MODELS } from './models.js?v=191';
+import { PROCESSORS } from './processor-data.js?v=191';
+import { processorRequirements } from './processor-limits.js?v=191';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=191';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=191';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=191';
+import { parseCasesText, normalizeDate } from './cases.js?v=191';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -90,6 +90,10 @@ let visibleLines = new Set(SALES_LINES);
 
 const $ = s => document.querySelector(s);
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+// 벽면 크기 입력(#spaceW/#spaceH)은 m 단위로 받는다. 내부 계산·저장·공유는 모두 mm이므로 읽을 때 ×1000 환산.
+//   (반대로 화면에 되쓸 때는 c.spaceW/1000 — applyConfig 참조.)
+const spaceWmm = () => num($('#spaceW').value) * 1000;
+const spaceHmm = () => num($('#spaceH').value) * 1000;
 const fmt = (n, d = 0) => (isFinite(n) && n != null) ? n.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
 // 피치 표기: 최대 소수 2자리, 끝자리 0은 생략 (1.5→"1.5", 1.25→"1.25", 1.5625→"1.56").
 const fmtPitch = p => (p != null && isFinite(p)) ? p.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : '—';
@@ -196,8 +200,8 @@ function opts() {
   const common = { redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight };
   if (mode === 'manual') return { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), ...common };
   // 자동 채움: ② LED 설치 크기(비우면 벽면 = 세로는 하단 높이 위)에 캐비닛을 채운다.
-  const lw = num($('#ledW')?.value) || num($('#spaceW').value);
-  const lh = num($('#ledH')?.value) || Math.max(0, num($('#spaceH').value) - baseHeight);
+  const lw = num($('#ledW')?.value) || spaceWmm();
+  const lh = num($('#ledH')?.value) || Math.max(0, spaceHmm() - baseHeight);
   return { mode: 'ledsize', ledW: lw, ledH: lh, ...common };
 }
 
@@ -248,7 +252,7 @@ function renderPreview() {
   const stage = $('#stage');
   $('#pvModelName').textContent = m ? m.name : '—';
   if (!m) { stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
-  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const sW = spaceWmm(), sH = spaceHmm();
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
 
@@ -420,7 +424,7 @@ function renderReadout() {
   const m = models.find(x => x.id === selectedId);
   const box = $('#readout'), nt = $('#notices'); nt.innerHTML = '';
   if (!m) { box.innerHTML = ''; const vs = $('#vSplitInfo'); if (vs) vs.hidden = true; return; }
-  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const sW = spaceWmm(), sH = spaceHmm();
   const r = computeConfig(m, sW, sH, opts());
   updateVSplit(r, sH);
   // 화면(Screen) 배열은 항상 표시: 자동 채움·LED 크기 지정 모드에선 계산된 열·행을 입력칸에 반영한다.
@@ -543,7 +547,7 @@ function renderProcessors() {
   if (!auto || !out) return;
   const m = models.find(x => x.id === selectedId);
   if (!m) { auto.innerHTML = '<div class="previewEmpty">모델을 선택하면 추천이 표시됩니다.</div>'; out.innerHTML = ''; return; }
-  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const sW = spaceWmm(), sH = spaceHmm();
   const r = computeConfig(m, sW, sH, opts());
   if (!r.fits || !(r.resW > 0)) { auto.innerHTML = '<div class="previewEmpty">배열이 없어 추천을 계산할 수 없습니다.</div>'; out.innerHTML = ''; return; }
   const o = vpReqOpts();
@@ -600,7 +604,7 @@ function renderBuild(req, ranked) {
 }
 
 function renderCompare() {
-  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const sW = spaceWmm(), sH = spaceHmm();
   const cs4b = $('#useCS4B')?.checked ?? false;
   const rows = visibleModels().map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill', cs4b }) }));
   const body = $('#cmpBody'); body.innerHTML = '';
@@ -646,7 +650,7 @@ function renderQuote() {
   ensureIndirectDefaults();
   const m = models.find(x => x.id === selectedId);
   if (!m) { box.innerHTML = ''; return; }
-  const sW = num($('#spaceW').value), sH = num($('#spaceH').value);
+  const sW = spaceWmm(), sH = spaceHmm();
   const r = computeConfig(m, sW, sH, opts());
   const etc = { cost: num($('#etcCost')?.value), sell: num($('#etcSell')?.value) };
   const highWork = $('#highWork')?.checked ?? false;
@@ -718,8 +722,8 @@ function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHe
 // LED 크기 입력칸의 max 속성만 갱신(값은 절대 건드리지 않음).
 //   벽면·하단 높이를 편집할 때 이걸 쓴다 → LED 세로가 편집 중 0으로 눌러붙던 버그 방지.
 function setLedMax() {
-  const maxW = Math.max(0, num($('#spaceW').value));
-  const maxH = Math.max(0, num($('#spaceH').value) - num($('#baseHeight').value));
+  const maxW = Math.max(0, spaceWmm());
+  const maxH = Math.max(0, spaceHmm() - num($('#baseHeight').value));
   const wEl = $('#ledW'), hEl = $('#ledH');
   if (wEl) wEl.max = maxW;
   if (hEl) hEl.max = maxH;
@@ -728,8 +732,8 @@ function setLedMax() {
 //   maxH가 0(하단 높이 ≥ 벽 세로)일 땐 값을 0으로 만들지 않는다(=0은 '벽면 전체 채움' 뜻이라 혼동 방지).
 function clampLedInputs() {
   setLedMax();
-  const maxW = Math.max(0, num($('#spaceW').value));
-  const maxH = Math.max(0, num($('#spaceH').value) - num($('#baseHeight').value));
+  const maxW = Math.max(0, spaceWmm());
+  const maxH = Math.max(0, spaceHmm() - num($('#baseHeight').value));
   const wEl = $('#ledW'), hEl = $('#ledH');
   if (wEl && maxW > 0 && num(wEl.value) > maxW) wEl.value = maxW;
   if (hEl && maxH > 0 && num(hEl.value) > maxH) hEl.value = maxH;
@@ -739,8 +743,8 @@ function clampLedInputs() {
 function clampBaseHeight() {
   const m = models.find(x => x.id === selectedId); const el = $('#baseHeight');
   if (!m || !el) return;
-  const sH = num($('#spaceH').value);
-  const r = computeConfig(m, num($('#spaceW').value), sH, opts());
+  const sH = spaceHmm();
+  const r = computeConfig(m, spaceWmm(), sH, opts());
   if (!r.fits || !(r.actualH > 0)) { el.removeAttribute('max'); return; }
   const maxBase = Math.max(0, Math.round(sH - r.actualH));
   el.max = maxBase;
@@ -751,7 +755,7 @@ function clampBaseHeight() {
 function clampManualArray() {
   if (mode !== 'manual') return;
   const m = models.find(x => x.id === selectedId); if (!m) return;
-  const fit = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
+  const fit = computeConfig(m, spaceWmm(), spaceHmm(), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
   const cEl = $('#manCols'), rEl = $('#manRows');
   if (cEl && fit.cols > 0) { cEl.max = fit.cols; if (num(cEl.value) > fit.cols) cEl.value = fit.cols; }
   if (rEl && fit.rows > 0) { rEl.max = fit.rows; if (num(rEl.value) > fit.rows) rEl.value = fit.rows; }
@@ -944,7 +948,7 @@ function writeConfigs(list) { try { localStorage.setItem(CONFIG_KEY, JSON.string
 function gatherConfig() {
   const m = models.find(x => x.id === selectedId) || null;
   return {
-    spaceW: num($('#spaceW').value), spaceH: num($('#spaceH').value),
+    spaceW: spaceWmm(), spaceH: spaceHmm(),
     baseHeight: num($('#baseHeight').value), ledW: num($('#ledW').value), ledH: num($('#ledH').value),
     mode, manCols: num($('#manCols').value), manRows: num($('#manRows').value),
     redundancy: $('#redundancy').checked, cs4b: userCS4B, gbicFB: $('#gbicFB').checked,
@@ -966,7 +970,7 @@ function applyConfig(raw) {
   if (c.selectedId && !models.some(m => m.id === c.selectedId) && c.selectedModel) {
     models.push({ ...c.selectedModel, _show: true });
   }
-  $('#spaceW').value = c.spaceW; $('#spaceH').value = c.spaceH;
+  $('#spaceW').value = c.spaceW / 1000; $('#spaceH').value = c.spaceH / 1000;   // 저장은 mm, 화면 입력은 m
   $('#baseHeight').value = c.baseHeight; $('#ledW').value = c.ledW; $('#ledH').value = c.ledH;
   $('#manCols').value = c.manCols; $('#manRows').value = c.manRows;
   $('#sboxSpare').value = c.sboxSpare;
@@ -999,7 +1003,7 @@ function configSummary(d) {
   const c = normalizeConfig(d);
   const model = c.selectedModel?.name || c.selectedId || '—';
   const arr = c.mode === 'manual' ? `${c.manCols}×${c.manRows}` : '자동';
-  return `${esc(model)} · ${fmt(c.spaceW)}×${fmt(c.spaceH)}mm · ${arr}`;
+  return `${esc(model)} · ${c.spaceW / 1000}×${c.spaceH / 1000}m · ${arr}`;
 }
 
 // 현재 화면에 불러와 있는 구성 이름(있으면 '덮어쓰기 저장'의 대상). 새로 만들면 null.
@@ -1027,7 +1031,7 @@ function saveCurrentConfig() {
   // 기본 이름 제안: 모델명_열X행 (예: IF015R_4X4). 배열 수량은 현재 설정으로 산출.
   let suggested = m?.name || '구성';
   if (m) {
-    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
+    const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
     if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
   }
   // 불러온 구성(로컬·공유함·링크)이 있으면: 덮어쓰기 저장 / 다른 이름으로 저장 선택.
@@ -1208,7 +1212,7 @@ async function uploadCurrentToShared() {
   const m = models.find(x => x.id === selectedId);
   let suggested = currentConfigName || m?.name || '구성';
   if (!currentConfigName && m) {
-    const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
+    const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
     if (r && r.cols > 0 && r.rows > 0) suggested = `${m.name}_${r.cols}X${r.rows}`;
   }
   const name = (prompt('설계 프로젝트에 올릴 이름:', suggested) || '').trim();
@@ -1270,7 +1274,7 @@ function getCaseAdminCode(forceNew) {
 function currentModelArray() {
   const m = models.find(x => x.id === selectedId);
   if (!m) return { m: null, cols: 0, rows: 0 };
-  const r = computeConfig(m, num($('#spaceW').value), num($('#spaceH').value), opts());
+  const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
   return { m, cols: r.cols || 0, rows: r.rows || 0 };
 }
 // 사례의 해상도 표기(모델+배열로 자동 계산). 모델을 못 찾으면 빈 문자열.
@@ -1414,7 +1418,7 @@ async function registerCurrentCase() {
   const rec = {
     name, site: site || null, install_date, memo: memo || null,
     model_name: m.name, cols, rows,
-    space_w: num($('#spaceW').value) || null, space_h: num($('#spaceH').value) || null,
+    space_w: spaceWmm() || null, space_h: spaceHmm() || null,
     data: gatherConfig(), created_by: localStorage.getItem(NAME_KEY) || null,
   };
   // 중복 검사 — 같은 사례가 이미 있으면 등록하지 않고 팝업으로 알린다.
@@ -1437,7 +1441,7 @@ async function editCase(c) {
   const { m, cols, rows } = currentModelArray();
   if (m && confirm(`모델·배열을 지금 화면 구성(${m.name} ${cols}×${rows})으로 교체할까요?\n[확인] 모델·배열까지 교체   [취소] 사례명·장소·날짜·메모만 수정`)) {
     patch.model_name = m.name; patch.cols = cols; patch.rows = rows;
-    patch.space_w = num($('#spaceW').value) || null; patch.space_h = num($('#spaceH').value) || null;
+    patch.space_w = spaceWmm() || null; patch.space_h = spaceHmm() || null;
     patch.data = gatherConfig();
   }
   try { await updateCase(admin, c.id, patch, caseViewCode); await renderCaseList(); alert(`'${name}' 사례를 수정했습니다.`); }
