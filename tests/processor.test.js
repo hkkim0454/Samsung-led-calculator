@@ -233,10 +233,11 @@ test('Aquilon RS4 meets 4K in 8 / mixing 8 / out 4 -> PASS', () => {
 
 // ── rankProcessors: 등급 순 정렬, FAIL은 부적합으로 뒤로 ─────────────────────────
 test('rankProcessors sorts PASS/CONDITIONAL ahead of FAIL', () => {
-  const req = processorRequirements({ resW: 3840, resH: 2160 }, { independent4kInputs: 30 });
+  // 4K 출력 4개(≥3)라 Aquilon도 목록에 포함된다.
+  const req = processorRequirements({ resW: 7680, resH: 4320 }, { independent4kInputs: 30 });
   const ranked = rankProcessors(PROCESSORS, req);
-  assert.ok(ranked.length === PROCESSORS.length);
-  // 독립 4K 입력 30 요구 -> X100 Pro(최대 8)·Midra(8) 등은 부적합, Aquilon RS6(32)는 통과 가능.
+  assert.equal(ranked.length, PROCESSORS.length);
+  // 독립 4K 입력 30 요구 -> X100 Pro(최대 8) 등은 부적합, Aquilon RS6(32)는 통과 가능.
   const rs6 = ranked.find(r => r.proc.id === 'aw-aquilon-rs6');
   const x7u = ranked.find(r => r.proc.id === 'cl-x100pro-7u');
   assert.equal(x7u.label, '부적합');       // 독립 4K 입력 8 < 30
@@ -244,6 +245,28 @@ test('rankProcessors sorts PASS/CONDITIONAL ahead of FAIL', () => {
   // 일단 '부적합'이 나오면 그 뒤는 전부 '부적합'이어야 한다(부적합은 맨 뒤로).
   const firstFail = ranked.findIndex(r => r.label === '부적합');
   assert.ok(firstFail === -1 || ranked.slice(firstFail).every(r => r.label === '부적합'));
+});
+
+// ── 이사 규칙: 소형 작업(4K 출력 ≤2)에서 Aquilon 숨김(예외 없음) ────────────────
+test('Aquilon hidden when required 4K outputs <= 2, shown when >= 3', () => {
+  const has = list => list.some(r => r.proc.family === 'Aquilon');
+  // 4K 출력 1개(3840×2160): Aquilon 숨김
+  assert.equal(has(rankProcessors(PROCESSORS, processorRequirements({ resW: 3840, resH: 2160 }))), false);
+  // 4K 출력 2개(7680×2160): Aquilon 숨김
+  assert.equal(has(rankProcessors(PROCESSORS, processorRequirements({ resW: 7680, resH: 2160 }))), false);
+  // 4K 출력 4개(7680×4320): Aquilon 표시
+  assert.equal(has(rankProcessors(PROCESSORS, processorRequirements({ resW: 7680, resH: 4320 }))), true);
+  // 예외 없음: 방송급(공연·방송급) 요구여도 소형이면 숨김
+  const show = processorRequirements({ resW: 3840, resH: 2160 }, { advancedTransitionRequired: true, trueABRequired: true });
+  assert.equal(has(rankProcessors(PROCESSORS, show)), false);
+});
+
+// ── QuickVu / QuickMatrix 단종 삭제 확인 ────────────────────────────────────────
+test('discontinued Midra models removed; Pulse/Eikos remain', () => {
+  const midra = PROCESSORS.filter(p => p.family === 'Midra').map(p => p.model);
+  assert.deepEqual(midra.sort(), ['Eikos 4K', 'Pulse 4K']);
+  assert.equal(getProcessor('aw-midra-quickvu-4k'), null);
+  assert.equal(getProcessor('aw-midra-quickmatrix-4k'), null);
 });
 
 // ── 데이터 무결성: 모든 제품이 유효한 스키마를 가진다 ───────────────────────────
