@@ -318,6 +318,63 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
   .rsFig .h{background:#565b6b} .rsFig .b{background:#4b505f} .rsFig .l{background:#414654}
 }
 
+/* ==== 03 미리보기 — CSS 3D 1점 투시 원근(rs3*, 원근감 스펙 2026-09-12). 물리 다이어그램이라 항상 라이트. ====
+   (위 rs* 블록은 이전 2D 방식으로 현재 미사용 — renderPreview가 rs3*로 교체됨. 추후 정리 예정) */
+@keyframes rs3Breathe{0%,100%{opacity:.6}50%{opacity:1}}
+.rs3Frame{position:relative;width:100%;overflow:hidden;border-radius:var(--r-inner);
+  background:linear-gradient(170deg,#f7f8fb 0%,#eceef3 100%);border:1px solid rgba(16,18,40,.06)}
+.rs3Frame,.rs3Frame *{color-scheme:only light;forced-color-adjust:none}
+.rs3Canvas{position:absolute;top:0;left:0;transform-origin:top left}
+.rs3Persp{position:absolute;inset:0}
+.rs3Scene{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
+.rs3Face{position:absolute;transform-style:preserve-3d;backface-visibility:hidden}
+.rs3Face.front{background:linear-gradient(160deg,#eceef2,#e2e5ea)}
+.rs3Face.ceil{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#fdfdfe,#e9ebef)}
+.rs3Face.floor{transform-origin:top;transform:rotateX(90deg);background:linear-gradient(#cfd3d9,#e6e8ec);overflow:hidden}
+.rs3Face.wallL{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to right,#e2e5ea,#eef0f4)}
+.rs3Face.wallR{transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(to left,#e2e5ea,#eef0f4)}
+.rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(16,18,22,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(16,18,22,.16) 0 1px,transparent 1px);background-repeat:repeat}
+.rs3Ao{position:absolute;left:0;right:0;top:0;height:120px;background:linear-gradient(to bottom,rgba(16,18,22,.16),transparent)}
+.rs3FloorGlow{position:absolute;top:0;height:420px;background:radial-gradient(120% 100% at 50% 0%,rgba(47,127,246,.20),transparent 70%)}
+.rs3Led{position:absolute;transform:translateZ(10px);border-radius:2px;background:#14161a;
+  box-shadow:0 0 0 2px #2f7ff6,0 0 60px 10px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)}
+.rs3Grid{position:absolute;inset:0;display:grid;gap:2px;padding:3px;box-sizing:border-box}
+.rs3Grid>i{background:linear-gradient(160deg,#2b3037,#1e2228 60%,#23272d);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);border-radius:1px}
+.rs3Glow{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(47,127,246,.22),transparent 60%);animation:rs3Breathe 6s ease-in-out infinite;pointer-events:none}
+.rs3ColN,.rs3RowN{position:absolute;display:grid;align-items:center;justify-items:center;font-size:9.5px;font-weight:700;color:#EDEDF4;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none}
+.rs3Sig{position:absolute;box-sizing:border-box;border:2px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}
+.rs3Sig.uhd{border-color:rgba(255,59,48,.95)}
+.rs3SigTag{position:absolute;top:0;left:0;font-size:8.5px;font-weight:700;color:#fff;background:rgba(47,127,246,.95);padding:0 4px;border-radius:0 0 4px 0}
+.rs3Sig.uhd .rs3SigTag{background:rgba(255,59,48,.95)}
+.rs3Eye{position:absolute;left:0;width:100%;border-top:1px dashed rgba(29,95,208,.5)}
+.rs3EyeLbl{position:absolute;left:6px;transform:translateY(-50%);font-size:9px;font-weight:600;color:#1d5fd0;white-space:nowrap}
+.rs3Person{position:absolute;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.rs3Person .h{width:26%;aspect-ratio:1;border-radius:50%;background:#b3b3c0}
+.rs3Person .b{width:100%;flex:1;margin-top:4%;border-radius:44% 44% 16% 16%/22% 22% 6% 6%;background:#c1c1cd}
+.rs3Overlay{position:absolute;inset:0;pointer-events:none}
+.rs3Dln{position:absolute;pointer-events:none}
+.rs3Dln.h{border-top:1px dashed rgba(16,18,22,.3);transform:translateY(-50%)}
+.rs3Dln.v{border-left:1px dashed rgba(16,18,22,.3);transform:translateX(-50%)}
+.rs3Dlbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-family:var(--mono);pointer-events:none}
+.rs3Dlbl.key{background:#14161a;color:#fff;font-size:12px;font-weight:600;padding:2px 7px;border-radius:6px}
+.rs3Dlbl.sub{background:rgba(255,255,255,.94);color:#5b6069;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
+.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.rs3Dlbl.person{background:rgba(255,255,255,.94);color:#5b6069;font-size:10px;font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
+.rs3Dlbl.vlbl{transform:translate(-50%,-50%) rotate(-90deg)}
+.rs3Frame.noGrid .rs3FloorGrid{display:none}
+.rs3Frame.noEye .rs3Eye,.rs3Frame.noEye .rs3EyeLbl{display:none}
+.rs3Frame.noPerson .rs3Person,.rs3Frame.noPerson .rs3Dlbl.person{display:none}
+.rs3Frame.noDims .rs3Overlay,.rs3Frame.noDims .rs3ColN,.rs3Frame.noDims .rs3RowN,.rs3Frame.noDims .rs3SigTag{display:none}
+/* 표시 토글 버튼(세그먼트 오른쪽) */
+.pvHeadRow{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.pvToggles{display:flex;gap:6px;flex-wrap:wrap}
+.pvTog{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(16,18,22,.12);background:var(--field-fill,#fff);
+  padding:7px 11px;border-radius:8px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.pvTog:hover{border-color:rgba(47,127,246,.5);color:var(--ink)}
+.pvTog .dot{width:7px;height:7px;border-radius:50%;background:#d5d8dd}
+.pvTog.on .dot{background:#2f7ff6}
+.pvTog.on{color:var(--ink)}
+
 /* Samsung-configurator style preview */
 /* 설치 공간(선언한 벽면). 얇은 회색 윤곽 + 은은한 그림자 — FHD(파랑) 신호와 색이 겹치지 않게 */
 .pvScene{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
