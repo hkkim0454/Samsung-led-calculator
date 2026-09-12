@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=211';
-import { MODELS } from './models.js?v=211';
-import { PROCESSORS } from './processor-data.js?v=211';
-import { processorRequirements } from './processor-limits.js?v=211';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=211';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=211';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=211';
-import { parseCasesText, normalizeDate } from './cases.js?v=211';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=212';
+import { MODELS } from './models.js?v=212';
+import { PROCESSORS } from './processor-data.js?v=212';
+import { processorRequirements } from './processor-limits.js?v=212';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=212';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=212';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=212';
+import { parseCasesText, normalizeDate } from './cases.js?v=212';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -296,8 +296,8 @@ function renderPreview() {
   // ── 줌인(이사 요청: 20% 이상 크게) + 라벨 화면 안 clamp 준비 ─────────────────
   //   방+오버레이가 모두 rs3Canvas 안이라, 캔버스에 zoom(scale)+이동만 주면 정렬이 유지된다.
   const personLbl = proj(personX, SHp, personD);
-  const topDimGap = px(700);
-  const topDimV = Ly - topDimGap;                 // 상단 가로 치수선 높이(캐비닛 번호와 넉넉히 떨어지게 위로, 이사 요청)
+  const topDimGap = px(500);
+  const topDimV = Ly - topDimGap;                 // 상단 가로 치수선 높이(번호 위, 너무 높지 않게, 이사 요청)
   const dFront = Dp;                               // 벽 치수선을 방 '맨 앞 모서리'(가로=앞 바닥, 세로=앞 좌측)에(이사 요청). 라벨은 clamp로 화면 안 유지.
   const yTopC = Math.min(proj(0, 0, Dp).y, proj(Lx, topDimV, 0).y) - 8;   // 콘텐츠 세로 범위(캔버스 좌표)
   const yBotC = Math.max(proj(0, SHp, Dp).y, personLbl.y + 20) + 8;
@@ -417,10 +417,11 @@ function renderPreview() {
     hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
     hDim(Lx + Lw, SWp, topDimV, 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
   }
-  // 벽 크기(가로·세로): 방 맨 바깥 앞 모서리에(이사 요청). 가로=앞 바닥 맨 아래, 세로=앞 좌측 세로 모서리.
-  //   가로: 앞 바닥 모서리가 화면 아래로 잘리면 '보이는 맨 아래(visB)'에 맞춰 깊이를 당겨 선이 항상 보이게.
+  // 벽 크기(가로·세로): 방 바깥쪽 앞 모서리에(이사 요청). 가로=앞 바닥, 세로=앞 좌측 세로 모서리.
+  //   가로 치수선은 화면 맨 아래 경계에 딱 붙으면 프레임에 가려 안 보이므로, 바닥에서 22px 위까지만 내림.
+  const yWidthMax = visB - 22 / effFit;
   let dWidth = dFront;
-  if (proj(0, SHp, dFront).y > visB) dWidth = P + ZW - P / ((visB - CY) / (SHp - vEye));
+  if (proj(0, SHp, dFront).y > yWidthMax) dWidth = P + ZW - P / ((yWidthMax - CY) / (SHp - vEye));
   hDim(0, SWp, SHp, dWidth, mL(sW), 'sub');
   vDim(uHeight, 0, SHp, dFront, mL(sH), 'sub');
   pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
