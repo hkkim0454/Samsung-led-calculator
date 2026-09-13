@@ -605,3 +605,23 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppTable .pp-n{text-align:right;white-space:nowrap}
 .ppNote{margin-top:6px;font-size:12px;color:var(--muted)}
 .ppVer{padding:8px 18px 16px;font-size:12px;color:var(--warn)}
+
+/* ── 03 미리보기 '크게 보기'(전체화면 팝업) ── */
+.pvZoomBtn{margin-left:6px}
+#pvZoom{position:fixed;inset:0;z-index:1000;background:rgba(16,18,40,.55);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.pvZoomInner{background:#fff;border-radius:16px;width:min(1400px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px -12px rgba(10,20,60,.5)}
+.pvZoomHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(16,18,40,.08)}
+.pvZoomTitle{font-weight:700}
+.pvZoomClose{border:0;background:rgba(16,18,40,.06);width:34px;height:34px;border-radius:9px;font-size:16px;line-height:1;cursor:pointer}
+.pvZoomClose:hover{background:rgba(16,18,40,.12)}
+.pvZoomBody{padding:14px;overflow:auto}
+.pvZoomBody .pvHeadRow{margin-bottom:10px}
+.pvZoomBody .previewStage{width:100%}
+body.pvZoomOpen{overflow:hidden}
+body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버튼 숨김 */
+@media (prefers-color-scheme:dark){
+  .pvZoomInner{background:#12141a;box-shadow:0 24px 60px -12px rgba(0,0,0,.6)}
+  .pvZoomHead{border-bottom-color:rgba(255,255,255,.1)}
+  .pvZoomClose{background:rgba(255,255,255,.1);color:#e8eaf0}
+  .pvZoomClose:hover{background:rgba(255,255,255,.18)}
+}

@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=236';
-import { MODELS } from './models.js?v=236';
-import { PROCESSORS } from './processor-data.js?v=236';
-import { processorRequirements } from './processor-limits.js?v=236';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=236';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=236';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=236';
-import { parseCasesText, normalizeDate } from './cases.js?v=236';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=237';
+import { MODELS } from './models.js?v=237';
+import { PROCESSORS } from './processor-data.js?v=237';
+import { processorRequirements } from './processor-limits.js?v=237';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=237';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=237';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=237';
+import { parseCasesText, normalizeDate } from './cases.js?v=237';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -964,6 +964,53 @@ $('#pvToggles')?.addEventListener('click', e => {
   renderPreview();
 });
 syncPvToggles();
+
+// ── 03 미리보기 '크게 보기'(전체화면 팝업) ─────────────────────────────
+//   머리줄(토글·신호)+미리보기(#stage)를 팝업으로 옮겨 담아 그대로 크게 보여주고,
+//   닫으면 원래 카드로 되돌린다. renderPreview는 #stage 실폭에 맞춰 자동 확대되므로 팝업에선 크게 그려짐.
+(function setupPreviewZoom() {
+  const toggles = $('#pvToggles');
+  const card = document.querySelector('.previewCard');
+  if (!toggles || !card) return;
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'pvTog pvZoomBtn'; btn.dataset.act = 'zoom';
+  btn.title = '미리보기 크게 보기'; btn.innerHTML = '⛶ 크게 보기';
+  toggles.appendChild(btn);
+
+  let overlay = null;
+  const head = () => document.querySelector('.pvHeadRow');
+  const stageEl = () => document.querySelector('#stage');
+  function ensureOverlay() {
+    if (overlay) return;
+    overlay = document.createElement('div');
+    overlay.id = 'pvZoom'; overlay.hidden = true;
+    overlay.innerHTML = '<div class="pvZoomInner" role="dialog" aria-modal="true" aria-label="배열 미리보기 크게 보기">'
+      + '<div class="pvZoomHead"><span class="pvZoomTitle">배열 미리보기</span>'
+      + '<button class="pvZoomClose" type="button" aria-label="닫기">✕</button></div>'
+      + '<div class="pvZoomBody"></div></div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('.pvZoomClose')) closeZoom(); });
+  }
+  function onKey(e) { if (e.key === 'Escape') closeZoom(); }
+  function openZoom() {
+    if (overlay && !overlay.hidden) return;
+    ensureOverlay();
+    const body = overlay.querySelector('.pvZoomBody');
+    body.appendChild(head()); body.appendChild(stageEl());   // 머리줄+미리보기를 팝업으로 이동
+    overlay.hidden = false; document.body.classList.add('pvZoomOpen');
+    document.addEventListener('keydown', onKey);
+    renderPreview();
+  }
+  function closeZoom() {
+    if (!overlay || overlay.hidden) return;
+    card.appendChild(head()); card.appendChild(stageEl());    // 원래 카드로 되돌림(h2 다음 순서 유지)
+    overlay.hidden = true; document.body.classList.remove('pvZoomOpen');
+    document.removeEventListener('keydown', onKey);
+    renderPreview();
+  }
+  btn.addEventListener('click', openZoom);
+})();
+
 $('#lineFilter').addEventListener('change', e => {
   const cb = e.target.closest('input[data-line]'); if (!cb) return;
   if (cb.checked) visibleLines.add(cb.dataset.line); else visibleLines.delete(cb.dataset.line);
