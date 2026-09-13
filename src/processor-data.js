@@ -31,7 +31,9 @@ const emptySlots = () => ({ physicalInputSlots: null, physicalOutputSlots: null,
 // 확인 안 되면 모두 null(추정 금지).
 const emptyInputs = () => ({ total: null, maxIndependent2k: null, maxIndependent4k: null, dedicated2kInputs: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null, comboHdmi14Sdi3g: null });
 // 출력: Active / 독립4K출력 / 4K PGM / 독립2K를 각각 분리(지침 1). max4k/max2k 단일값 사용 금지.
-const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null });
+//   maxWallSbox4k: 하나의 통합 LED 벽을 구동할 때 지원 가능한 S-Box 4K 패널(3840×2160) 최대 수.
+//     Pulse 4K는 4K 1판(S-Box 1개)만 가능 → 1. null이면 별도 제한 없음(4K PGM 용량까지 허용).
+const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null, maxWallSbox4k: null });
 const emptyLayers = () => ({ model: null, maxWindows: null, maxLayers: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, chassisMaxLayers2k: null });
 const emptyCanvas = () => ({ multiOutputCanvas: null, horizontalSpan: null, verticalSpan: null, maxCanvasOutputs: null });
 // AUX(보조 출력)는 제조사/제품군별로 성격이 다르므로 generic 규칙으로 합치지 않는다(지침 7).
@@ -80,12 +82,12 @@ export const PROCESSORS = [
   //   Pulse: Matrix(2×PGM) / Mixer(1×PGM + 1×AUX 1080p60). Edge-Blending 미지원(→ Wide Canvas 불가).
   //   Eikos: Matrix / Mixer / Edge-Blending(Hard-Soft Edge) → 2출력 1 wide PGM 지원(지침 5).
   ...[
-    { model: 'Pulse 4K', slug: 'pulse-4k',
+    { model: 'Pulse 4K', slug: 'pulse-4k', wall4k: 1,   // 4K 1판(S-Box 1개)만 → 3840×2160 초과 시 사용 불가
       canvas: { multiOutputCanvas: false, horizontalSpan: false, verticalSpan: false, maxCanvasOutputs: null },   // Edge-Blending 미지원
       modes: { matrix: true, mixer: true, edgeBlending: false },   // Matrix(2 독립 PGM) / Mixer / Edge 미지원
       aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null },   // Mixer 모드 1×AUX. 메인자원 소모여부 미확인→null
-      note: 'Matrix 2×4K 독립 PGM / Mixer 1×4K PGM + 1×AUX(1080p60). Edge-Blending 미지원 → Wide Canvas 불가.' },
-    { model: 'Eikos 4K', slug: 'eikos-4k',
+      note: 'Matrix 2×4K 독립 PGM / Mixer 1×4K PGM + 1×AUX(1080p60). Edge-Blending 미지원 → Wide Canvas 불가. 통합 벽 4K 1판(S-Box 1개)만 → 3840×2160 초과 시 사용 불가.' },
+    { model: 'Eikos 4K', slug: 'eikos-4k', wall4k: null,   // Edge-Blending으로 2출력 wide 가능(별도 제한 없음)
       canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 2 },   // Edge-Blending 지원(2출력 → 1 wide PGM)
       modes: { matrix: true, mixer: true, edgeBlending: true },   // Matrix(2 독립 PGM) / Mixer / Edge-Blending 모두 지원
       aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null },   // 메인자원 소모여부 미확인→null
@@ -94,7 +96,7 @@ export const PROCESSORS = [
     id: 'aw-midra-' + m.slug,
     manufacturer: AW, family: 'Midra 4K', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
     inputs: { total: 10, maxIndependent4k: 8, maxIndependent2k: 10, dedicated2kInputs: 2, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 8×4K60 + 2×2K60(전용)
-    outputs: { maxActiveOutputs: 2, maxIndependent4kOutputs: 2, maxIndependent4kPgm: 2, maxIndependent2k: null },
+    outputs: { maxActiveOutputs: 2, maxIndependent4kOutputs: 2, maxIndependent4kPgm: 2, maxIndependent2k: null, maxWallSbox4k: m.wall4k },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },
     canvas: m.canvas,
     modes: m.modes,
