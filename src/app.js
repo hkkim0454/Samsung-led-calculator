@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=257';
-import { MODELS } from './models.js?v=257';
-import { PROCESSORS } from './processor-data.js?v=257';
-import { processorRequirements } from './processor-limits.js?v=257';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=257';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=257';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=257';
-import { parseCasesText, normalizeDate } from './cases.js?v=257';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=258';
+import { MODELS } from './models.js?v=258';
+import { PROCESSORS } from './processor-data.js?v=258';
+import { processorRequirements } from './processor-limits.js?v=258';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=258';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=258';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=258';
+import { parseCasesText, normalizeDate } from './cases.js?v=258';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -742,6 +742,74 @@ function dfTopProcessorName(r) {
     return best ? `${best.proc.manufacturer} · ${best.proc.model}` : null;
   } catch { return null; }
 }
+// ── 삼성 공식 도면 스타일 SVG (P18 Power Flow / P19 Data Flow) ────────────────
+function fxCellSize(cols, rows) {
+  return Math.max(16, Math.min(44, Math.floor(980 / Math.max(1, cols)), Math.floor(300 / Math.max(1, rows))));
+}
+// P19 Data Flow(Front View): 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형(serpentine) 영상/통신 배선 + 시작점(파란 점).
+function dataFlowSVG(r) {
+  const ig = r.ig; if (!ig || !ig.regions.length) return '';
+  const cs = fxCellSize(r.cols, r.rows), W = r.cols * cs, H = r.rows * cs;
+  const cx = c => c * cs + cs / 2, cy = k => k * cs + cs / 2;
+  const io = Math.max(5, cs * 0.34);
+  let cells = '', cables = '', groups = '';
+  for (let rr = 0; rr < r.rows; rr++) for (let c = 0; c < r.cols; c++) {
+    cells += `<rect class="fxCell" x="${c * cs}" y="${rr * cs}" width="${cs}" height="${cs}"/>`
+      + `<rect class="fxIo" x="${(c * cs + (cs - io) / 2).toFixed(1)}" y="${(rr * cs + (cs - io) / 2).toFixed(1)}" width="${io.toFixed(1)}" height="${io.toFixed(1)}"/>`;
+  }
+  for (const rg of ig.regions) {
+    if (rg.colStart == null) continue;
+    const x0 = rg.colStart * cs, y0 = rg.rowStart * cs, w = (rg.colEnd - rg.colStart + 1) * cs, h = (rg.rowEnd - rg.rowStart + 1) * cs;
+    const pts = [];
+    for (let ri = rg.rowStart; ri <= rg.rowEnd; ri++) {
+      const cc = []; for (let c = rg.colStart; c <= rg.colEnd; c++) cc.push(c);
+      if ((ri - rg.rowStart) % 2 === 1) cc.reverse();
+      for (const c of cc) pts.push([cx(c), cy(ri)]);
+    }
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    cables += `<path class="fxCable" d="${d}"/><circle class="fxStart" cx="${pts[0][0].toFixed(1)}" cy="${pts[0][1].toFixed(1)}" r="${Math.max(4, cs * 0.18).toFixed(1)}"/>`;
+    groups += `<rect class="fxGroup" x="${x0 + 1}" y="${y0 + 1}" width="${w - 2}" height="${h - 2}"/>`;
+  }
+  return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${cables}${groups}</svg></div>`;
+}
+// P18 Power Flow(Rear View): 캐비닛 격자 + 열별 데이지체인(길이 perDaisy) — 상단 파란 사각(라우팅 종단),
+//   세로 인터커넥트 케이블, 캐비닛별 회색 I/O, 하단 파란 꺾쇠(∧, 주 전원 입력).
+function powerFlowSVG(r, perDaisy) {
+  const cs = fxCellSize(r.cols, r.rows), W = r.cols * cs, H = r.rows * cs;
+  const cx = c => c * cs + cs / 2;
+  const io = Math.max(4, cs * 0.28), L = (perDaisy && perDaisy > 0) ? perDaisy : r.rows;
+  let cells = '', wires = '';
+  for (let rr = 0; rr < r.rows; rr++) for (let c = 0; c < r.cols; c++)
+    cells += `<rect class="fxCell" x="${c * cs}" y="${rr * cs}" width="${cs}" height="${cs}"/>`;
+  for (let c = 0; c < r.cols; c++) {
+    const x = cx(c);
+    for (let rs = 0; rs < r.rows; rs += L) {
+      const re = Math.min(rs + L - 1, r.rows - 1);
+      for (let k = rs; k <= re; k++)
+        wires += `<rect class="fxIo" x="${(x - io / 2).toFixed(1)}" y="${(k * cs + cs / 2 - io / 2).toFixed(1)}" width="${io.toFixed(1)}" height="${io.toFixed(1)}"/>`;
+      const yTop = rs * cs + cs * 0.30, yBot = re * cs + cs * 0.78;
+      wires += `<line class="pxLine" x1="${x}" y1="${yTop.toFixed(1)}" x2="${x}" y2="${yBot.toFixed(1)}"/>`;
+      const sq = Math.max(7, cs * 0.32);
+      wires += `<rect class="pxEnd" x="${(x - sq / 2).toFixed(1)}" y="${(rs * cs + cs * 0.14).toFixed(1)}" width="${sq.toFixed(1)}" height="${sq.toFixed(1)}"/>`;
+      const ch = Math.max(6, cs * 0.26), yb = re * cs + cs * 0.86;
+      wires += `<path class="pxChev" d="M ${(x - ch).toFixed(1)} ${yb.toFixed(1)} L ${x} ${(yb - ch).toFixed(1)} L ${(x + ch).toFixed(1)} ${yb.toFixed(1)}"/>`;
+    }
+  }
+  return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${wires}</svg></div>`;
+}
+const DF_LEGEND = `<div class="fxLegend">
+  <i><span class="k-dot"></span>Primary Video Cable Input (주 영상 입력)</i>
+  <i><span class="k-io"></span>Video &amp; Communication Input (영상·통신 입력)</i>
+  <i><span class="k-line"></span>Video &amp; Communication Cables (영상·통신 케이블)</i>
+  <i><span class="k-grp"></span>S-Box 신호 그룹</i>
+</div>`;
+const PW_LEGEND = `<div class="fxLegend">
+  <i><span class="k-line"></span>Power Interconnect Cable (전원 연결 케이블)</i>
+  <i><span class="k-io"></span>Power Cable Input/Output (전원 입·출력)</i>
+  <i><span class="k-sq"></span>Primary Cable Routing End Point (배선 종단)</i>
+  <i><span class="k-chev">∧</span>Primary Power Cable Input (주 전원 입력)</i>
+</div>`;
+
 function renderDataFlow() {
   const host = $('#dfDiagram'); if (!host) return;
   const m = models.find(x => x.id === selectedId);
@@ -758,27 +826,12 @@ function renderDataFlow() {
     <span class="dfNode sbox">S-Box ${ig.boxes}대${r.redundancy ? ' <em class="muted-note">+이중화</em>' : ''}</span><span class="dfArrow">→</span>
     <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
   </div>`;
-  // 영역 맵: 화면 비율 사각형을 S-Box 담당 구역으로 분할(색=구역). 가짜 값 없이 r.ig만 사용.
-  const W = 560, H = Math.max(120, Math.min(360, Math.round(W * r.resH / r.resW)));
-  const blocks = ig.regions.map((rg, i) => {
-    const x = (rg.px0 / r.resW) * W, y = (rg.py0 / r.resH) * H;
-    const w = (rg.pxW / r.resW) * W, h = (rg.pxH / r.resH) * H;
-    const hue = (i * 47) % 360;
-    const colLbl = rg.colStart != null ? `열 ${rg.colStart + 1}~${rg.colEnd + 1}` : '—';
-    const rowLbl = rg.rowStart != null ? `행 ${rg.rowStart + 1}~${rg.rowEnd + 1}` : '—';
-    return `<div class="dfBlk" style="left:${x}px;top:${y}px;width:${Math.max(0, w - 2)}px;height:${Math.max(0, h - 2)}px;--h:${hue}">
-      <b>S-Box ${i + 1}</b>
-      <span class="dfBlkCab">${colLbl} · ${rowLbl}</span>
-      <span class="dfBlkN">${rg.cabinets}대</span>
-      <span class="dfBlkPx">${fmt(rg.pxW)}×${fmt(rg.pxH)}px</span>
-    </div>`;
-  }).join('');
-  // 배경 캐비닛 격자: 셀 = 맵폭/열 × 맵높이/행 (resW=열×캐비닛px 이므로 정확히 캐비닛 경계와 일치).
-  const cw = W / r.cols, ch = H / r.rows;
-  const gridBg = `background-image:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px ${cw}px),repeating-linear-gradient(0deg,var(--line) 0 1px,transparent 1px ${ch}px)`;
+  // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형 배선.
   host.innerHTML = flow
-    + `<div class="dfMapWrap"><div class="dfMap" style="width:${W}px;height:${H}px;${gridBg}">${blocks}</div></div>`
-    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 색 구역 = 각 S-Box가 담당하는 캐비닛</div>`;
+    + `<div class="fxTitle">Data Flow Diagram (Front View) — S-Box ${ig.boxes}대</div>`
+    + dataFlowSVG(r)
+    + DF_LEGEND
+    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로</div>`;
 }
 
 // 09 전원 구성: 삼성 데이터시트 알고리즘(회로당=⌊V×A×0.8/Wcab⌋, 회로수=⌈총/회로당⌉). r.power만 사용.
@@ -800,7 +853,12 @@ function renderPower() {
       <td>${x.daisyChains ?? '—'} 줄</td>
     </tr>`;
   }).join('');
-  host.innerHTML = `
+  // 삼성 Power Flow Diagram(Rear View) 스타일: 열별 데이지체인(주 사용 230V 20A 기준) 도면.
+  const primaryRow = p.rows.find(x => x.primary) || p.rows.find(x => x.cabinetsPerDaisyChain != null);
+  const perDaisy = primaryRow?.cabinetsPerDaisyChain ?? null;
+  const flowHTML = `<div class="fxTitle">Power Flow Diagram (Rear View) — ${esc(primaryRow?.label || '230V')} · 데이지체인 ${perDaisy ?? '—'}대</div>`
+    + powerFlowSVG(r, perDaisy) + PW_LEGEND;
+  host.innerHTML = flowHTML + `
     <div class="pwSummary">
       <span>총 캐비닛 <b>${fmt(p.total)}</b>대</span>
       <span>캐비닛당 최대 <b>${fmt(p.perCabinetW)}</b>W</span>
