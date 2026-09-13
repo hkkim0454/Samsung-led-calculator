@@ -274,6 +274,28 @@ test('[AW] Pulse: 2×4K PGM (Matrix) + Mixer 1×AUX 1080p60; Eikos: 2-output wid
   assert.equal(eikos.canvas.multiOutputCanvas, true);          // Edge-Blending → 2출력 wide canvas
   assert.equal(eikos.canvas.maxCanvasOutputs, 2);
 });
+test('[AW] Eikos supports Matrix/Mixer/Edge; Pulse supports Matrix/Mixer but not Edge', () => {
+  const eikos = getProcessor('aw-midra-eikos-4k'), pulse = getProcessor('aw-midra-pulse-4k');
+  assert.deepEqual(eikos.modes, { matrix: true, mixer: true, edgeBlending: true });   // 3개 모두 지원
+  assert.deepEqual(pulse.modes, { matrix: true, mixer: true, edgeBlending: false });  // Edge만 미지원
+  // Matrix = 2 independent 4K PGM (둘 다 동일).
+  assert.equal(eikos.outputs.maxIndependent4kPgm, 2);
+  assert.equal(pulse.outputs.maxIndependent4kPgm, 2);
+  // modes.edgeBlending 은 canvas.multiOutputCanvas 와 일관.
+  assert.equal(eikos.modes.edgeBlending, eikos.canvas.multiOutputCanvas);
+  assert.equal(pulse.modes.edgeBlending, pulse.canvas.multiOutputCanvas);
+});
+test('[AW] Pulse NOT failed for wide LED unless a single-wide canvas is required', () => {
+  const pulse = getProcessor('aw-midra-pulse-4k');
+  // 5760×1080: canvas 요구 없음 → Matrix 2 독립 PGM으로 PASS(가로가 넓다는 이유만으로 FAIL 아님).
+  const noCanvas = validateProcessor(pulse, processorRequirements({ resW: 5760, resH: 1080 }));
+  assert.equal(noCanvas.verdict, 'PASS');
+  assert.equal(findCheck(noCanvas, 'Wide Canvas'), undefined);   // Wide Canvas 검사 자체가 스킵
+  // single_wide 요구가 있을 때만 Pulse가 canvas capability로 FAIL.
+  const wide = validateProcessor(pulse, processorRequirements({ resW: 5760, resH: 1080 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2 }));
+  assert.equal(findCheck(wide, 'Wide Canvas').ok, false);
+  assert.equal(wide.verdict, 'FAIL');
+});
 test('[AW] Eikos wide-canvas job ranks Eikos above Pulse (Operation Fit boost)', () => {
   const req = processorRequirements({ resW: 7680, resH: 2160 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2, application: 'exec' });
   const ranked = rankProcessors(PROCESSORS, req);

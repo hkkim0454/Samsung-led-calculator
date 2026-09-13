@@ -33,6 +33,9 @@ const emptyCanvas = () => ({ multiOutputCanvas: null, horizontalSpan: null, vert
 //   usesMainLayerResources: AUX 레이어가 메인 처리자원을 소모하는가(Aquilon RS는 false — 별도 자원).
 const emptyAux = () => ({ maxResolution: null, maxAuxOutputs: null, usesMainLayerResources: null });
 const emptyMixing = () => ({ supportsMixed4k2kBoards: null });
+// 운영 모드 지원(Analog Way 등). matrix: 다중 독립 PGM, mixer: 1 PGM + AUX, edgeBlending: 2출력→1 wide PGM.
+//   확인 안 되면 null(추정 금지). edgeBlending 여부는 canvas.multiOutputCanvas와 일관 유지.
+const emptyModes = () => ({ matrix: null, mixer: null, edgeBlending: null });
 const emptySwitching = () => ({ cut: null, fade: null, seamless: null, trueABMixing: null, previewProgram: null, monitoringPreview: null, transitionGrade: null });
 const emptyLatency = () => ({ frames: null, milliseconds: null });
 const emptyFeatures = () => ({ genlock: null, hdr: null, tenBit: null, multiview: null, redundancy: null });
@@ -52,6 +55,7 @@ function proc(p) {
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
     layers: { ...emptyLayers(), ...(p.layers ?? {}) },
     canvas: { ...emptyCanvas(), ...(p.canvas ?? {}) },
+    modes: { ...emptyModes(), ...(p.modes ?? {}) },
     aux: { ...emptyAux(), ...(p.aux ?? {}) },
     outputBoardMixing: { ...emptyMixing(), ...(p.outputBoardMixing ?? {}) },
     switching: { ...emptySwitching(), ...(p.switching ?? {}) },
@@ -72,12 +76,14 @@ export const PROCESSORS = [
   ...[
     { model: 'Pulse 4K', slug: 'pulse-4k',
       canvas: { multiOutputCanvas: false, horizontalSpan: false, verticalSpan: false, maxCanvasOutputs: null },   // Edge-Blending 미지원
+      modes: { matrix: true, mixer: true, edgeBlending: false },   // Matrix(2 독립 PGM) / Mixer / Edge 미지원
       aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null },   // Mixer 모드 1×AUX. 메인자원 소모여부 미확인→null
       note: 'Matrix 2×4K 독립 PGM / Mixer 1×4K PGM + 1×AUX(1080p60). Edge-Blending 미지원 → Wide Canvas 불가.' },
     { model: 'Eikos 4K', slug: 'eikos-4k',
       canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 2 },   // Edge-Blending 지원(2출력 → 1 wide PGM)
+      modes: { matrix: true, mixer: true, edgeBlending: true },   // Matrix(2 독립 PGM) / Mixer / Edge-Blending 모두 지원
       aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null },   // 메인자원 소모여부 미확인→null
-      note: 'Matrix / Mixer / Edge-Blending(Hard-Soft Edge). 2 물리출력 전체 → 1 wide Edge-Blended PGM(Edge모드 2믹싱/4분할), 가로·세로 wide canvas 용도. Pulse와 달리 Edge-Blending 지원.' },
+      note: 'Matrix(2×4K 독립 PGM) / Mixer(1 PGM + 1 AUX) / Edge-Blending(Hard-Soft Edge). 2 물리출력 전체 → 1 wide Edge-Blended PGM(Edge모드 2믹싱/4분할), 가로·세로 wide canvas 용도. Pulse와 달리 Edge-Blending 지원.' },
   ].map(m => proc({
     id: 'aw-midra-' + m.slug,
     manufacturer: AW, family: 'Midra 4K', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
@@ -85,6 +91,7 @@ export const PROCESSORS = [
     outputs: { maxActiveOutputs: 2, maxIndependent4kOutputs: 2, maxIndependent4kPgm: 2, maxIndependent2k: null },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },
     canvas: m.canvas,
+    modes: m.modes,
     aux: m.aux,
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
