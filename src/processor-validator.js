@@ -12,8 +12,9 @@ import {
   INPUT_2K_PER_CARD,
   inputsCapacity,
   outputCapacity,
+  outputCapacity2k,
   validateOutputCardLayers,
-} from './processor-limits.js?v=248';
+} from './processor-limits.js?v=249';
 
 function maxNullable(...vals) {
   const nums = vals.filter(v => v != null);
@@ -68,11 +69,37 @@ export function validateProcessor(proc, req) {
     checks.push({ name, need: '지원', have: have === true ? '지원' : (have === false ? '미지원' : '확인 필요'), unit: '', ok });
   };
 
-  // 1) 필요 4K 출력 — 제조사별 출력용량(AW=PGM, X100/Universe=독립4K출력, NovaStar=출력카드수).
-  if (req.required4kOutputs > 0) {
-    const cap = outputCapacity(proc);
-    const label = cap.kind === 'pgm' ? '4K PGM 출력' : (cap.assumed ? '4K 출력(카드 가정)' : '4K 출력');
-    numCheck(label, req.required4kOutputs, cap.value);
+  // 1) Samsung S-Box 출력 — topology 후보별 Capacity Fit(지침 1). UHD 중심 + 검증된 FHD 중심.
+  //    규칙: 후보 중 하나라도 PASS면 출력 OK(기술적으로 사용 가능). 하나도 PASS 못하면
+  //    기본(UHD) 후보 결과로 판정한다 — 미확인(null) 대체 후보가 확정 FAIL을 되살리지 않는다.
+  //    통과한 후보는 passedTopologies로 결과에 보존한다.
+  let passedTopologies = [], topologyResults = [];
+  {
+    const outCap = outputCapacity(proc);        // 4K 계열(AW=PGM / X100·Universe=독립4K / NovaStar=카드)
+    const out2k = outputCapacity2k(proc);       // 2K 독립 출력(FHD 중심 후보용)
+    const evalTopos = [];
+    if (req.required4kOutputs > 0) evalTopos.push({ label: 'UHD 중심', kind: '4k', need: req.required4kOutputs });
+    for (const t of (req.sboxTopologies ?? [])) {
+      if (t.required2kOutputs != null && t.required2kOutputs > 0) evalTopos.push({ label: t.label, kind: '2k', need: t.required2kOutputs });
+    }
+    topologyResults = evalTopos.map(t => {
+      const have = t.kind === '4k' ? outCap.value : out2k.value;
+      const name = t.kind === '2k' ? '2K 출력'
+        : (outCap.kind === 'pgm' ? '4K PGM 출력' : (outCap.assumed ? '4K 출력(카드 가정)' : '4K 출력'));
+      const ok = (t.need != null && have != null) ? have >= t.need : null;
+      return { label: t.label, name, need: t.need, have: have ?? null, ok };
+    });
+    if (topologyResults.length) {
+      const primary = topologyResults[0];
+      const anyPass = topologyResults.some(t => t.ok === true);
+      const outputOk = anyPass ? true : primary.ok;
+      passedTopologies = topologyResults.filter(t => t.ok === true).map(t => t.label);
+      const shown = topologyResults.find(t => t.ok === true) || primary;
+      const note = topologyResults.length > 1
+        ? 'S-Box 후보 — ' + topologyResults.map(t => `${t.label}: ${t.name} ${t.have ?? '?'}/${t.need}${t.ok === true ? ' ✓' : t.ok === false ? ' ✗' : ' ?'}`).join(' · ')
+        : undefined;
+      checks.push({ name: shown.name, need: shown.need ?? null, have: shown.have ?? null, unit: '개', ok: outputOk, ...(note ? { note } : {}) });
+    }
   }
 
   // 2) 독립 입력(4K/2K). 입력 슬롯 공유검사는 '슬롯=4K1 또는 2K4' 비율 모델(X100/NovaStar)에만.
@@ -139,7 +166,7 @@ export function validateProcessor(proc, req) {
   const anyFail = checks.some(c => c.ok === false);
   const anyUnknown = checks.some(c => c.ok === null);
   const verdict = anyFail ? 'FAIL' : (anyUnknown ? 'CONDITIONAL' : 'PASS');
-  return { id: proc.id ?? null, verdict, checks };
+  return { id: proc.id ?? null, verdict, checks, passedTopologies, topologyResults };
 }
 
 // ── Operation Fit: 공간 용도 5종 성향(SoT §2). 통과 제품의 우선순위/등급 결정 ────────
@@ -152,19 +179,58 @@ const OPERATION_PREF = Object.freeze({
   lobby:        ['X100 Pro', 'Universe', 'H'],                // 로비 사이니지 — Colorlight 우선, NovaStar 대안
 });
 
-/** Operation Fit. 반환: { rank(작을수록 우선, 미해당=99), preferred(용도 최우선군=rank 0) }. */
+// 소형 작업(필요 4K 출력 ≤2) 기준. 이 이하 + 고급요구 없음이면 고가 Aquilon을 후순위로 내린다.
+// (하드 필터 아님 — 확장/이중화/커스터마이즈/LivePremier 요구가 있으면 다시 상위 후보가 됨, 지침 2)
+export const AQUILON_SMALL_JOB_MAX_4K = 2;
+const AQUILON_SMALL_JOB_PENALTY = 100;   // 소형·단순에서 Aquilon을 뒤로(제거는 안 함)
+
+/**
+ * 제품 단위 Operation Fit 보정(지침 3). 제조사 선호(baseRank)에 운영 요구를 반영해 미세 조정.
+ * 낮을수록 우선. family 밴드(×10)를 넘어설 수 있어 예: 확장/이중화 요구 시 Aquilon이 고정형 Alta보다 앞설 수 있다.
+ */
+function productAdjust(proc, req) {
+  let adj = 0;
+  const smallJob = req.required4kOutputs != null && req.required4kOutputs <= AQUILON_SMALL_JOB_MAX_4K;
+  const wantsHighEnd = !!(req.expansionRequired || req.redundancyRequired || req.customizableRequired || req.livePremierPreferred);
+  if (proc.family === 'Aquilon') {
+    if (smallJob && !wantsHighEnd) adj += AQUILON_SMALL_JOB_PENALTY;   // 소형·단순 → 후순위(삭제 아님)
+    if (req.expansionRequired)    adj -= 6;    // 향후 I/O 확장
+    if (req.redundancyRequired)   adj -= 6;    // Redundant PSU 등
+    if (req.customizableRequired) adj -= 4;    // 커스터마이즈 구성
+    if (req.livePremierPreferred) adj -= 3;    // LivePremier 생태계
+  }
+  // 고정형 라인(Alta/Midra)은 확장·이중화 요구가 크면 상대적으로 후순위.
+  if (proc.family === 'Alta' || proc.family === 'Midra') {
+    if (req.expansionRequired)  adj += 3;
+    if (req.redundancyRequired) adj += 3;
+  }
+  // 다중 윈도우 우선 → X100 Pro(global_window) 가점.
+  if (req.multiWindowPriority && proc.family === 'X100 Pro') adj -= 4;
+  // 전환효과(Fade/Seamless/True A/B/PGM/고급 트랜지션) 중시 → Analog Way 계열 가점.
+  if ((req.fadeRequired || req.seamlessSwitching || req.trueABRequired || req.previewProgramRequired || req.advancedTransitionRequired)
+      && (proc.family === 'Midra' || proc.family === 'Alta' || proc.family === 'Aquilon')) adj -= 2;
+  // 고정 솔루션 선호 → Midra/Alta 가점, 모듈형 Aquilon 감점.
+  if (req.fixedSolutionPreferred) {
+    if (proc.family === 'Midra' || proc.family === 'Alta') adj -= 2;
+    if (proc.family === 'Aquilon') adj += 3;
+  }
+  return adj;
+}
+
+/**
+ * Operation Fit. 반환: { rank(작을수록 우선), preferred(용도 최우선 제품군), baseRank }.
+ *   rank = 제조사 선호 밴드(baseRank×10) + 제품단위 보정(productAdjust). 제조사 선호만으로 끝내지 않는다.
+ *   preferred는 라벨용으로 제조사 선호(최우선군) 기준을 유지한다.
+ */
 export function operationFit(proc, req) {
   const pref = OPERATION_PREF[req.application] ?? [];
   const idx = pref.indexOf(proc.family);
-  return { rank: idx < 0 ? 99 : idx, preferred: idx === 0 };
+  const baseRank = idx < 0 ? 99 : idx;
+  const rank = baseRank * 10 + productAdjust(proc, req);
+  return { rank, preferred: idx === 0, baseRank };
 }
 
 const GRADE_ORDER = Object.freeze({ '권장': 0, '적합': 1, '조건부 적합': 2, '한계 구성': 3, '부적합': 4 });
-
-// 소형 작업(필요 4K 출력 ≤2)에서는 고가 Aquilon을 추천에서 숨긴다(이사 지침, Operation Fit 규칙).
-export const AQUILON_HIDE_MAX_4K_OUTPUTS = 2;
-const isExpensiveOverspec = (proc, req) =>
-  proc.family === 'Aquilon' && req.required4kOutputs != null && req.required4kOutputs <= AQUILON_HIDE_MAX_4K_OUTPUTS;
 
 /** 최종 등급(임의 % 없음). Capacity verdict + Operation Fit + 여유(딱맞음) 조합. */
 function statusLabel(verdict, op, tight) {
@@ -177,14 +243,14 @@ function statusLabel(verdict, op, tight) {
 
 /**
  * 제품 목록 평가·정렬. 반환: [{ proc, verdict, checks, label, opRank, preferred, _headroom }].
- * needs_verification 제품(예: H20)은 제외(지침 6). 소형에서 Aquilon 숨김.
- * 정렬: (1) Operation Fit 우선순위 → (2) 등급 → (3) 여유 적은(적정) 모델 먼저.
+ * needs_verification 제품(예: H20)은 제외(지침 6). Aquilon은 하드 제외하지 않고 Operation Fit
+ * 점수(productAdjust)로 소형·단순에선 후순위, 확장/이중화 요구 시 상위로 정렬(지침 2).
+ * 정렬: (1) Operation Fit 점수 → (2) 등급 → (3) 여유 적은(적정) 모델 먼저.
  */
 export function rankProcessors(procs, req) {
   if (!Array.isArray(procs) || !req) return [];
   return procs
     .filter(proc => proc.verification?.status !== 'needs_verification')
-    .filter(proc => !isExpensiveOverspec(proc, req))
     .map(proc => {
       const v = validateProcessor(proc, req);
       const op = operationFit(proc, req);

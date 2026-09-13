@@ -97,6 +97,14 @@ export function processorRequirements(config, o = {}) {
     tenBitRequired: !!o.tenBitRequired,
     externalControlRequired: !!o.externalControlRequired,
     application: o.application ?? 'other',
+    // Operation Fit(제품 단위) 성향 플래그 — 제조사 선호만으로 끝내지 않기 위함(지침 3).
+    expansionRequired: !!o.expansionRequired,
+    redundancyRequired: !!o.redundancyRequired,
+    customizableRequired: !!o.customizableRequired,
+    livePremierPreferred: !!o.livePremierPreferred,
+    multiWindowPriority: !!o.multiWindowPriority,
+    fixedSolutionPreferred: !!o.fixedSolutionPreferred,
+    switchingFrequency: o.switchingFrequency ?? null,   // 'low' | 'high' 등(참고용, 점수엔 미반영)
   };
 }
 
@@ -132,6 +140,12 @@ export function outputCapacity(proc) {
     default:
       return { value: o.maxIndependent4kOutputs ?? null, kind: 'independent', assumed: false };
   }
+}
+
+/** 독립 2K 출력 용량(FHD 중심 S-Box topology 판정용). 데이터 없으면 null(→확인 필요). */
+export function outputCapacity2k(proc) {
+  const o = proc?.outputs ?? {};
+  return { value: o.maxIndependent2k ?? null, kind: '2k', assumed: false };
 }
 
 /**

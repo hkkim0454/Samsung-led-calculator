@@ -249,12 +249,84 @@ test('output capacity null never auto-PASS (fixture no output)', () => {
   assert.notEqual(v.verdict, 'PASS');
 });
 
-// ── 소형(4K출력≤2) Aquilon 숨김 ──────────────────────────────────────────────
-test('Aquilon hidden when required 4K outputs <= 2, shown >= 3', () => {
-  const has = list => list.some(r => r.proc.family === 'Aquilon');
-  assert.equal(has(rankProcessors(PROCESSORS, processorRequirements({ resW: 3840, resH: 2160 }))), false);
-  assert.equal(has(rankProcessors(PROCESSORS, processorRequirements({ resW: 7680, resH: 2160 }))), false);
-  assert.equal(has(rankProcessors(PROCESSORS, processorRequirements({ resW: 7680, resH: 4320 }))), true);
+// ── [Test A] FHD 대체 topology 후보가 요구사양에 실려온다 ─────────────────────
+test('[A] 5760x1080 -> req.sboxTopologies has UHD(4K 2) and FHD(2K 3) candidates', () => {
+  const req = processorRequirements({ resW: 5760, resH: 1080 });
+  const labels = req.sboxTopologies.map(t => t.label);
+  assert.ok(labels.includes('UHD 중심'));
+  assert.ok(labels.includes('FHD 중심'));
+  assert.equal(req.sboxTopologies.find(t => t.label === 'UHD 중심').required4kOutputs, 2);
+  assert.equal(req.sboxTopologies.find(t => t.label === 'FHD 중심').required2kOutputs, 3);
+});
+
+// ── [Test B] 두 topology가 실제 판정에 연결된다(X100 Pro) ─────────────────────
+test('[B] 5760x1080 + X100 Pro: UHD & FHD topology both evaluated; FHD(2K) passes via maxIndependent2k', () => {
+  const req = processorRequirements({ resW: 5760, resH: 1080 });
+  const x = getProcessor('cl-x100pro-7u');   // 4K 8 / 2K 32
+  const v = validateProcessor(x, req);
+  const uhd = v.topologyResults.find(t => t.label === 'UHD 중심');
+  const fhd = v.topologyResults.find(t => t.label === 'FHD 중심');
+  assert.ok(uhd && fhd, 'both topology results present');
+  assert.equal(uhd.ok, true);   // 4K 출력 8 >= 2
+  assert.equal(fhd.ok, true);   // 2K 출력 32 >= 3
+  assert.ok(v.passedTopologies.includes('UHD 중심') && v.passedTopologies.includes('FHD 중심'));
+});
+test('[B2] FHD-only capable device passes via FHD topology when UHD 4K output unknown', () => {
+  // 2K 출력만 정의된 가상 제품: UHD(4K PGM null) 미확인이지만 FHD(2K) 후보로 PASS 가능.
+  const fx = { id: 'fx-2konly', manufacturer: 'X', family: 'X', model: 'fx',
+    inputs: { maxIndependent4k: 8 }, outputs: { maxIndependent4kPgm: null, maxIndependent2k: 8 },
+    slots: {}, layers: { model: 'global_window', maxWindows: 16 }, canvas: {}, outputBoardMixing: {},
+    switching: {}, features: {}, control: {}, verification: { status: 'official' } };
+  const req = processorRequirements({ resW: 5760, resH: 1080 });   // UHD 2×4K / FHD 3×2K
+  const v = validateProcessor(fx, req);
+  const out = v.checks.find(c => c.name === '2K 출력' || c.name.startsWith('4K'));
+  assert.equal(out.ok, true);                       // 하나라도 PASS(FHD 2K 8>=3) → 출력 OK
+  assert.ok(v.passedTopologies.includes('FHD 중심'));
+});
+test('[B3] unknown FHD alternative must NOT rescue a real UHD fail (Zenith100 stays FAIL)', () => {
+  const req = processorRequirements({ resW: 7680, resH: 4320 });   // UHD 4×4K, FHD 16×2K
+  const z1 = validateProcessor(getProcessor('aw-alta-zenith-100'), req);  // PGM 3, 2K출력 null
+  assert.equal(findCheck(z1, '4K PGM 출력').ok, false);   // UHD 확정 미달(3<4)
+  assert.equal(z1.verdict, 'FAIL');                       // 미확인 FHD가 되살리지 않음
+});
+
+// ── [Test C] 소형(4K출력≤2)에서 Aquilon은 후순위지만 후보에서 삭제되지 않는다 ──
+test('[C] Aquilon kept (not hard-hidden) on small jobs, but ranked low without high-end needs', () => {
+  const req = processorRequirements({ resW: 3840, resH: 2160 });   // 1×4K 소형
+  const ranked = rankProcessors(PROCESSORS, req);
+  const cmini = ranked.find(r => r.proc.id === 'aw-aquilon-cmini');
+  assert.ok(cmini, 'Cmini는 후보에서 완전히 삭제되지 않음');
+  // 소형·단순 → 페널티로 후순위(다른 제품이 위에 있음).
+  assert.ok(ranked.some(r => r.proc.family !== 'Aquilon' && ranked.indexOf(r) < ranked.indexOf(cmini)));
+});
+
+// ── [Test D] 같은 4×4K 강당: 확장/이중화 요구 유무로 Zenith200 ↔ Cmini 우선 역전 ─
+test('[D] auditorium 4x4K: no expansion -> Zenith200 first; expansion+redundancy -> Cmini rises above Zenith200', () => {
+  const base = { resW: 7680, resH: 4320 };
+  const plain = rankProcessors(PROCESSORS, processorRequirements(base, { application: 'auditorium' }));
+  const zi = plain.findIndex(r => r.proc.id === 'aw-alta-zenith-200');
+  const ci = plain.findIndex(r => r.proc.id === 'aw-aquilon-cmini');
+  assert.ok(zi >= 0 && ci >= 0);
+  assert.ok(zi < ci, '고급요구 없으면 Zenith 200이 Cmini보다 우선');
+
+  const hi = rankProcessors(PROCESSORS, processorRequirements(base, { application: 'auditorium', expansionRequired: true, redundancyRequired: true }));
+  const zi2 = hi.findIndex(r => r.proc.id === 'aw-alta-zenith-200');
+  const ci2 = hi.findIndex(r => r.proc.id === 'aw-aquilon-cmini');
+  assert.ok(zi2 >= 0 && ci2 >= 0);
+  assert.ok(ci2 < zi2, '확장+이중화 요구면 Cmini가 Zenith 200보다 우선(가능)');
+});
+
+// ── [Test E] verification 미검증 제품은 기본 자동추천에서 제외(강등 메커니즘 검증) ──
+test('[E] needs_verification excludes from rankProcessors; Alta Zenith kept official (owner decision)', () => {
+  // 오너 결정: Alta(Zenith)는 이사 제공 데이터시트 근거로 official 유지 → 자동추천 포함.
+  assert.equal(getProcessor('aw-alta-zenith-200').verification.status, 'official');
+  assert.ok(rankProcessors(PROCESSORS, processorRequirements({ resW: 7680, resH: 4320 }, { application: 'auditorium' }))
+    .some(r => r.proc.id === 'aw-alta-zenith-200'));
+  // 메커니즘: 어떤 제품이든 needs_verification이면 기본 추천에서 빠지고 verificationPending에만 노출.
+  const fx = { ...getProcessor('aw-alta-zenith-200'), id: 'fx-unverified', verification: { status: 'needs_verification' } };
+  const ranked = rankProcessors([...PROCESSORS, fx], processorRequirements({ resW: 7680, resH: 4320 }, { application: 'auditorium' }));
+  assert.ok(!ranked.some(r => r.proc.id === 'fx-unverified'));
+  assert.ok(verificationPending([...PROCESSORS, fx]).some(p => p.id === 'fx-unverified'));
 });
 
 // ── rankProcessors: FAIL/부적합은 뒤로 ───────────────────────────────────────
