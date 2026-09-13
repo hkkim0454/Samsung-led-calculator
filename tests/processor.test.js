@@ -282,6 +282,24 @@ test('[AW] Eikos wide-canvas job ranks Eikos above Pulse (Operation Fit boost)',
   assert.ok(ei >= 0 && pu >= 0 && ei < pu, 'Eikos가 Pulse보다 상위');
 });
 
+test('[AW] Zenith 100/200 support Hard/Soft Edge (wide canvas); maxCanvasOutputs unconfirmed -> null', () => {
+  for (const id of ['aw-alta-zenith-100', 'aw-alta-zenith-200']) {
+    const c = getProcessor(id).canvas;
+    assert.equal(c.multiOutputCanvas, true);
+    assert.equal(c.horizontalSpan, true);
+    assert.equal(c.verticalSpan, true);
+    assert.equal(c.maxCanvasOutputs, null);   // 공식 미확인 → 추정 금지
+  }
+});
+test('[AW] confirmed total input counts; Aquilon RS AUX not-main-resource, Zenith AUX main-resource unknown', () => {
+  assert.equal(getProcessor('aw-alta-zenith-100').inputs.total, 13);
+  assert.equal(getProcessor('aw-alta-zenith-200').inputs.total, 16);
+  assert.equal(getProcessor('aw-aquilon-rs1').inputs.total, 16);
+  assert.equal(getProcessor('aw-aquilon-rs4').inputs.total, 24);
+  assert.equal(getProcessor('aw-aquilon-rs1').aux.usesMainLayerResources, false);   // RS: 공식 확인
+  assert.equal(getProcessor('aw-alta-zenith-100').aux.usesMainLayerResources, null); // Zenith: 미확인(추정 금지)
+});
+
 // ── Operation Fit: 공간 5종 성향 ─────────────────────────────────────────────
 test('operationFit preferred by application', () => {
   assert.equal(operationFit(getProcessor('aw-alta-zenith-200'), processorRequirements({ resW: 3840, resH: 2160 }, { application: 'auditorium' })).preferred, true);  // 강당=Alta 최우선

@@ -22,7 +22,8 @@ const AW = 'Analog Way', NS = 'NovaStar', CL = 'Colorlight';
 
 // 누락 필드는 null(확인 필요). comboHdmi14Sdi3g: HDMI1.4/3G-SDI 겸용 입력 수(표시용).
 const emptySlots = () => ({ physicalInputSlots: null, physicalOutputSlots: null, maxInputBoards: null, maxOutputBoards: null, sharedIoSlots: null });
-const emptyInputs = () => ({ maxIndependent2k: null, maxIndependent4k: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null, comboHdmi14Sdi3g: null });
+// total: 공식 확인된 "총 입력 수". maxIndependent4k/2k(용량)와 다른 개념 — 확인 안 되면 null.
+const emptyInputs = () => ({ total: null, maxIndependent2k: null, maxIndependent4k: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null, comboHdmi14Sdi3g: null });
 // 출력: Active / 독립4K출력 / 4K PGM / 독립2K를 각각 분리(지침 1). max4k/max2k 단일값 사용 금지.
 const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null });
 const emptyLayers = () => ({ model: null, maxWindows: null, maxLayers: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, chassisMaxLayers2k: null });
@@ -80,7 +81,7 @@ export const PROCESSORS = [
   ].map(m => proc({
     id: 'aw-midra-' + m.slug,
     manufacturer: AW, family: 'Midra 4K', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { maxIndependent4k: 8, maxIndependent2k: 10, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },
+    inputs: { total: 10, maxIndependent4k: 8, maxIndependent2k: 10, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },
     outputs: { maxActiveOutputs: 2, maxIndependent4kOutputs: 2, maxIndependent4kPgm: 2, maxIndependent2k: null },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },
     canvas: m.canvas,
@@ -96,24 +97,26 @@ export const PROCESSORS = [
   proc({
     id: 'aw-alta-zenith-100',
     manufacturer: AW, family: 'Alta 4K', model: 'Zenith 100', lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { maxIndependent4k: 11, maxIndependent2k: 13, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },
+    inputs: { total: 13, maxIndependent4k: 11, maxIndependent2k: 13, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },
     outputs: { maxActiveOutputs: 4, maxIndependent4kOutputs: 4, maxIndependent4kPgm: 3, maxIndependent2k: null },   // Active 4 / PGM 3
     layers: { model: 'mixing_split', mixing4k: 3, split4k: 6 },   // 공식 재검증(2026-09-13): 믹싱3 / 분할6
-    aux: { maxResolution: '1080p60', maxAuxOutputs: 2, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 2
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: null },   // Hard/Soft Edge 지원(공식 비교표). 최대 캔버스 출력수 미확인→null
+    aux: { maxResolution: '1080p60', maxAuxOutputs: 2, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 2. 메인자원 소모여부 미확인→null
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 }, features: { genlock: true, hdr: true, tenBit: true, multiview: true }, control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-100', sourceDocument: 'ZEN100 데이터시트(이사 제공) + AW 공식 재검증', sourceVersion: '2026-09-13', notes: '13입력(11×4K60 + 2×2K60). Active 4 / 4K PGM 3 / AUX 2(1080p60). 믹싱3 분할6. Active ≠ PGM.' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-100', sourceDocument: 'ZEN100 데이터시트(이사 제공) + AW 공식 비교표 재검증', sourceVersion: '2026-09-13', notes: '13입력(11×4K60 + 2×2K60). Active 4 / 4K PGM 3 / AUX 2(1080p60). 믹싱3 분할6. Hard/Soft Edge 지원. Active ≠ PGM. AUX 메인자원 소모여부 미확인(null).' },
   }),
   proc({
     id: 'aw-alta-zenith-200',
     manufacturer: AW, family: 'Alta 4K', model: 'Zenith 200', lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { maxIndependent4k: 14, maxIndependent2k: 16, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },
+    inputs: { total: 16, maxIndependent4k: 14, maxIndependent2k: 16, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },
     outputs: { maxActiveOutputs: 6, maxIndependent4kOutputs: 6, maxIndependent4kPgm: 4, maxIndependent2k: null },   // Active 6 / PGM 4
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
-    aux: { maxResolution: '1080p60', maxAuxOutputs: 4, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 4
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: null },   // Hard/Soft Edge 지원(공식 비교표). 최대 캔버스 출력수 미확인→null
+    aux: { maxResolution: '1080p60', maxAuxOutputs: 4, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 4. 메인자원 소모여부 미확인→null
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 }, features: { genlock: true, hdr: true, tenBit: true, multiview: true }, control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceDocument: 'ZEN200 데이터시트(이사 제공) + AW 공식 재검증', sourceVersion: '2026-09-13', notes: '16입력(14×4K60 + 2×2K60). Active 6 / 4K PGM 4 / AUX 4(1080p60). 믹싱4 분할8. Active ≠ PGM.' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceDocument: 'ZEN200 데이터시트(이사 제공) + AW 공식 비교표 재검증', sourceVersion: '2026-09-13', notes: '16입력(14×4K60 + 2×2K60). Active 6 / 4K PGM 4 / AUX 4(1080p60). 믹싱4 분할8. Hard/Soft Edge 지원. Active ≠ PGM. AUX 메인자원 소모여부 미확인(null).' },
   }),
 
   // ── Analog Way · Aquilon (LivePremier RS) ─────────────────────────────────
@@ -131,7 +134,7 @@ export const PROCESSORS = [
   ].map(m => proc({
     id: 'aw-aquilon-' + m.slug,
     manufacturer: AW, family: 'Aquilon', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { maxIndependent4k: m.in4k },
+    inputs: { total: m.in4k, maxIndependent4k: m.in4k },   // 총 입력 수 = 확인된 4K 입력 수(2K 전용수는 미확인→null)
     outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: m.pgm },   // Active ≠ PGM(공식값)
     layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },   // non-PGM 출력 = scaled 4K60 AUX, 메인자원 미소모
@@ -147,7 +150,7 @@ export const PROCESSORS = [
     id: 'aw-aquilon-cmini',
     manufacturer: AW, family: 'Aquilon', model: 'Aquilon C mini', lifecycle: 'active', configurationType: 'customizable',
     slots: { maxInputBoards: 2, maxOutputBoards: 3 },
-    inputs: { maxIndependent4k: 8 },
+    inputs: { total: 8, maxIndependent4k: 8 },
     outputs: { maxActiveOutputs: 12, maxIndependent4kOutputs: 12, maxIndependent4kPgm: 4 },
     layers: { model: 'mixing_split', mixing4k: 4, split4k: null },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
