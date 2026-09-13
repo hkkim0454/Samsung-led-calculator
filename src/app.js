@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=233';
-import { MODELS } from './models.js?v=233';
-import { PROCESSORS } from './processor-data.js?v=233';
-import { processorRequirements } from './processor-limits.js?v=233';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=233';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=233';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=233';
-import { parseCasesText, normalizeDate } from './cases.js?v=233';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=234';
+import { MODELS } from './models.js?v=234';
+import { PROCESSORS } from './processor-data.js?v=234';
+import { processorRequirements } from './processor-limits.js?v=234';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=234';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=234';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=234';
+import { parseCasesText, normalizeDate } from './cases.js?v=234';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -287,10 +287,9 @@ function renderPreview() {
   const cellPx = Math.min(colWp, rowHp);
   const gap = Math.max(1, cellPx * 0.02);                   // 배열 많을 때 gap이 셀을 잡아먹지 않게(v2 2-3)
 
-  // 사람: 벽에서 3.5 m, 측벽에서 1.5 m(여백 쪽). LED를 가리지 않게(v2 1-3).
+  // 사람: 벽에서 3.5 m, 캐비닛(LED) 왼쪽 모서리에서 1 m 왼쪽에 배치(이사 요청). LED를 가리지 않게.
   const personD = Math.min(px(3500), Dp * 0.45);
-  const personU = Math.min(px(1500), SWp * 0.12);
-  const personX = personU;                                  // 좌측(왼쪽 측벽에서 1.5 m, 이사 요청)
+  const personX = Math.max(px(300), Lx - px(1000));         // LED 왼쪽 모서리(Lx)에서 1 m 왼쪽(최소 벽에서 0.3 m)
   const personFf = P / (P + ZW - personD);                  // 사람 깊이 투영배율(3D 자동 축소)
 
   // ── 줌인(이사 요청: 20% 이상 크게) + 라벨 화면 안 clamp 준비 ─────────────────
