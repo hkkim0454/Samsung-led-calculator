@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=243';
-import { MODELS } from './models.js?v=243';
-import { PROCESSORS } from './processor-data.js?v=243';
-import { processorRequirements } from './processor-limits.js?v=243';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=243';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=243';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=243';
-import { parseCasesText, normalizeDate } from './cases.js?v=243';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=244';
+import { MODELS } from './models.js?v=244';
+import { PROCESSORS } from './processor-data.js?v=244';
+import { processorRequirements } from './processor-limits.js?v=244';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=244';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=244';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=244';
+import { parseCasesText, normalizeDate } from './cases.js?v=244';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -326,7 +326,7 @@ function renderPreview() {
   const dWall = P + ZW - P / fWall;
   // 사람을 '벽 공간 치수선(dWall)'보다 30cm 안쪽(뒤)에 세워 앞으로 튀어나오지 않게(이사 요청: 눈높이가 어색).
   //   → 벽과 치수선 사이에 위치. 눈높이선·라벨·사람 모두 이 깊이(personDeff)를 공유해 정렬 유지.
-  const personDeff = Math.max(px(400), Math.min(personD, dWall - px(300)));
+  const personDeff = px(100);   // 사람을 LED(벽)에서 100mm 앞에 세움(이사 요청 2026-09-13: 기존엔 너무 앞).
   const personFoot = proj(personX, SHp, personDeff);
 
   let cells = ''; for (let i = 0; i < Math.min(r.total, 2000); i++) cells += '<i></i>';
