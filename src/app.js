@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=241';
-import { MODELS } from './models.js?v=241';
-import { PROCESSORS } from './processor-data.js?v=241';
-import { processorRequirements } from './processor-limits.js?v=241';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=241';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=241';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=241';
-import { parseCasesText, normalizeDate } from './cases.js?v=241';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=242';
+import { MODELS } from './models.js?v=242';
+import { PROCESSORS } from './processor-data.js?v=242';
+import { processorRequirements } from './processor-limits.js?v=242';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=242';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=242';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=242';
+import { parseCasesText, normalizeDate } from './cases.js?v=242';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -397,7 +397,7 @@ function renderPreview() {
     + edgeSeg(0, 0, 0, SWp, 0, 0) + edgeSeg(0, SHp, 0, SWp, SHp, 0)
     + edgeSeg(0, 0, 0, 0, SHp, 0) + edgeSeg(SWp, 0, 0, SWp, SHp, 0);
 
-  const gridMM = 600;   // 바닥 그리드 = 실제 바닥 타일(대부분 600×600mm) 기준(이사 요청 2026-09-13)
+  const gridMM = 1200;   // 바닥 그리드 간격(이사 요청 2026-09-13: 600 타일의 2배 = 1200mm)
 
   // ── 바닥 그리드: CSS 텍스처 대신 2D 투영선으로 직접(원근 아티팩트 제거, 이사 요청 2026-09-13) ──
   //   바닥면(v=SHp)에 600mm 간격 선. 앞쪽으로 선이 프레임 밖(visB)으로 나가면 중단(과도한 몰림 방지).
