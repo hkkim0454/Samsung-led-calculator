@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=235';
-import { MODELS } from './models.js?v=235';
-import { PROCESSORS } from './processor-data.js?v=235';
-import { processorRequirements } from './processor-limits.js?v=235';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=235';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=235';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=235';
-import { parseCasesText, normalizeDate } from './cases.js?v=235';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=236';
+import { MODELS } from './models.js?v=236';
+import { PROCESSORS } from './processor-data.js?v=236';
+import { processorRequirements } from './processor-limits.js?v=236';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=236';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=236';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=236';
+import { parseCasesText, normalizeDate } from './cases.js?v=236';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -843,7 +843,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -1076,6 +1076,10 @@ $('#loadList').addEventListener('click', e => {
    화면의 모든 입력·선택(공간·배열·옵션·선택 모델 등)을 한 건으로 저장했다가 그대로 복원한다.
    가격표(prices.local.js)와 가격은 여기에 포함하지 않는다(별도 저장). 규격은 config.js. */
 const CONFIG_KEY = 'svtled_configs_v1';
+// 새로고침/재접속 시 직전 상태 자동 복원 — 값이 바뀔 때마다 이 브라우저에 조용히 저장(이름 저장과 별개).
+const LAST_KEY = 'svtled_last_v1';
+function saveLastSession() { try { localStorage.setItem(LAST_KEY, JSON.stringify(gatherConfig())); } catch { } }
+function restoreLastSession() { try { const s = localStorage.getItem(LAST_KEY); if (s) { applyConfig(JSON.parse(s)); return true; } } catch { } return false; }
 function readConfigs() { try { return normalizeRecords(JSON.parse(localStorage.getItem(CONFIG_KEY) || '[]')); } catch { return []; } }
 function writeConfigs(list) { try { localStorage.setItem(CONFIG_KEY, JSON.stringify(list)); } catch (e) { alert('구성을 저장하지 못했습니다(브라우저 저장공간 문제).\n' + e.message); } }
 
@@ -1675,5 +1679,5 @@ window.addEventListener('resize', renderPreview);
 window.addEventListener('beforeprint', () => { document.body.classList.add('printing'); renderPreview(); });
 window.addEventListener('afterprint', () => { document.body.classList.remove('printing'); renderPreview(); });
 
-renderAll();
-handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성을 불러온다.
+if (!restoreLastSession()) renderAll();   // 직전 상태 복원(있으면 applyConfig가 렌더까지 수행), 없으면 기본 렌더.
+handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성을 불러온다(자동복원보다 우선).
