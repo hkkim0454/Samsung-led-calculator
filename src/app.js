@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=240';
-import { MODELS } from './models.js?v=240';
-import { PROCESSORS } from './processor-data.js?v=240';
-import { processorRequirements } from './processor-limits.js?v=240';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=240';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=240';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=240';
-import { parseCasesText, normalizeDate } from './cases.js?v=240';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=241';
+import { MODELS } from './models.js?v=241';
+import { PROCESSORS } from './processor-data.js?v=241';
+import { processorRequirements } from './processor-limits.js?v=241';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=241';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=241';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=241';
+import { parseCasesText, normalizeDate } from './cases.js?v=241';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -399,19 +399,50 @@ function renderPreview() {
 
   const gridMM = 600;   // 바닥 그리드 = 실제 바닥 타일(대부분 600×600mm) 기준(이사 요청 2026-09-13)
 
+  // ── 바닥 그리드: CSS 텍스처 대신 2D 투영선으로 직접(원근 아티팩트 제거, 이사 요청 2026-09-13) ──
+  //   바닥면(v=SHp)에 600mm 간격 선. 앞쪽으로 선이 프레임 밖(visB)으로 나가면 중단(과도한 몰림 방지).
+  //   먼 쪽(뒷벽=작은 d)은 흐리게, 앞쪽은 진하게.
+  let floorGrid = '';
+  {
+    const gp = px(gridMM);
+    const gseg = (u1, d1, u2, d2, op) => {
+      const a = proj(u1, SHp, d1), b = proj(u2, SHp, d2);
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+      const w = (0.5 / effFit).toFixed(3);
+      return `<div class="rs3GridLn" style="left:${a.x}px;top:${a.y}px;width:${len}px;border-top-width:${w}px;opacity:${op.toFixed(2)};transform:rotate(${ang}deg)"></div>`;
+    };
+    let dEnd = 0;
+    const ds = [];
+    for (let d = 0; d <= Dp + 0.5; d += gp) {
+      ds.push(d); dEnd = d;
+      if (proj(0, SHp, d).y > visB) break;   // 앞쪽(프레임 아래)으로 나가면 중단
+    }
+    dEnd = Math.min(dEnd, Dp);
+    for (const d of ds) {                     // 가로선(폭 방향): 먼 쪽 흐림
+      if (d > dEnd + 0.5) continue;
+      floorGrid += gseg(0, d, SWp, d, 0.12 + 0.5 * (d / (dEnd || 1)));
+    }
+    for (let u = 0; u <= SWp + 0.5; u += gp) { // 세로선(깊이 방향)
+      const uu = Math.min(u, SWp);
+      floorGrid += gseg(uu, 0, uu, dEnd, 0.28);
+    }
+  }
+
   // ── 2D 치수 오버레이 ──
   const dims = [];
+  const dlw = (0.7 / effFit).toFixed(3);   // 치수선 두께 화면상 0.7px로 얇게(이사 요청 2026-09-13)
   //   치수선은 그대로 두고, 라벨(글자)만 화면(프레임) 안으로 clamp → 줌해도 글자가 안 잘림.
   const hDim = (u1, u2, v, d, label, cls = '') => {
     const a = proj(u1, v, d), b = proj(u2, v, d);
     const x = Math.min(a.x, b.x), w = Math.abs(b.x - a.x);
-    dims.push(`<div class="rs3Dln h" style="left:${x}px;top:${a.y}px;width:${w}px"></div>`
+    dims.push(`<div class="rs3Dln h" style="left:${x}px;top:${a.y}px;width:${w}px;border-top-width:${dlw}px"></div>`
       + `<div class="rs3Dlbl ${cls}" style="left:${clx((a.x + b.x) / 2)}px;top:${cly(a.y)}px">${label}</div>`);
   };
   const vDim = (u, v1, v2, d, label, cls = '') => {
     const a = proj(u, v1, d), b = proj(u, v2, d);
     const y = Math.min(a.y, b.y), h = Math.abs(b.y - a.y);
-    dims.push(`<div class="rs3Dln v" style="left:${a.x}px;top:${y}px;height:${h}px"></div>`
+    dims.push(`<div class="rs3Dln v" style="left:${a.x}px;top:${y}px;height:${h}px;border-left-width:${dlw}px"></div>`
       + `<div class="rs3Dlbl vlbl ${cls}" style="left:${clx(a.x)}px;top:${cly((a.y + b.y) / 2)}px">${label}</div>`);
   };
   const pt = (u, v, d, label, cls = '') => { const p = proj(u, v, d); dims.push(`<div class="rs3Dlbl ${cls}" style="left:${clx(p.x)}px;top:${cly(p.y)}px">${label}</div>`); };
@@ -445,7 +476,6 @@ function renderPreview() {
         <div class="rs3Scene" style="transform:${sceneT}">
           <div class="rs3Face ceil" style="left:0;top:0;width:${SWp}px;height:${Dp}px"></div>
           <div class="rs3Face floor" style="left:0;top:${SHp}px;width:${SWp}px;height:${Dp}px">
-            <div class="rs3FloorGrid" style="background-size:${px(gridMM)}px ${px(gridMM)}px"></div>
             <div class="rs3Ao" style="height:${px(1500)}px"></div>
             <div class="rs3FloorGlow" style="left:${Lx}px;width:${Lw}px;height:${px(4000)}px"></div>
           </div>
@@ -461,6 +491,7 @@ function renderPreview() {
           <div class="rs3Person" style="left:${personX}px;top:${SHp - px(1700)}px;width:${px(320)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${personDeff}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
         </div>
       </div>
+      <div class="rs3GridLayer">${floorGrid}</div>
       <div class="rs3EdgeLayer">${roomEdges}</div>
       <div class="rs3EyeLayer">${eyeLines}</div>
       <div class="rs3Overlay">
