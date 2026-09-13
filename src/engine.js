@@ -139,8 +139,10 @@ export const POWER_DERATE = 0.8;
 //   ⌊전압 × 3.9 / 캐비닛W⌋ → 110V→2, 208V→4, 230V→4 (190W 기준 일치). engineeringRule(모델별 케이블
 //   정격에 따라 다를 수 있어 정확값은 모델 데이터시트 필요). 0 이하가 되면 null.
 export const POWER_CHAIN_AMPS = 3.9;
-// 표준 회로 옵션(데이터시트). 국내 기준 230V를 앞에 둔다(이사 지침).
+// 표준 회로 옵션. 국내 시공은 230V 20A 차단기를 주로 사용(이사 지침) → primary로 맨 앞.
+//   16A/13A는 데이터시트(유럽 기준) 참고용으로 함께 표시.
 export const POWER_CIRCUIT_OPTIONS = Object.freeze([
+  { id: '230v20a', label: '230V 20A', voltage: 230, amps: 20, primary: true },
   { id: '230v16a', label: '230V 16A', voltage: 230, amps: 16 },
   { id: '230v13a', label: '230V 13A', voltage: 230, amps: 13 },
   { id: '208v20a', label: '208V 20A', voltage: 208, amps: 20 },
@@ -162,7 +164,7 @@ export function powerConfig(model, total, opts = {}) {
     const perCircuit = Math.floor(o.voltage * o.amps * derate / Wcab);
     const perDaisy = Math.floor(o.voltage * chainAmps / Wcab);
     return {
-      id: o.id, label: o.label, voltage: o.voltage, amps: o.amps,
+      id: o.id, label: o.label, voltage: o.voltage, amps: o.amps, primary: !!o.primary,
       cabinetsPerCircuit: perCircuit > 0 ? perCircuit : null,
       circuits: perCircuit > 0 ? Math.ceil(total / perCircuit) : null,
       cabinetsPerDaisyChain: perDaisy > 0 ? perDaisy : null,

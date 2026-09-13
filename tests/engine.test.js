@@ -91,6 +91,16 @@ test('powerConfig: circuit counts match datasheet — 9x3=27 cabinets', () => {
   assert.equal(powRow(27, '230v13a').circuits, 3);     // 3
   assert.equal(powRow(27, '230v16a').circuits, 2);     // 2
 });
+test('powerConfig: 230V 20A (국내 주 사용) — 190W cabinet, 6x6=36 -> 19/circuit, 2 circuits', () => {
+  const r = powerConfig(IF015RM, 36);
+  const row = r.rows.find(x => x.id === '230v20a');
+  assert.ok(row.primary, '230V 20A는 primary(주 사용)');
+  assert.equal(row.cabinetsPerCircuit, 19);   // ⌊230×20×0.8/190⌋=19
+  assert.equal(row.circuits, 2);              // ⌈36/19⌉=2
+  assert.equal(row.cabinetsPerDaisyChain, 4);
+  assert.equal(row.daisyChains, 9);           // ⌈36/4⌉=9
+  assert.equal(r.rows[0].id, '230v20a');      // 맨 앞(주 사용)
+});
 test('powerConfig: null when per-cabinet power unknown (no fake numbers)', () => {
   assert.equal(powerConfig({ maxPower: null }, 36), null);
   assert.equal(powerConfig({ maxPower: 190 }, 0), null);

@@ -792,9 +792,8 @@ function renderPower() {
   const p = r.power;
   const kw = v => v == null ? '—' : fmt(v / 1000, 2);
   const rows = p.rows.map(x => {
-    const is230 = x.voltage === 230;
-    return `<tr class="${is230 ? 'pw230' : ''}">
-      <td class="pwV">${esc(x.label)}${is230 ? ' <span class="pwTag">국내</span>' : ''}</td>
+    return `<tr class="${x.primary ? 'pw230' : ''}">
+      <td class="pwV">${esc(x.label)}${x.primary ? ' <span class="pwTag">주 사용</span>' : ''}</td>
       <td>${x.cabinetsPerCircuit ?? '—'} 대</td>
       <td><b>${x.circuits ?? '—'}</b> 회로</td>
       <td>${x.cabinetsPerDaisyChain ?? '—'} 대</td>
