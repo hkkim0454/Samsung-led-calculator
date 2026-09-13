@@ -14,7 +14,7 @@ import {
   outputCapacity,
   outputCapacity2k,
   validateOutputCardLayers,
-} from './processor-limits.js?v=253';
+} from './processor-limits.js?v=257';
 
 // ── 제조사별 Layer validator (SoT §6 — 반드시 분리) ────────────────────────────
 function validateAnalogWayLayers(proc, req, numCheck) {
@@ -79,8 +79,12 @@ export function validateProcessor(proc, req) {
     for (const t of (req.sboxTopologies ?? [])) {
       if (t.required2kOutputs != null && t.required2kOutputs > 0) evalTopos.push({ label: t.label, kind: '2k', need: t.required2kOutputs });
     }
+    // 통합 벽 4K 패널 상한(예: Pulse 4K = 1판/S-Box 1개). null이면 제한 없음.
+    const wallCap4k = proc.outputs?.maxWallSbox4k;
+    let have4k = outCap.value;
+    if (wallCap4k != null) have4k = (have4k != null) ? Math.min(have4k, wallCap4k) : wallCap4k;
     topologyResults = evalTopos.map(t => {
-      const have = t.kind === '4k' ? outCap.value : out2k.value;
+      const have = t.kind === '4k' ? have4k : out2k.value;
       const name = t.kind === '2k' ? '2K 출력'
         : (outCap.kind === 'pgm' ? '4K PGM 출력' : (outCap.assumed ? '4K 출력(카드 가정)' : '4K 출력'));
       const ok = (t.need != null && have != null) ? have >= t.need : null;

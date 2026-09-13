@@ -285,16 +285,26 @@ test('[AW] Eikos supports Matrix/Mixer/Edge; Pulse supports Matrix/Mixer but not
   assert.equal(eikos.modes.edgeBlending, eikos.canvas.multiOutputCanvas);
   assert.equal(pulse.modes.edgeBlending, pulse.canvas.multiOutputCanvas);
 });
-test('[AW] Pulse NOT failed for wide LED unless a single-wide canvas is required', () => {
+test('[AW] Pulse 4K = 1 S-Box 4K panel only: OK at <=3840x2160, FAIL when exceeded', () => {
   const pulse = getProcessor('aw-midra-pulse-4k');
-  // 5760×1080: canvas 요구 없음 → Matrix 2 독립 PGM으로 PASS(가로가 넓다는 이유만으로 FAIL 아님).
-  const noCanvas = validateProcessor(pulse, processorRequirements({ resW: 5760, resH: 1080 }));
-  assert.equal(noCanvas.verdict, 'PASS');
-  assert.equal(findCheck(noCanvas, 'Wide Canvas'), undefined);   // Wide Canvas 검사 자체가 스킵
-  // single_wide 요구가 있을 때만 Pulse가 canvas capability로 FAIL.
-  const wide = validateProcessor(pulse, processorRequirements({ resW: 5760, resH: 1080 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2 }));
-  assert.equal(findCheck(wide, 'Wide Canvas').ok, false);
-  assert.equal(wide.verdict, 'FAIL');
+  assert.equal(pulse.outputs.maxWallSbox4k, 1);   // 통합 벽 4K 1판만
+  // 3840×2160(4K 1판): 출력 검사 통과.
+  const ok = validateProcessor(pulse, processorRequirements({ resW: 3840, resH: 2160 }));
+  assert.equal(findCheck(ok, '4K PGM 출력').ok, true);
+  assert.notEqual(ok.verdict, 'FAIL');
+  // 5760×1080(4K 2판 필요, 3840 초과): Pulse 사용 불가(FAIL).
+  const over = validateProcessor(pulse, processorRequirements({ resW: 5760, resH: 1080 }));
+  assert.equal(findCheck(over, '4K PGM 출력').have, 1);   // 2가 아니라 1로 상한
+  assert.equal(findCheck(over, '4K PGM 출력').ok, false); // 1 < 2
+  assert.equal(over.verdict, 'FAIL');
+  // 7680×2160(4K 4판)도 당연히 FAIL.
+  assert.equal(validateProcessor(pulse, processorRequirements({ resW: 7680, resH: 2160 })).verdict, 'FAIL');
+});
+test('[AW] Eikos not limited to 1 panel (2 PGM / edge-blending) — 5760x1080 passes output', () => {
+  const eikos = getProcessor('aw-midra-eikos-4k');
+  assert.equal(eikos.outputs.maxWallSbox4k, null);   // 별도 제한 없음
+  const v = validateProcessor(eikos, processorRequirements({ resW: 5760, resH: 1080 }));  // 2판
+  assert.equal(findCheck(v, '4K PGM 출력').ok, true);  // 2 >= 2
 });
 test('[AW] Eikos wide-canvas job ranks Eikos above Pulse (Operation Fit boost)', () => {
   const req = processorRequirements({ resW: 7680, resH: 2160 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2, application: 'exec' });
