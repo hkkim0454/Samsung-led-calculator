@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=237';
-import { MODELS } from './models.js?v=237';
-import { PROCESSORS } from './processor-data.js?v=237';
-import { processorRequirements } from './processor-limits.js?v=237';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=237';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=237';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=237';
-import { parseCasesText, normalizeDate } from './cases.js?v=237';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=238';
+import { MODELS } from './models.js?v=238';
+import { PROCESSORS } from './processor-data.js?v=238';
+import { processorRequirements } from './processor-limits.js?v=238';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=238';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=238';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=238';
+import { parseCasesText, normalizeDate } from './cases.js?v=238';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -974,7 +974,7 @@ syncPvToggles();
   if (!toggles || !card) return;
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'pvTog pvZoomBtn'; btn.dataset.act = 'zoom';
-  btn.title = '미리보기 크게 보기'; btn.innerHTML = '⛶ 크게 보기';
+  btn.title = '미리보기 크게 보기(전체화면)'; btn.innerHTML = '⛶ Fullscreen';
   toggles.appendChild(btn);
 
   let overlay = null;
