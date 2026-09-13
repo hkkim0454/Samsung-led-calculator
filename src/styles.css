@@ -267,7 +267,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3EdgeLayer{position:absolute;inset:0;pointer-events:none}
 .rs3Edge{position:absolute;height:0;border-top:1px solid rgba(243,245,249,.75);transform-origin:left center;pointer-events:none}  /* 경계선: 천장 그라데이션 밝은 톤(#f3f5f9)으로 아주 은은하게 */
 /* 바닥 격자: 가로 격자(깊이로 물러나는 좌우 방향 선 = to bottom)를 더 진하게, 세로(수렴) 선은 은은하게. */
-.rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat}
+.rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat;background-position:0 100%}   /* 격자 기준을 앞쪽 끝(front)+좌측벽에 맞춰 세로 간격이 어중간하게 잘리지 않게(이사 요청) */
 /* 깊이 단서 높이·offset은 mm 환산값을 인라인으로 넘긴다(v2 2-3) — CSS 고정 px 제거. */
 .rs3Ao{position:absolute;left:0;right:0;top:0;background:linear-gradient(to bottom,rgba(16,18,22,.22),transparent)}
 .rs3FloorGlow{position:absolute;top:0;background:radial-gradient(120% 100% at 50% 0%,rgba(47,127,246,.20),transparent 70%)}
@@ -295,7 +295,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Num{position:absolute;transform:translate(-50%,-50%);font-size:calc(8.4px / var(--fit,1));font-weight:700;font-family:var(--mono);pointer-events:none;white-space:nowrap}
 .rs3Num.col{color:#EDEEF4;text-shadow:0 1px 2px rgba(0,0,0,.7)}
 .rs3Num.row{color:#6B7178}
-.rs3Sig{position:absolute;box-sizing:border-box;border:2px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}
+.rs3Sig{position:absolute;box-sizing:border-box;border:1px solid rgba(47,127,246,.95);transform:translateZ(14px);pointer-events:none}   /* FHD/UHD 신호 격자선 두께 50%(2px→1px, 이사 요청) */
 .rs3Sig.uhd{border-color:rgba(255,59,48,.95)}
 .rs3SigTag{position:absolute;top:0;left:0;font-size:8.5px;font-weight:700;color:#fff;background:rgba(47,127,246,.95);padding:0 4px;border-radius:0 0 4px 0}
 .rs3Sig.uhd .rs3SigTag{background:rgba(255,59,48,.95)}
@@ -607,7 +607,10 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppVer{padding:8px 18px 16px;font-size:12px;color:var(--warn)}
 
 /* ── 03 미리보기 '크게 보기'(전체화면 팝업) ── */
-.pvZoomBtn{margin-left:6px}
+/* 강조 버튼: 토글 칩과 구분되게 파란 채움으로 눈에 띄게. */
+.pvZoomBtn{margin-left:8px;background:#2f7ff6;color:#fff;border:1px solid #2f7ff6;font-weight:700;box-shadow:0 2px 8px -2px rgba(47,127,246,.5)}
+.pvZoomBtn:hover{background:#1f6fe6;border-color:#1f6fe6}
+.pvZoomBtn .dot{display:none}
 #pvZoom{position:fixed;inset:0;z-index:1000;background:rgba(16,18,40,.55);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
 .pvZoomInner{background:#fff;border-radius:16px;width:min(1400px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px -12px rgba(10,20,60,.5)}
 .pvZoomHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(16,18,40,.08)}
