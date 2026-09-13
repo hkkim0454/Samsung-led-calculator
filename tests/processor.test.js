@@ -60,15 +60,14 @@ test('Zenith 100 fails S-Box 4×4K (PGM 3<4); Zenith 200 passes (PGM 4)', () => 
   assert.ok(!ranked.some(r => r.proc.id === 'aw-alta-zenith-100' && r.label !== '부적합'));
 });
 
-// ── 지침5: Aquilon RS PGM null → S-Box 판정 CONDITIONAL(FAIL 아님) ─────────────
-test('Aquilon RS PGM null -> output check CONDITIONAL, not FAIL; Active not used as PGM', () => {
+// ── 지침6: Aquilon RS는 공식 PGM 값으로 정상 판정(PGM null 규칙 폐기). Active≠PGM ─
+test('Aquilon RS uses official PGM (not null); RS output judged PASS/FAIL, Active not used as PGM', () => {
   const rs4 = getProcessor('aw-aquilon-rs4');
-  assert.equal(rs4.outputs.maxIndependent4kPgm, null);
-  assert.equal(rs4.outputs.maxActiveOutputs, 16);
-  const v = validateProcessor(rs4, processorRequirements({ resW: 7680, resH: 4320 }));  // 4 out
-  assert.equal(findCheck(v, '4K PGM 출력').ok, null);     // PGM 미확인
-  assert.notEqual(v.verdict, 'FAIL');
-  assert.equal(v.verdict, 'CONDITIONAL');
+  assert.equal(rs4.outputs.maxIndependent4kPgm, 8);       // 공식 PGM
+  assert.equal(rs4.outputs.maxActiveOutputs, 16);         // Active ≠ PGM
+  const v = validateProcessor(rs4, processorRequirements({ resW: 7680, resH: 4320 }));  // 4×4K
+  assert.equal(findCheck(v, '4K PGM 출력').ok, true);     // PGM 8 >= 4 → PASS(더 이상 CONDITIONAL 아님)
+  assert.notEqual(v.verdict, 'CONDITIONAL');
 });
 
 // ── 지침4: X100 Window로 Capacity Fit PASS 가능(레이어 null이어도) ────────────
@@ -210,13 +209,77 @@ test('Aquilon Cmini / RS alpha / RS5 present with verified values', () => {
   assert.equal(getProcessor('aw-aquilon-rs5').inputs.maxIndependent4k, 32);
 });
 
-// ── Wide Canvas (SoT §15): Eikos 지원 / Pulse 미확인 ─────────────────────────
-test('Wide Canvas single_wide 2-output: Eikos PASS, Pulse CONDITIONAL(null)', () => {
+// ── Wide Canvas (SoT §15, 지침 5): Eikos Edge-Blending 지원 / Pulse 미지원 ────────
+test('Wide Canvas single_wide 2-output: Eikos PASS, Pulse unsupported (Edge-Blending 없음 -> false)', () => {
   const req = processorRequirements({ resW: 7680, resH: 2160 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2, application: 'exec' });
   const eikos = validateProcessor(getProcessor('aw-midra-eikos-4k'), req);
   assert.equal(findCheck(eikos, 'Wide Canvas').ok, true);
   const pulse = validateProcessor(getProcessor('aw-midra-pulse-4k'), req);
-  assert.equal(findCheck(pulse, 'Wide Canvas').ok, null);   // canvas 미확인 → CONDITIONAL
+  assert.equal(getProcessor('aw-midra-pulse-4k').canvas.multiOutputCanvas, false);   // Pulse는 Edge-Blending 미지원
+  assert.equal(findCheck(pulse, 'Wide Canvas').ok, false);   // 미지원 → FAIL
+});
+
+// ── Analog Way 공식 재검증(2026-09-13): Family / Active≠PGM≠Mixing / RS PGM / AUX / Alta ──
+test('[AW] Alta 4K is a family (Zenith 100/200); no standalone "Alta" model is recommended', () => {
+  const alta = PROCESSORS.filter(p => p.family === 'Alta 4K').map(p => p.model).sort();
+  assert.deepEqual(alta, ['Zenith 100', 'Zenith 200']);
+  // family 문자열이 제품(model)로 새어나오면 안 됨.
+  assert.ok(!PROCESSORS.some(p => p.model === 'Alta' || p.model === 'Alta 4K'));
+  const ranked = rankProcessors(PROCESSORS, processorRequirements({ resW: 7680, resH: 4320 }, { application: 'auditorium' }));
+  assert.ok(!ranked.some(r => r.proc.model === 'Alta' || r.proc.model === 'Alta 4K'));   // 추천은 Zenith 100/200 단위
+  assert.ok(ranked.some(r => r.proc.model === 'Zenith 200'));
+});
+test('[AW] Zenith 100: Active4/PGM3/mixing3/split6, 4×4K -> FAIL; Zenith 200: Active6/PGM4 -> PASS', () => {
+  const z1 = getProcessor('aw-alta-zenith-100');
+  assert.deepEqual({ act: z1.outputs.maxActiveOutputs, pgm: z1.outputs.maxIndependent4kPgm, mix: z1.layers.mixing4k, sp: z1.layers.split4k }, { act: 4, pgm: 3, mix: 3, sp: 6 });
+  const req = processorRequirements({ resW: 7680, resH: 4320 });   // 4×4K
+  assert.equal(validateProcessor(z1, req).verdict, 'FAIL');          // PGM 3 < 4
+  const z2 = getProcessor('aw-alta-zenith-200');
+  assert.deepEqual({ act: z2.outputs.maxActiveOutputs, pgm: z2.outputs.maxIndependent4kPgm }, { act: 6, pgm: 4 });
+  assert.equal(findCheck(validateProcessor(z2, req), '4K PGM 출력').ok, true);   // PGM 4 >= 4
+});
+test('[AW] Aquilon RS1 PGM4: req 4 -> PASS, req 5 -> FAIL', () => {
+  const rs1 = getProcessor('aw-aquilon-rs1');
+  assert.deepEqual({ act: rs1.outputs.maxActiveOutputs, pgm: rs1.outputs.maxIndependent4kPgm }, { act: 8, pgm: 4 });
+  assert.equal(findCheck(validateProcessor(rs1, processorRequirements({ resW: 3840, resH: 2160 }, { required4kOutputs: 4 })), '4K PGM 출력').ok, true);
+  assert.equal(findCheck(validateProcessor(rs1, processorRequirements({ resW: 3840, resH: 2160 }, { required4kOutputs: 5 })), '4K PGM 출력').ok, false);
+});
+test('[AW] Aquilon RS2 PGM8: req 8 -> PASS, req 9 -> FAIL', () => {
+  const rs2 = getProcessor('aw-aquilon-rs2');
+  assert.deepEqual({ act: rs2.outputs.maxActiveOutputs, pgm: rs2.outputs.maxIndependent4kPgm }, { act: 12, pgm: 8 });
+  assert.equal(findCheck(validateProcessor(rs2, processorRequirements({ resW: 3840, resH: 2160 }, { required4kOutputs: 8 })), '4K PGM 출력').ok, true);
+  assert.equal(findCheck(validateProcessor(rs2, processorRequirements({ resW: 3840, resH: 2160 }, { required4kOutputs: 9 })), '4K PGM 출력').ok, false);
+});
+test('[AW] Aquilon RS4 keeps Active(16)/PGM(8)/Mixing(12) as three separate fields', () => {
+  const rs4 = getProcessor('aw-aquilon-rs4');
+  assert.equal(rs4.outputs.maxActiveOutputs, 16);
+  assert.equal(rs4.outputs.maxIndependent4kPgm, 8);
+  assert.equal(rs4.layers.mixing4k, 12);
+  assert.equal(rs4.layers.split4k, 24);
+  // 세 값이 서로 다른 개념 — 하나로 합쳐지지 않았는지.
+  assert.notEqual(rs4.outputs.maxActiveOutputs, rs4.outputs.maxIndependent4kPgm);
+  assert.notEqual(rs4.outputs.maxIndependent4kPgm, rs4.layers.mixing4k);
+});
+test('[AW] Aquilon RS AUX = scaled 4K60, main resources not used; Zenith AUX = 1080p60', () => {
+  assert.deepEqual(getProcessor('aw-aquilon-rs4').aux, { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false });
+  assert.equal(getProcessor('aw-alta-zenith-100').aux.maxResolution, '1080p60');
+  assert.equal(getProcessor('aw-alta-zenith-200').aux.maxAuxOutputs, 4);
+});
+test('[AW] Pulse: 2×4K PGM (Matrix) + Mixer 1×AUX 1080p60; Eikos: 2-output wide canvas supported', () => {
+  const pulse = getProcessor('aw-midra-pulse-4k');
+  assert.equal(pulse.outputs.maxIndependent4kPgm, 2);          // Matrix: 2×4K PGM
+  assert.deepEqual(pulse.aux, { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: true });   // Mixer: 1×AUX
+  assert.equal(pulse.canvas.multiOutputCanvas, false);         // Edge-Blending 미지원
+  const eikos = getProcessor('aw-midra-eikos-4k');
+  assert.equal(eikos.canvas.multiOutputCanvas, true);          // Edge-Blending → 2출력 wide canvas
+  assert.equal(eikos.canvas.maxCanvasOutputs, 2);
+});
+test('[AW] Eikos wide-canvas job ranks Eikos above Pulse (Operation Fit boost)', () => {
+  const req = processorRequirements({ resW: 7680, resH: 2160 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2, application: 'exec' });
+  const ranked = rankProcessors(PROCESSORS, req);
+  const ei = ranked.findIndex(r => r.proc.id === 'aw-midra-eikos-4k');
+  const pu = ranked.findIndex(r => r.proc.id === 'aw-midra-pulse-4k');
+  assert.ok(ei >= 0 && pu >= 0 && ei < pu, 'Eikos가 Pulse보다 상위');
 });
 
 // ── Operation Fit: 공간 5종 성향 ─────────────────────────────────────────────
@@ -361,8 +424,8 @@ test('validateBuild: X100 7U 5760x1080 출력2장 PASS, 1장 FAIL, 9장 섀시�
 });
 
 // ── 단종/무결성 ──────────────────────────────────────────────────────────────
-test('discontinued Midra removed; Pulse/Eikos remain', () => {
-  const midra = PROCESSORS.filter(p => p.family === 'Midra').map(p => p.model).sort();
+test('discontinued Midra removed; Pulse/Eikos remain (family = Midra 4K)', () => {
+  const midra = PROCESSORS.filter(p => p.family === 'Midra 4K').map(p => p.model).sort();
   assert.deepEqual(midra, ['Eikos 4K', 'Pulse 4K']);
 });
 test('every processor has valid layer model / status / unique id', () => {

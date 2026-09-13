@@ -27,6 +27,10 @@ const emptyInputs = () => ({ maxIndependent2k: null, maxIndependent4k: null, hdm
 const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null });
 const emptyLayers = () => ({ model: null, maxWindows: null, maxLayers: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, chassisMaxLayers2k: null });
 const emptyCanvas = () => ({ multiOutputCanvas: null, horizontalSpan: null, verticalSpan: null, maxCanvasOutputs: null });
+// AUX(보조 출력)는 제조사/제품군별로 성격이 다르므로 generic 규칙으로 합치지 않는다(지침 7).
+//   maxResolution: AUX 최대 해상도('1080p60' | '4K60' 등). maxAuxOutputs: AUX로 쓸 수 있는 출력 수.
+//   usesMainLayerResources: AUX 레이어가 메인 처리자원을 소모하는가(Aquilon RS는 false — 별도 자원).
+const emptyAux = () => ({ maxResolution: null, maxAuxOutputs: null, usesMainLayerResources: null });
 const emptyMixing = () => ({ supportsMixed4k2kBoards: null });
 const emptySwitching = () => ({ cut: null, fade: null, seamless: null, trueABMixing: null, previewProgram: null, monitoringPreview: null, transitionGrade: null });
 const emptyLatency = () => ({ frames: null, milliseconds: null });
@@ -47,6 +51,7 @@ function proc(p) {
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
     layers: { ...emptyLayers(), ...(p.layers ?? {}) },
     canvas: { ...emptyCanvas(), ...(p.canvas ?? {}) },
+    aux: { ...emptyAux(), ...(p.aux ?? {}) },
     outputBoardMixing: { ...emptyMixing(), ...(p.outputBoardMixing ?? {}) },
     switching: { ...emptySwitching(), ...(p.switching ?? {}) },
     latency: { ...emptyLatency(), ...(p.latency ?? {}) },
@@ -59,67 +64,81 @@ function proc(p) {
 export const PROCESSORS = [
 
   // ── Analog Way · Midra 4K (Pulse 4K / Eikos 4K) ───────────────────────────
-  // I/O·레이어 공식(EKS-4K 데이터시트 + AW 페이지). Active 2 / 독립4K출력 2 / PGM 2.
+  // 공식 재검증(2026-09-13): 10입력(8×4K60 + 2×2K60). 2 물리출력 = 최대 2×4K PGM(HDMI+SDI는
+  //   mirrored plug → 독립출력 2배 계산 금지, 지침 4·10). 믹싱2/분할4. Active ≠ PGM.
+  //   Pulse: Matrix(2×PGM) / Mixer(1×PGM + 1×AUX 1080p60). Edge-Blending 미지원(→ Wide Canvas 불가).
+  //   Eikos: Matrix / Mixer / Edge-Blending(Hard-Soft Edge) → 2출력 1 wide PGM 지원(지침 5).
   ...[
-    { model: 'Pulse 4K', slug: 'pulse-4k', canvas: emptyCanvas() },
-    // Eikos 4K: 2출력 Wide Canvas(가로/세로) 공식 지원(SoT §7·§15).
-    { model: 'Eikos 4K', slug: 'eikos-4k', canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 2 } },
+    { model: 'Pulse 4K', slug: 'pulse-4k',
+      canvas: { multiOutputCanvas: false, horizontalSpan: false, verticalSpan: false, maxCanvasOutputs: null },   // Edge-Blending 미지원
+      aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: true },   // Mixer 모드 1×AUX
+      note: 'Matrix 2×4K PGM / Mixer 1×4K PGM + 1×AUX(1080p60). Edge-Blending 미지원 → Wide Canvas 불가.' },
+    { model: 'Eikos 4K', slug: 'eikos-4k',
+      canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 2 },   // Edge-Blending 지원
+      aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: true },
+      note: 'Matrix / Mixer / Edge-Blending(Hard-Soft Edge). 2 물리출력 → 1 wide PGM(2믹싱/4분할). Pulse와 달리 Edge-Blending 지원.' },
   ].map(m => proc({
     id: 'aw-midra-' + m.slug,
-    manufacturer: AW, family: 'Midra', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
+    manufacturer: AW, family: 'Midra 4K', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
     inputs: { maxIndependent4k: 8, maxIndependent2k: 10, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },
     outputs: { maxActiveOutputs: 2, maxIndependent4kOutputs: 2, maxIndependent4kPgm: 2, maxIndependent2k: null },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },
     canvas: m.canvas,
+    aux: m.aux,
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'presentation' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true },
     control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/pulse-4k', sourceDocument: 'EKS-4K 데이터시트(이사 제공) + AW 공식', sourceVersion: '2026-09-12', notes: 'Active 2 / 독립4K출력 2 / PGM 2, 믹싱2 분할4. 10입력(8×4K + IN1·2 HDMI1.4/3G-SDI 겸용 2K). Eikos만 2출력 Wide Canvas.' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/pulse-4k', sourceDocument: 'EKS-4K 데이터시트(이사 제공) + AW 공식 재검증', sourceVersion: '2026-09-13', notes: m.note + ' 10입력(8×4K + 2×2K 겸용). Active 2 / PGM 2, 믹싱2 분할4. HDMI+SDI mirrored plug → 독립출력 2배 금지.' },
   })),
 
   // ── Analog Way · Alta 4K (Zenith 100 / Zenith 200) ────────────────────────
   // 지침 1: Active ≠ PGM. Samsung S-Box 판정엔 PGM 사용.
   proc({
     id: 'aw-alta-zenith-100',
-    manufacturer: AW, family: 'Alta', model: 'Zenith 100', lifecycle: 'active', configurationType: 'preconfigured',
+    manufacturer: AW, family: 'Alta 4K', model: 'Zenith 100', lifecycle: 'active', configurationType: 'preconfigured',
     inputs: { maxIndependent4k: 11, maxIndependent2k: 13, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },
     outputs: { maxActiveOutputs: 4, maxIndependent4kOutputs: 4, maxIndependent4kPgm: 3, maxIndependent2k: null },   // Active 4 / PGM 3
-    layers: { model: 'mixing_split', mixing4k: null, split4k: null },   // 데이터시트 미기재 → null
+    layers: { model: 'mixing_split', mixing4k: 3, split4k: 6 },   // 공식 재검증(2026-09-13): 믹싱3 / 분할6
+    aux: { maxResolution: '1080p60', maxAuxOutputs: 2, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 2
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 }, features: { genlock: true, hdr: true, tenBit: true, multiview: true }, control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-100', sourceDocument: 'ZEN100 뒷면 데이터시트(이사 제공)', sourceVersion: '2026-09-12', notes: '13입력(4K 11/2K 13). Active 4 / 4K PGM 3. 믹싱/분할 미기재(null).' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-100', sourceDocument: 'ZEN100 데이터시트(이사 제공) + AW 공식 재검증', sourceVersion: '2026-09-13', notes: '13입력(11×4K60 + 2×2K60). Active 4 / 4K PGM 3 / AUX 2(1080p60). 믹싱3 분할6. Active ≠ PGM.' },
   }),
   proc({
     id: 'aw-alta-zenith-200',
-    manufacturer: AW, family: 'Alta', model: 'Zenith 200', lifecycle: 'active', configurationType: 'preconfigured',
+    manufacturer: AW, family: 'Alta 4K', model: 'Zenith 200', lifecycle: 'active', configurationType: 'preconfigured',
     inputs: { maxIndependent4k: 14, maxIndependent2k: 16, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },
     outputs: { maxActiveOutputs: 6, maxIndependent4kOutputs: 6, maxIndependent4kPgm: 4, maxIndependent2k: null },   // Active 6 / PGM 4
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
+    aux: { maxResolution: '1080p60', maxAuxOutputs: 4, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 4
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 }, features: { genlock: true, hdr: true, tenBit: true, multiview: true }, control: { tcp: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceDocument: 'ZEN200 뒷면 데이터시트(이사 제공)', sourceVersion: '2026-09-12', notes: '16입력(4K 14/2K 16). Active 6 / 4K PGM 4. 믹싱4 분할8. AMX 확인 필요(null).' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/zenith-200', sourceDocument: 'ZEN200 데이터시트(이사 제공) + AW 공식 재검증', sourceVersion: '2026-09-13', notes: '16입력(14×4K60 + 2×2K60). Active 6 / 4K PGM 4 / AUX 4(1080p60). 믹싱4 분할8. Active ≠ PGM.' },
   }),
 
   // ── Analog Way · Aquilon (LivePremier RS) ─────────────────────────────────
-  // SoT §8: IN / Active Out / Mixing 만 제공. PGM Screen 미제공 → maxIndependent4kPgm=null(추정 금지, 지침 5).
+  // 공식 재검증(2026-09-13, 지침 6): 모델별 PGM/믹싱/분할 확정 → PGM null 규칙 폐기.
+  //   Active ≠ PGM ≠ Mixing(지침 8). non-PGM 출력은 scaled 4K60 AUX로 사용 가능하고 그 AUX 레이어는
+  //   메인 처리자원을 쓰지 않음(usesMainLayerResources=false, 지침 7) — Zenith(1080p60 AUX)와 다름.
   ...[
-    { model: 'Aquilon RS alpha', in4k: 8,  act: 4,  mix: 4,  slug: 'rsalpha' },
-    { model: 'Aquilon RS1',      in4k: 16, act: 8,  mix: 4,  slug: 'rs1' },
-    { model: 'Aquilon RS2',      in4k: 16, act: 12, mix: 8,  slug: 'rs2' },
-    { model: 'Aquilon RS3',      in4k: 24, act: 12, mix: 8,  slug: 'rs3' },
-    { model: 'Aquilon RS4',      in4k: 24, act: 16, mix: 12, slug: 'rs4' },
-    { model: 'Aquilon RS5',      in4k: 32, act: 16, mix: 12, slug: 'rs5' },
-    { model: 'Aquilon RS6',      in4k: 32, act: 20, mix: 16, slug: 'rs6' },
+    { model: 'Aquilon RS alpha', in4k: 8,  act: 4,  pgm: 4,  mix: 4,  split: 8,  slug: 'rsalpha' },
+    { model: 'Aquilon RS1',      in4k: 16, act: 8,  pgm: 4,  mix: 4,  split: 8,  slug: 'rs1' },
+    { model: 'Aquilon RS2',      in4k: 16, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs2' },
+    { model: 'Aquilon RS3',      in4k: 24, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs3' },
+    { model: 'Aquilon RS4',      in4k: 24, act: 16, pgm: 8,  mix: 12, split: 24, slug: 'rs4' },
+    { model: 'Aquilon RS5',      in4k: 32, act: 16, pgm: 12, mix: 12, split: 24, slug: 'rs5' },
+    { model: 'Aquilon RS6',      in4k: 32, act: 20, pgm: 16, mix: 16, split: 32, slug: 'rs6' },
   ].map(m => proc({
     id: 'aw-aquilon-' + m.slug,
     manufacturer: AW, family: 'Aquilon', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
     inputs: { maxIndependent4k: m.in4k },
-    outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: null },   // PGM 미확인(null)
-    layers: { model: 'mixing_split', mixing4k: m.mix, split4k: null },   // 분할 수치 SoT 미제공(null)
+    outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: m.pgm },   // Active ≠ PGM(공식값)
+    layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
+    aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },   // non-PGM 출력 = scaled 4K60 AUX, 메인자원 미소모
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
     control: { tcp: true, restApi: true, amxCompatible: true, crestronCompatible: true },
-    verification: { status: 'partial_official', sourceUrl: 'https://www.analogway.com/products/', sourceDocument: 'SoT §8 (LivePremier RS)', sourceVersion: '2026-09-13', notes: 'IN/Active Out/Mixing만 확인. PGM Screen·분할 레이어 미제공 → null. S-Box PGM 판정은 CONDITIONAL.' },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/', sourceDocument: 'Analog Way LivePremier RS 공식 재검증(이사 제공, 2026-09-13)', sourceVersion: '2026-09-13', notes: `IN ${m.in4k}×4K / Active ${m.act} / PGM ${m.pgm} / 믹싱 ${m.mix} / 분할 ${m.split}. non-PGM 출력=scaled 4K60 AUX(메인자원 미소모). Active·PGM·Mixing 별도.` },
   })),
 
   // ── Analog Way · Aquilon C mini (customizable / LivePremier) ──────────────

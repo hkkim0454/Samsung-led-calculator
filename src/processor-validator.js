@@ -172,9 +172,9 @@ export function validateProcessor(proc, req) {
 // ── Operation Fit: 공간 용도 5종 성향(SoT §2). 통과 제품의 우선순위/등급 결정 ────────
 //   family: Midra(Pulse/Eikos)·Alta(Zenith)·Aquilon = Analog Way / X100 Pro·Universe = Colorlight / H = NovaStar
 const OPERATION_PREF = Object.freeze({
-  exec:         ['Midra', 'Alta', 'Aquilon'],                 // 중역회의실 — Analog Way 최우선
-  conference:   ['Midra', 'Alta', 'Aquilon', 'X100 Pro'],     // 회의실 — AW 우선, Colorlight 조건부
-  auditorium:   ['Alta', 'Aquilon', 'Midra'],                 // 강당 — AW 최우선(공연·이벤트 성격 흡수)
+  exec:         ['Midra 4K', 'Alta 4K', 'Aquilon'],                 // 중역회의실 — Analog Way 최우선
+  conference:   ['Midra 4K', 'Alta 4K', 'Aquilon', 'X100 Pro'],     // 회의실 — AW 우선, Colorlight 조건부
+  auditorium:   ['Alta 4K', 'Aquilon', 'Midra 4K'],                 // 강당 — AW 최우선(공연·이벤트 성격 흡수)
   control_room: ['X100 Pro', 'Universe', 'H'],                // 상황실/관제실 — X100 우선, NovaStar 후순위
   lobby:        ['X100 Pro', 'Universe', 'H'],                // 로비 사이니지 — Colorlight 우선, NovaStar 대안
 });
@@ -199,8 +199,8 @@ function productAdjust(proc, req) {
     if (req.customizableRequired) adj -= 4;    // 커스터마이즈 구성
     if (req.livePremierPreferred) adj -= 3;    // LivePremier 생태계
   }
-  // 고정형 라인(Alta/Midra)은 확장·이중화 요구가 크면 상대적으로 후순위.
-  if (proc.family === 'Alta' || proc.family === 'Midra') {
+  // 고정형 라인(Alta 4K/Midra 4K)은 확장·이중화 요구가 크면 상대적으로 후순위.
+  if (proc.family === 'Alta 4K' || proc.family === 'Midra 4K') {
     if (req.expansionRequired)  adj += 3;
     if (req.redundancyRequired) adj += 3;
   }
@@ -208,12 +208,15 @@ function productAdjust(proc, req) {
   if (req.multiWindowPriority && proc.family === 'X100 Pro') adj -= 4;
   // 전환효과(Fade/Seamless/True A/B/PGM/고급 트랜지션) 중시 → Analog Way 계열 가점.
   if ((req.fadeRequired || req.seamlessSwitching || req.trueABRequired || req.previewProgramRequired || req.advancedTransitionRequired)
-      && (proc.family === 'Midra' || proc.family === 'Alta' || proc.family === 'Aquilon')) adj -= 2;
-  // 고정 솔루션 선호 → Midra/Alta 가점, 모듈형 Aquilon 감점.
+      && (proc.family === 'Midra 4K' || proc.family === 'Alta 4K' || proc.family === 'Aquilon')) adj -= 2;
+  // 고정 솔루션 선호 → Midra 4K/Alta 4K 가점, 모듈형 Aquilon 감점.
   if (req.fixedSolutionPreferred) {
-    if (proc.family === 'Midra' || proc.family === 'Alta') adj -= 2;
+    if (proc.family === 'Midra 4K' || proc.family === 'Alta 4K') adj -= 2;
     if (proc.family === 'Aquilon') adj += 3;
   }
+  // 2출력 이상 Wide Canvas(가로/세로 확장)가 필요하면, 실제로 지원하는 제품(예: Eikos 4K Edge-Blending) 가점(지침 5).
+  if (req.requiredCanvasOutputs > 1 && req.canvasMode && req.canvasMode !== 'independent'
+      && req.canvasMode !== 'multi_region' && proc.canvas?.multiOutputCanvas === true) adj -= 5;
   return adj;
 }
 
