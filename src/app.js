@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=246';
-import { MODELS } from './models.js?v=246';
-import { PROCESSORS } from './processor-data.js?v=246';
-import { processorRequirements } from './processor-limits.js?v=246';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=246';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=246';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=246';
-import { parseCasesText, normalizeDate } from './cases.js?v=246';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=247';
+import { MODELS } from './models.js?v=247';
+import { PROCESSORS } from './processor-data.js?v=247';
+import { processorRequirements } from './processor-limits.js?v=247';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=247';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=247';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=247';
+import { parseCasesText, normalizeDate } from './cases.js?v=247';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -431,7 +431,7 @@ function renderPreview() {
 
   // ── 2D 치수 오버레이 ──
   const dims = [];
-  const dlw = (0.7 / effFit).toFixed(3);   // 치수선 두께 화면상 0.7px로 얇게(이사 요청 2026-09-13)
+  const dlw = (0.49 / effFit).toFixed(3);   // 치수선 두께 화면상 0.49px(0.7→30% 더 축소, 이사 요청 2026-09-13)
   //   치수선은 그대로 두고, 라벨(글자)만 화면(프레임) 안으로 clamp → 줌해도 글자가 안 잘림.
   const hDim = (u1, u2, v, d, label, cls = '') => {
     const a = proj(u1, v, d), b = proj(u2, v, d);
