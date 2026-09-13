@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=234';
-import { MODELS } from './models.js?v=234';
-import { PROCESSORS } from './processor-data.js?v=234';
-import { processorRequirements } from './processor-limits.js?v=234';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=234';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=234';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=234';
-import { parseCasesText, normalizeDate } from './cases.js?v=234';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=235';
+import { MODELS } from './models.js?v=235';
+import { PROCESSORS } from './processor-data.js?v=235';
+import { processorRequirements } from './processor-limits.js?v=235';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=235';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=235';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=235';
+import { parseCasesText, normalizeDate } from './cases.js?v=235';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -287,9 +287,9 @@ function renderPreview() {
   const cellPx = Math.min(colWp, rowHp);
   const gap = Math.max(1, cellPx * 0.02);                   // 배열 많을 때 gap이 셀을 잡아먹지 않게(v2 2-3)
 
-  // 사람: 벽에서 3.5 m, 캐비닛(LED) 왼쪽 모서리에서 1 m 왼쪽에 배치(이사 요청). LED를 가리지 않게.
+  // 사람: 벽에서 3.5 m, 캐비닛(LED) 왼쪽 모서리에서 항상 500 mm 왼쪽에 배치(이사 요청). LED를 가리지 않게.
   const personD = Math.min(px(3500), Dp * 0.45);
-  const personX = Math.max(px(300), Lx - px(1000));         // LED 왼쪽 모서리(Lx)에서 1 m 왼쪽(최소 벽에서 0.3 m)
+  const personX = Math.max(px(150), Lx - px(500));          // LED 왼쪽 모서리(Lx)에서 500 mm 왼쪽(최소 벽에서 0.15 m)
   const personFf = P / (P + ZW - personD);                  // 사람 깊이 투영배율(3D 자동 축소)
 
   // ── 줌인(이사 요청: 20% 이상 크게) + 라벨 화면 안 clamp 준비 ─────────────────
@@ -371,16 +371,16 @@ function renderPreview() {
   }
 
   // 눈높이선: 사람 눈높이(1.6/1.2 m)를 사람 깊이(personDeff) 기준 '수평 점선'으로 그림.
-  //   사람이 좌측이라 선은 왼쪽 벽~LED 오른쪽으로, 라벨은 왼쪽 끝(사람 쪽)에 배치.(이사 요청)
+  //   사람이 좌측이라 라벨은 사람과 안 겹치게 반대편(오른쪽 끝)에 우측 정렬로 배치.(이사 요청)
   let eyeLines = '';
   for (const g of [{ mm: 1600, t: '눈높이(서) 1.6 m' }, { mm: 1200, t: '눈높이(앉) 1.2 m' }]) {
     if (g.mm > sH) continue;
     const v = SHp - px(g.mm);
     const eyeY = proj(personX, v, personDeff).y;                     // 눈높이 화면 y(수평선, 사람 깊이=personDeff)
     const xL = Math.max(visL + 6, proj(0, v, personDeff).x);         // 왼쪽 끝(왼쪽 벽 부근, 화면 안)
-    const xR = Math.min(visR - 6, proj(Lx + Lw, v, personDeff).x);   // 오른쪽 끝(LED 오른쪽 부근, 화면 안)
+    const xR = Math.min(visR - 6, proj(SWp, v, personDeff).x);       // 오른쪽 끝(오른쪽 벽 부근, 화면 안)
     eyeLines += `<div class="rs3Eye" style="left:${xL}px;top:${eyeY}px;width:${Math.max(0, xR - xL)}px"></div>`
-      + `<span class="rs3EyeLbl" style="left:${xL}px;top:${cly(eyeY)}px">${g.t}</span>`;
+      + `<span class="rs3EyeLbl r" style="left:${xR}px;top:${cly(eyeY)}px">${g.t}</span>`;
   }
 
   // 방 모서리(구조 edge)를 2D 오버레이 선으로. 깊이 4모서리 + 뒷벽 둘레 4변.
