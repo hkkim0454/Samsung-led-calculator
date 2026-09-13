@@ -1,33 +1,59 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// 비디오 프로세서 — 하드 제약 판정·등급·정렬 (DEC-030, 코드 3분할 2026-09-12)
+// 비디오 프로세서 — Capacity Fit / Operation Fit 2단계 판정 (SoT + plan v2, 2026-09-13)
 //
-// 이 파일은 "제품이 요구를 충족하는지"를 판정한다: validateProcessor(하드 제약 PASS/
-// CONDITIONAL/FAIL), rankProcessors(등급 매김·정렬), validateBuild(실제 카드 구성 검증).
-// 용량·한계 숫자 계산은 processor-limits.js가 담당하고, 여기서 그 결과를 조합해 판정만 한다.
+// 1) Capacity Fit (validateProcessor): 하드 제약. 제조사별 Layer validator를 분리 호출.
+//    하나라도 false → FAIL, false 없고 null 있으면 CONDITIONAL, 모두 true면 PASS.
+// 2) Operation Fit (operationFit): 공간 용도(5종) 성향으로 통과 제품의 우선순위/등급 결정.
 //
-// 데이터 신뢰성 원칙(SOURCE-OF-TRUTH.md §9): 필수 기능이 UNKNOWN(null)이면 PASS가 아니라
-//   CONDITIONAL. null을 임의로 PASS로 만들지 않는다. (null !== false)
+// 원칙(SoT §18): 미확인(null)은 PASS 아님(=CONDITIONAL). null !== false. 임의 % 점수 없음.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
   INPUT_2K_PER_CARD,
   inputsCapacity,
-  outputs4kCapacity,
+  outputCapacity,
   validateOutputCardLayers,
-} from './processor-limits.js?v=247';
+} from './processor-limits.js?v=248';
 
-/** 여러 값 중 최댓값(null 무시). 전부 null이면 null. */
 function maxNullable(...vals) {
   const nums = vals.filter(v => v != null);
   return nums.length ? Math.max(...nums) : null;
 }
 
-/**
- * 하드 제약 검사. proc(제품) vs req(processorRequirements 결과).
- * 각 검사 ok: true(충족)/false(미달)/null(사양 미확인). 요구하지 않은 항목은 검사 생략.
- * 종합 verdict: 하나라도 false면 FAIL, false는 없고 null 있으면 CONDITIONAL, 모두 true면 PASS.
- * 반환: { id, verdict, checks: [{name, need, have, unit, ok}] }.
- */
+// ── 제조사별 Layer validator (SoT §6 — 반드시 분리) ────────────────────────────
+function validateAnalogWayLayers(proc, req, numCheck) {
+  const L = proc.layers ?? {};
+  // True A/B가 필요하면 반드시 '믹싱' 레이어만(분할로 대체 불가, SoT §7).
+  if (req.requiredMixingLayers > 0) numCheck('4K 믹싱 레이어(A/B)', req.requiredMixingLayers, L.mixing4k ?? null);
+  if (req.requiredSplitLayers > 0) numCheck('4K 레이어(믹싱/분할)', req.requiredSplitLayers, maxNullable(L.split4k, L.mixing4k));
+}
+function validateX100Windows(proc, req, numCheck) {
+  const L = proc.layers ?? {};
+  // Window≠Layer(SoT §9·§14). 공식 Max Windows가 요구를 만족하면 PASS 가능(지침 4).
+  if (req.requiredWindows > 0) numCheck('최대 윈도우', req.requiredWindows, L.maxWindows ?? null, '개', 'Window≠Layer(공식 Max Windows)');
+  // per-output-card 4K Layer 한계는 공식 미확인 → 추정 금지(검사하지 않음).
+}
+function validateUniverseLayers(proc, req, numCheck) {
+  const L = proc.layers ?? {};
+  if (req.required4kLayers > 0) numCheck('4K 레이어(전역)', req.required4kLayers, L.global4k ?? null);
+  if (req.required2kLayers > 0) numCheck('2K 레이어(전역)', req.required2kLayers, L.global2k ?? null);
+  // per-board 몰림 검사는 validateOutputCardLayers()에서(전역 + 보드별 둘 다).
+}
+function validateNovaStarLayers(proc, req, numCheck) {
+  const L = proc.layers ?? {};
+  const boards = proc.slots?.maxOutputBoards ?? null;
+  if (req.required4kLayers > 0) {
+    const cap = (L.perOutputCard4k != null && boards != null) ? L.perOutputCard4k * boards : null;
+    numCheck('4K 레이어', req.required4kLayers, cap);
+  }
+  if (req.required2kLayers > 0) {
+    const cap = (L.perOutputCard2k != null && boards != null) ? L.perOutputCard2k * boards : null;
+    numCheck('2K 레이어', req.required2kLayers, cap);
+  }
+  // per-card 몰림 검사는 validateOutputCardLayers()에서.
+}
+
+/** Capacity Fit(하드 제약). 반환: { id, verdict, checks: [{name,need,have,unit,ok,note?}] }. */
 export function validateProcessor(proc, req) {
   if (!proc || !req) return null;
   const checks = [];
@@ -42,70 +68,55 @@ export function validateProcessor(proc, req) {
     checks.push({ name, need: '지원', have: have === true ? '지원' : (have === false ? '미지원' : '확인 필요'), unit: '', ok });
   };
 
-  // 1) 독립 입력(4K/2K) — 윈도우·레이어와 별개(문서 §4). 입력카드 기준(슬롯당 4K 1 또는 2K 4).
+  // 1) 필요 4K 출력 — 제조사별 출력용량(AW=PGM, X100/Universe=독립4K출력, NovaStar=출력카드수).
+  if (req.required4kOutputs > 0) {
+    const cap = outputCapacity(proc);
+    const label = cap.kind === 'pgm' ? '4K PGM 출력' : (cap.assumed ? '4K 출력(카드 가정)' : '4K 출력');
+    numCheck(label, req.required4kOutputs, cap.value);
+  }
+
+  // 2) 독립 입력(4K/2K). 입력 슬롯 공유검사는 '슬롯=4K1 또는 2K4' 비율 모델(X100/NovaStar)에만.
   const inCap = inputsCapacity(proc);
   if (req.independent4kInputs > 0) numCheck('독립 4K 입력', req.independent4kInputs, inCap.max4k, '개', inCap.assumed4k ? '입력카드 가정(슬롯=4K1)' : undefined);
   if (req.independent2kInputs > 0) numCheck('독립 2K 입력', req.independent2kInputs, inCap.max2k, '개', inCap.assumed2k ? '입력카드 가정(슬롯=2K4)' : undefined);
-  // 4K·2K 입력이 동시에 필요하면 슬롯을 나눠 쓴다: 필요 4K + 올림(필요 2K/4) ≤ 슬롯 수.
-  // 단, '슬롯 1개=4K1 또는 2K4' 비율이 맞는 X100(global_window)·NovaStar(per_output_card)에만 적용.
-  // Universe(screen_group)는 입력카드 밀도가 달라(예: U9 보드당 2×4K) 이 비율을 쓰지 않는다.
   if (req.independent4kInputs > 0 && req.independent2kInputs > 0 && inCap.slots != null
       && (proc.layers?.model === 'global_window' || proc.layers?.model === 'per_output_card')) {
     const need = req.independent4kInputs + Math.ceil(req.independent2kInputs / INPUT_2K_PER_CARD);
     numCheck('입력 슬롯', need, inCap.slots, '슬롯', '4K 1개=슬롯 1, 2K 4개=슬롯 1');
   }
 
-  // 2) 필요 출력 수(4K) — HDMI 2.0(4K@60) 포트 기준. 출력카드 HDMI 2.0 가정 시 유도값 사용.
-  if (req.required4kOutputs > 0) {
-    const cap4k = outputs4kCapacity(proc);
-    numCheck(cap4k.assumed ? '4K 출력(HDMI2.0 가정)' : '4K 출력', req.required4kOutputs, cap4k.value);
+  // 3) 레이어 — 제조사별 validator 분리(SoT §6).
+  switch (proc.layers?.model) {
+    case 'mixing_split':    validateAnalogWayLayers(proc, req, numCheck); break;
+    case 'global_window':   validateX100Windows(proc, req, numCheck); break;
+    case 'screen_group':    validateUniverseLayers(proc, req, numCheck); break;
+    case 'per_output_card': validateNovaStarLayers(proc, req, numCheck); break;
   }
-
-  // 3) 레이어 용량 — capacityModel별로 다르게 산출(문서 §5).
-  const L = proc.layers ?? {};
-  if (L.model === 'global_window') {
-    // Colorlight X100 Pro: 공식 "Max. layers"는 해상도 무관 총 레이어(4K/2K로 쪼개지 않음, 이사 확인).
-    const totalLayers = req.simultaneous4kLayers + req.simultaneous2kLayers;
-    if (totalLayers > 0) numCheck('최대 레이어', totalLayers, L.maxLayers ?? L.maxWindows ?? null, '개', '해상도 무관 총 레이어(공식 Max. layers)');
-  } else {
-    if (req.simultaneous4kLayers > 0) {
-      let cap = null, name = '4K 레이어';
-      switch (L.model) {
-        case 'mixing_split':
-          // True A/B가 필요하면 반드시 '믹싱' 레이어만 사용(분할 레이어로 대체 불가, 문서 §12).
-          cap = req.trueABRequired ? (L.mixing4k ?? null) : maxNullable(L.mixing4k, L.split4k);
-          name = req.trueABRequired ? '4K 믹싱 레이어(A/B)' : '4K 레이어(믹싱/분할)';
-          break;
-        case 'per_output_card':
-          cap = (L.perOutputCard4k != null && proc.outputs?.maxOutputBoards != null)
-            ? L.perOutputCard4k * proc.outputs.maxOutputBoards : (L.global4k ?? null);
-          break;
-        case 'screen_group':
-        default:
-          cap = L.global4k ?? null;
-      }
-      numCheck(name, req.simultaneous4kLayers, cap);
-    }
-    if (req.simultaneous2kLayers > 0) {
-      let cap = null;
-      switch (L.model) {
-        case 'per_output_card':
-          cap = (L.perOutputCard2k != null && proc.outputs?.maxOutputBoards != null)
-            ? L.perOutputCard2k * proc.outputs.maxOutputBoards : (L.global2k ?? null);
-          break;
-        case 'screen_group':
-        default:
-          cap = L.global2k ?? null;
-      }
-      numCheck('2K 레이어', req.simultaneous2kLayers, cap);
-    }
-  }
-
-  // 3c) 출력카드/보드별 레이어 한계.
+  // 3b) 출력카드/보드별 레이어 몰림(Universe 전역+보드, NovaStar 카드).
   const cardCheck = validateOutputCardLayers(proc, req);
   if (cardCheck) checks.push(cardCheck);
 
-  // 4) 스위칭/기능 요구.
+  // 4) Wide Canvas — 단일 캔버스가 여러 출력에 걸칠 때만(출력 수만으로 지원 단정 금지, SoT §15).
+  if (req.requiredCanvasOutputs > 1 && req.canvasMode && req.canvasMode !== 'independent' && req.canvasMode !== 'multi_region') {
+    const c = proc.canvas ?? {};
+    const wantH = req.canvasMode === 'single_wide', wantV = req.canvasMode === 'single_tall';
+    let ok = null;
+    if (c.multiOutputCanvas === false) ok = false;
+    else if (c.multiOutputCanvas === true && c.maxCanvasOutputs != null) {
+      ok = c.maxCanvasOutputs >= req.requiredCanvasOutputs
+        && (!wantH || c.horizontalSpan === true) && (!wantV || c.verticalSpan === true);
+    }
+    checks.push({ name: 'Wide Canvas', need: `${req.requiredCanvasOutputs}출력·${req.canvasMode}`, have: c.multiOutputCanvas == null ? '확인 필요' : (ok ? '지원' : '미지원/부족'), unit: '', ok });
+  }
+
+  // 5) 출력보드 혼용(모델별, 지침 2) — 4K+2K 혼합 출력을 요구할 때만.
+  if (req.requiredMixed4k2kOutput) {
+    const s = proc.outputBoardMixing?.supportsMixed4k2kBoards;
+    const ok = s === true ? true : (s === false ? false : null);
+    checks.push({ name: '4K+2K 출력보드 혼용', need: '지원', have: s === true ? '지원' : (s === false ? '불가' : '확인 필요'), unit: '', ok });
+  }
+
+  // 6) 스위칭/기능.
   featCheck('True A/B 믹싱', req.trueABRequired, proc.switching?.trueABMixing);
   featCheck('Seamless 스위칭', req.seamlessSwitching, proc.switching?.seamless);
   featCheck('Fade', req.fadeRequired, proc.switching?.fade);
@@ -131,68 +142,73 @@ export function validateProcessor(proc, req) {
   return { id: proc.id ?? null, verdict, checks };
 }
 
-// 운용 환경별 우선 제품군(문서 §8). 정렬 시 가벼운 가중치로만 사용(v1은 정확한 판정이 우선, 문서 §16).
-const APPLICATION_PREFERRED = Object.freeze({
-  conference: ['Midra', 'Alta', 'X100 Pro'],
-  auditorium: ['Alta', 'Aquilon', 'Universe', 'H'],
-  event: ['Aquilon'],
-  broadcast: ['Aquilon'],
-  control_room: ['Universe', 'H'],
+// ── Operation Fit: 공간 용도 5종 성향(SoT §2). 통과 제품의 우선순위/등급 결정 ────────
+//   family: Midra(Pulse/Eikos)·Alta(Zenith)·Aquilon = Analog Way / X100 Pro·Universe = Colorlight / H = NovaStar
+const OPERATION_PREF = Object.freeze({
+  exec:         ['Midra', 'Alta', 'Aquilon'],                 // 중역회의실 — Analog Way 최우선
+  conference:   ['Midra', 'Alta', 'Aquilon', 'X100 Pro'],     // 회의실 — AW 우선, Colorlight 조건부
+  auditorium:   ['Alta', 'Aquilon', 'Midra'],                 // 강당 — AW 최우선(공연·이벤트 성격 흡수)
+  control_room: ['X100 Pro', 'Universe', 'H'],                // 상황실/관제실 — X100 우선, NovaStar 후순위
+  lobby:        ['X100 Pro', 'Universe', 'H'],                // 로비 사이니지 — Colorlight 우선, NovaStar 대안
 });
 
-/** 등급 라벨. 미달=부적합, 미확인=조건부 적합, 충족 시 수치 여유로 권장/적합/한계 구성 구분. */
-function gradeLabel(v) {
-  if (!v || v.verdict === 'FAIL') return '부적합';
-  if (v.verdict === 'CONDITIONAL') return '조건부 적합';
-  const nums = v.checks.filter(c => typeof c.need === 'number' && typeof c.have === 'number');
-  if (nums.some(c => c.have === c.need)) return '한계 구성';        // 딱 맞음
-  if (nums.length && nums.every(c => c.have >= c.need * 1.5)) return '권장';  // 넉넉한 여유
-  return '적합';
+/** Operation Fit. 반환: { rank(작을수록 우선, 미해당=99), preferred(용도 최우선군=rank 0) }. */
+export function operationFit(proc, req) {
+  const pref = OPERATION_PREF[req.application] ?? [];
+  const idx = pref.indexOf(proc.family);
+  return { rank: idx < 0 ? 99 : idx, preferred: idx === 0 };
 }
 
 const GRADE_ORDER = Object.freeze({ '권장': 0, '적합': 1, '조건부 적합': 2, '한계 구성': 3, '부적합': 4 });
 
-// 소형 작업(필요 4K 출력이 이 값 이하)에서는 고가의 Aquilon을 추천 목록에서 제외한다.
-// (이사 지침 2026-09-12: "4K 2개 출력엔 Aquilon 절대 사용 안 함(가격). 예외 없음.")
+// 소형 작업(필요 4K 출력 ≤2)에서는 고가 Aquilon을 추천에서 숨긴다(이사 지침, Operation Fit 규칙).
 export const AQUILON_HIDE_MAX_4K_OUTPUTS = 2;
 const isExpensiveOverspec = (proc, req) =>
-  proc.family === 'Aquilon' &&
-  req.required4kOutputs != null &&
-  req.required4kOutputs <= AQUILON_HIDE_MAX_4K_OUTPUTS;
+  proc.family === 'Aquilon' && req.required4kOutputs != null && req.required4kOutputs <= AQUILON_HIDE_MAX_4K_OUTPUTS;
 
-/**
- * 제품 목록을 평가·정렬한다. 반환: [{ proc, verdict, checks, label, appPreferred }] (좋은 등급 먼저).
- * 동급이면 (1) 운용 환경 우선 제품군, (2) **필요에 가까운(여유가 적은) 작은 모델 우선**.
- *   → 소형 작업에서 대용량(고가) 모델이 위로 오지 않고 적정 모델이 먼저 추천된다(이사 지침 2026-09-12).
- * 소형 작업에서는 Aquilon(고가)을 목록에서 숨긴다(위 규칙, 예외 없음).
- */
-export function rankProcessors(procs, req) {
-  if (!Array.isArray(procs) || !req) return [];
-  const pref = APPLICATION_PREFERRED[req.application] ?? [];
-  return procs
-    .filter(proc => !isExpensiveOverspec(proc, req))
-    .map(proc => {
-      const v = validateProcessor(proc, req);
-      const label = gradeLabel(v);
-      const out4k = v?.checks.find(c => c.name.startsWith('4K 출력'));
-      const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
-      // 필요 4K 출력이 정확히 2개('4K 2판')이면 Eikos 4K를 최우선 추천(이사 지침 2026-09-12).
-      //   2×4K는 Eikos가 딱 맞아 '한계 구성'이 되어 여유 큰 대형 모델보다 뒤로 밀리던 것을 위로 끌어올림.
-      const eikosTop = req.required4kOutputs === 2 && /eikos\s*4k/i.test(proc.model) && label !== '부적합';
-      return { proc, ...v, label, appPreferred: pref.includes(proc.family), _headroom: headroom, _eikosTop: eikosTop };
-    })
-    .sort((a, b) =>
-      (Number(b._eikosTop) - Number(a._eikosTop)) ||   // 4K 2판 → Eikos 4K 최우선
-      (GRADE_ORDER[a.label] - GRADE_ORDER[b.label]) ||
-      (Number(b.appPreferred) - Number(a.appPreferred)) ||
-      (a._headroom - b._headroom));   // 여유가 적은(적정 크기) 모델 먼저 → 대용량은 후순위
+/** 최종 등급(임의 % 없음). Capacity verdict + Operation Fit + 여유(딱맞음) 조합. */
+function statusLabel(verdict, op, tight) {
+  if (verdict === 'FAIL') return '부적합';
+  if (verdict === 'CONDITIONAL') return '조건부 적합';
+  if (op.preferred) return '권장';       // PASS + 용도 최우선 제품군
+  if (tight) return '한계 구성';          // PASS지만 딱 맞음(여유 없음)
+  return '적합';
 }
 
 /**
- * 사용자가 실제로 계획한 카드 구성(build)이 이 LED에 충분한지 검증한다.
- * build: { out4kCards, in4kPorts, in2kPorts } — 값이 없으면(null/undefined) 해당 검사 생략.
- * 각 항목: (1) LED 요구를 덮는가(필요 ≤ 보유), (2) 제품(섀시) 최대에 맞는가(보유 ≤ 최대).
- * 반환: { verdict, checks:[{name,need,have,unit,ok,note?}] }.
+ * 제품 목록 평가·정렬. 반환: [{ proc, verdict, checks, label, opRank, preferred, _headroom }].
+ * needs_verification 제품(예: H20)은 제외(지침 6). 소형에서 Aquilon 숨김.
+ * 정렬: (1) Operation Fit 우선순위 → (2) 등급 → (3) 여유 적은(적정) 모델 먼저.
+ */
+export function rankProcessors(procs, req) {
+  if (!Array.isArray(procs) || !req) return [];
+  return procs
+    .filter(proc => proc.verification?.status !== 'needs_verification')
+    .filter(proc => !isExpensiveOverspec(proc, req))
+    .map(proc => {
+      const v = validateProcessor(proc, req);
+      const op = operationFit(proc, req);
+      const nums = v.checks.filter(c => typeof c.need === 'number' && typeof c.have === 'number');
+      const tight = nums.some(c => c.have === c.need);
+      const label = statusLabel(v.verdict, op, tight);
+      const out4k = v.checks.find(c => c.name.startsWith('4K 출력') || c.name === '4K PGM 출력');
+      const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
+      return { proc, ...v, label, opRank: op.rank, preferred: op.preferred, _headroom: headroom };
+    })
+    .sort((a, b) =>
+      (a.opRank - b.opRank) ||
+      (GRADE_ORDER[a.label] - GRADE_ORDER[b.label]) ||
+      (a._headroom - b._headroom));
+}
+
+/** needs_verification(미검증) 후보 목록(자동추천 제외분). UI에서 별도 노출용. */
+export function verificationPending(procs) {
+  return (Array.isArray(procs) ? procs : []).filter(p => p.verification?.status === 'needs_verification');
+}
+
+/**
+ * 사용자가 계획한 카드 구성(build)이 이 LED에 충분한지 검증.
+ * build: { out4kCards, in4kPorts, in2kPorts }. 값 없으면 해당 검사 생략.
  */
 export function validateBuild(proc, req, build = {}) {
   if (!proc || !req) return null;
@@ -206,10 +222,11 @@ export function validateBuild(proc, req, build = {}) {
     if (have > max) checks.push({ name, need: max, have, unit, ok: false, note: '제품(섀시) 최대 초과' });
   };
   const inCap = inputsCapacity(proc);
+  const outCap = outputCapacity(proc);
 
   if (build.out4kCards != null) {
     cover('4K 출력카드(보유)', req.required4kOutputs, build.out4kCards, '장');
-    withinMax('4K 출력카드 섀시 한계', build.out4kCards, proc.outputs?.max4k, '장');
+    withinMax('4K 출력카드 섀시 한계', build.out4kCards, outCap.value, '장');
   }
   if (build.in4kPorts != null) {
     cover('4K 입력 포트(보유)', req.independent4kInputs, build.in4kPorts, '포트');
