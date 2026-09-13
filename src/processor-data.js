@@ -72,12 +72,12 @@ export const PROCESSORS = [
   ...[
     { model: 'Pulse 4K', slug: 'pulse-4k',
       canvas: { multiOutputCanvas: false, horizontalSpan: false, verticalSpan: false, maxCanvasOutputs: null },   // Edge-Blending 미지원
-      aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: true },   // Mixer 모드 1×AUX
-      note: 'Matrix 2×4K PGM / Mixer 1×4K PGM + 1×AUX(1080p60). Edge-Blending 미지원 → Wide Canvas 불가.' },
+      aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null },   // Mixer 모드 1×AUX. 메인자원 소모여부 미확인→null
+      note: 'Matrix 2×4K 독립 PGM / Mixer 1×4K PGM + 1×AUX(1080p60). Edge-Blending 미지원 → Wide Canvas 불가.' },
     { model: 'Eikos 4K', slug: 'eikos-4k',
-      canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 2 },   // Edge-Blending 지원
-      aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: true },
-      note: 'Matrix / Mixer / Edge-Blending(Hard-Soft Edge). 2 물리출력 → 1 wide PGM(2믹싱/4분할). Pulse와 달리 Edge-Blending 지원.' },
+      canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 2 },   // Edge-Blending 지원(2출력 → 1 wide PGM)
+      aux: { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null },   // 메인자원 소모여부 미확인→null
+      note: 'Matrix / Mixer / Edge-Blending(Hard-Soft Edge). 2 물리출력 전체 → 1 wide Edge-Blended PGM(Edge모드 2믹싱/4분할), 가로·세로 wide canvas 용도. Pulse와 달리 Edge-Blending 지원.' },
   ].map(m => proc({
     id: 'aw-midra-' + m.slug,
     manufacturer: AW, family: 'Midra 4K', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',

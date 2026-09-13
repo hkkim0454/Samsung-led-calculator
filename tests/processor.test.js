@@ -268,7 +268,7 @@ test('[AW] Aquilon RS AUX = scaled 4K60, main resources not used; Zenith AUX = 1
 test('[AW] Pulse: 2×4K PGM (Matrix) + Mixer 1×AUX 1080p60; Eikos: 2-output wide canvas supported', () => {
   const pulse = getProcessor('aw-midra-pulse-4k');
   assert.equal(pulse.outputs.maxIndependent4kPgm, 2);          // Matrix: 2×4K PGM
-  assert.deepEqual(pulse.aux, { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: true });   // Mixer: 1×AUX
+  assert.deepEqual(pulse.aux, { maxResolution: '1080p60', maxAuxOutputs: 1, usesMainLayerResources: null });   // Mixer: 1×AUX. 메인자원 소모여부 미확인
   assert.equal(pulse.canvas.multiOutputCanvas, false);         // Edge-Blending 미지원
   const eikos = getProcessor('aw-midra-eikos-4k');
   assert.equal(eikos.canvas.multiOutputCanvas, true);          // Edge-Blending → 2출력 wide canvas
