@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=251';
-import { MODELS } from './models.js?v=251';
-import { PROCESSORS } from './processor-data.js?v=251';
-import { processorRequirements } from './processor-limits.js?v=251';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=251';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=251';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=251';
-import { parseCasesText, normalizeDate } from './cases.js?v=251';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=252';
+import { MODELS } from './models.js?v=252';
+import { PROCESSORS } from './processor-data.js?v=252';
+import { processorRequirements } from './processor-limits.js?v=252';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=252';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=252';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=252';
+import { parseCasesText, normalizeDate } from './cases.js?v=252';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -781,6 +781,41 @@ function renderDataFlow() {
     + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 색 구역 = 각 S-Box가 담당하는 캐비닛</div>`;
 }
 
+// 09 전원 구성: 삼성 데이터시트 알고리즘(회로당=⌊V×A×0.8/Wcab⌋, 회로수=⌈총/회로당⌉). r.power만 사용.
+function renderPower() {
+  const host = $('#pwPanel'); if (!host) return;
+  const m = models.find(x => x.id === selectedId);
+  if (!m) { host.innerHTML = '<div class="previewEmpty">모델을 선택하면 표시됩니다.</div>'; return; }
+  const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
+  if (!r.fits) { host.innerHTML = '<div class="previewEmpty">배열이 없어 전원 구성을 계산할 수 없습니다.</div>'; return; }
+  if (!r.power) { host.innerHTML = '<div class="notice warn">이 모델은 캐비닛 최대전력(W) 데이터시트 값이 없어 전원 구성을 산출할 수 없습니다.</div>'; return; }
+  const p = r.power;
+  const kw = v => v == null ? '—' : fmt(v / 1000, 2);
+  const rows = p.rows.map(x => {
+    const is230 = x.voltage === 230;
+    return `<tr class="${is230 ? 'pw230' : ''}">
+      <td class="pwV">${esc(x.label)}${is230 ? ' <span class="pwTag">국내</span>' : ''}</td>
+      <td>${x.cabinetsPerCircuit ?? '—'} 대</td>
+      <td><b>${x.circuits ?? '—'}</b> 회로</td>
+      <td>${x.cabinetsPerDaisyChain ?? '—'} 대</td>
+      <td>${x.daisyChains ?? '—'} 줄</td>
+    </tr>`;
+  }).join('');
+  host.innerHTML = `
+    <div class="pwSummary">
+      <span>총 캐비닛 <b>${fmt(p.total)}</b>대</span>
+      <span>캐비닛당 최대 <b>${fmt(p.perCabinetW)}</b>W</span>
+      <span>총 최대전력 <b>${kw(r.maxW)}</b>kW</span>
+      <span>연속부하 여유 <b>${Math.round(p.derate * 100)}%</b></span>
+    </div>
+    <div class="tableWrap"><table class="pwTable">
+      <thead><tr><th>전압 / 차단기</th><th>회로당 캐비닛</th><th>필요 회로</th><th>데이지체인당</th><th>데이지체인</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="pwNote">회로당 캐비닛 = ⌊전압 × 차단기A × ${Math.round(p.derate * 100)}% ÷ 캐비닛최대W⌋, 필요 회로 = ⌈총 캐비닛 ÷ 회로당⌉.
+      데이지체인당 = ⌊전압 × ${p.chainAmps}A ÷ 캐비닛최대W⌋. (삼성 IF015R-M 데이터시트 알고리즘 · 230V 국내 기준)</div>`;
+}
+
 // 05 '내 장비 구성으로 검증': 사용자가 계획한 카드 수가 이 LED에 충분한지 확인.
 let vpBuildProcInit = false;
 function renderBuild(req, ranked) {
@@ -922,7 +957,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); saveLastSession(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.

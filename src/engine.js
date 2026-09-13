@@ -131,6 +131,47 @@ export function igLayout(model, resW, resH, cols, rows) {
   return { integrated: false, boxes: regCols * regRows, regCols, regRows, capW, capH, controller: model.sbox ?? null, regions };
 }
 
+// ── 전원 구성(회로/데이지체인) — Samsung IF015R-M 데이터시트 알고리즘(이사 제공, 2026) ──────
+// 연속부하 80% 여유. 회로당 캐비닛 = ⌊전압 × 차단기A × 0.8 / 캐비닛최대W⌋, 회로 수 = ⌈총/회로당⌉.
+//   데이터시트 검증(캐비닛 190W): 110V20A→9/회로, 208V20A→17, 230V13A→12, 230V16A→15.
+export const POWER_DERATE = 0.8;
+// 전원 데이지체인(전원 인터커넥트 케이블) 전류 예산(A). 데이터시트 보정값:
+//   ⌊전압 × 3.9 / 캐비닛W⌋ → 110V→2, 208V→4, 230V→4 (190W 기준 일치). engineeringRule(모델별 케이블
+//   정격에 따라 다를 수 있어 정확값은 모델 데이터시트 필요). 0 이하가 되면 null.
+export const POWER_CHAIN_AMPS = 3.9;
+// 표준 회로 옵션(데이터시트). 국내 기준 230V를 앞에 둔다(이사 지침).
+export const POWER_CIRCUIT_OPTIONS = Object.freeze([
+  { id: '230v16a', label: '230V 16A', voltage: 230, amps: 16 },
+  { id: '230v13a', label: '230V 13A', voltage: 230, amps: 13 },
+  { id: '208v20a', label: '208V 20A', voltage: 208, amps: 20 },
+  { id: '110v20a', label: '110V 20A', voltage: 110, amps: 20 },
+]);
+
+/**
+ * 전원 구성 산출. 캐비닛 최대전력(model.maxPower, W/대)과 총 캐비닛 수로 전압·차단기별
+ * 회로 수/회로당 캐비닛/데이지체인 수를 계산한다. maxPower 미확인이면 null(가짜 수치 금지).
+ * 반환: { perCabinetW, total, derate, chainAmps, rows:[{id,label,voltage,amps,cabinetsPerCircuit,circuits,cabinetsPerDaisyChain,daisyChains}] }
+ */
+export function powerConfig(model, total, opts = {}) {
+  const Wcab = model?.maxPower;
+  if (Wcab == null || !(Wcab > 0) || !(total > 0)) return null;
+  const derate = opts.derate ?? POWER_DERATE;
+  const chainAmps = opts.chainAmps ?? POWER_CHAIN_AMPS;
+  const options = opts.options ?? POWER_CIRCUIT_OPTIONS;
+  const rows = options.map(o => {
+    const perCircuit = Math.floor(o.voltage * o.amps * derate / Wcab);
+    const perDaisy = Math.floor(o.voltage * chainAmps / Wcab);
+    return {
+      id: o.id, label: o.label, voltage: o.voltage, amps: o.amps,
+      cabinetsPerCircuit: perCircuit > 0 ? perCircuit : null,
+      circuits: perCircuit > 0 ? Math.ceil(total / perCircuit) : null,
+      cabinetsPerDaisyChain: perDaisy > 0 ? perDaisy : null,
+      daisyChains: perDaisy > 0 ? Math.ceil(total / perDaisy) : null,
+    };
+  });
+  return { perCabinetW: Wcab, total, derate, chainAmps, rows };
+}
+
 /**
  * Decide how many cabinets fit.
  * mode 'fill'   -> floor((space - 2*clearance) / cabinet) on each axis (pure max-fill)
@@ -215,6 +256,8 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 
   // IG(신호 입력 그룹)·데이터 흐름 레이아웃 — S-Box 입력 영역 ↔ 캐비닛 매핑(별도 계통도 표시용).
   const ig = fits ? igLayout(model, resW, resH, cols, rows) : null;
+  // 전원 구성(회로/데이지체인) — 데이터시트 알고리즘. maxPower 없으면 null.
+  const power = (fits && total > 0) ? powerConfig(model, total, opts) : null;
 
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - baseHeight - actualH);   // 벽면 대비 위 남는 세로(하단 높이 제외 후)
@@ -230,7 +273,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy,
-    ig,
+    ig, power,
     deadW, deadH, baseHeight,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,

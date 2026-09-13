@@ -652,3 +652,15 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 @media print{
   .dfBlk{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* 09 전원 구성 */
+.pwPanel{display:flex;flex-direction:column;gap:12px}
+.pwSummary{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink-2)}
+.pwSummary b{color:var(--ink)}
+.pwTable{width:100%;border-collapse:collapse;font-size:13px}
+.pwTable th,.pwTable td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.pwTable th{color:var(--muted);font-weight:600}
+.pwTable tr.pw230{background:var(--accent-tint)}
+.pwTable .pwV{font-weight:600;color:var(--ink)}
+.pwTag{font-size:10px;font-weight:600;color:var(--accent-2);border:1px solid var(--accent);border-radius:var(--r-pill);padding:1px 6px;margin-left:4px}
+.pwNote{font-size:12px;color:var(--muted);line-height:1.5}
