@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
+import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, igLayout, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -20,6 +20,46 @@ test('MP012F 7x6 reproduces Samsung reference figures', () => {
   assert.equal(r.maxW, 6132);
   assert.ok(Math.abs(r.typW - 3234) < 8, `typ=${r.typW}`); // Samsung 3234 (pf 0.527)
   assert.ok(Math.abs(r.heatMaxBTU - 20916) < 20, `btu=${r.heatMaxBTU}`);
+});
+
+// ── IG(신호 입력 그룹)·데이터 흐름 레이아웃 ──────────────────────────────────
+// MP012F 6×3.4m(7×6=42캐비닛, 4480×2160): S-Box 2대 → 4K영역 2개(가로 분할).
+//   영역0 = 좌측 3840px = 캐비닛 6열(0~5)×6행 = 36대, 영역1 = 우측 640px = 1열(6)×6행 = 6대.
+test('igLayout: MP012F 4480x2160 -> 2 S-Box regions matching Samsung sbox count', () => {
+  const ig = igLayout(MP012F, 4480, 2160, 7, 6);
+  assert.equal(ig.integrated, false);
+  assert.equal(ig.boxes, 2);                 // sboxCount base(이중화 제외)와 일치
+  assert.equal(ig.boxes, sboxCount(MP012F, 4480, 2160));
+  assert.equal(ig.regCols, 2);
+  assert.equal(ig.regRows, 1);
+  assert.equal(ig.capW, 3840); assert.equal(ig.capH, 2160);
+  assert.equal(ig.regions.length, 2);
+  const r0 = ig.regions[0], r1 = ig.regions[1];
+  assert.deepEqual({ c0: r0.colStart, c1: r0.colEnd, n: r0.cabinets }, { c0: 0, c1: 5, n: 36 });
+  assert.deepEqual({ c0: r1.colStart, c1: r1.colEnd, n: r1.cabinets }, { c0: 6, c1: 6, n: 6 });
+  // 모든 캐비닛이 정확히 한 영역에 배정(합 = 총 캐비닛).
+  assert.equal(ig.regions.reduce((s, r) => s + r.cabinets, 0), 42);
+});
+test('igLayout: single 4K wall -> 1 region covering all cabinets', () => {
+  const ig = igLayout(MP012F, 3840, 2160, 6, 6);   // 6×640=3840, 6×360=2160
+  assert.equal(ig.boxes, 1);
+  assert.equal(ig.regions.length, 1);
+  assert.equal(ig.regions[0].cabinets, 36);
+});
+test('igLayout: unknown/invalid inputs -> null (no fake numbers)', () => {
+  assert.equal(igLayout(MP012F, 0, 2160, 7, 6), null);
+  assert.equal(igLayout({ ...MP012F, maxInputW: null }, 4480, 2160, 7, 6), null);
+});
+test('igLayout: integrated controller -> boxes 0', () => {
+  const ig = igLayout({ ...MP012F, integratedController: true }, 4480, 2160, 7, 6);
+  assert.equal(ig.integrated, true);
+  assert.equal(ig.boxes, 0);
+});
+test('computeConfig exposes ig layout consistent with sbox', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.ok(r.ig);
+  assert.equal(r.ig.boxes, r.sbox);   // 이중화 꺼짐 기준 동일
+  assert.equal(r.ig.regions.reduce((s, x) => s + x.cabinets, 0), r.total);
 });
 
 test('cabinet resolution derives from size/pitch when absent', () => {

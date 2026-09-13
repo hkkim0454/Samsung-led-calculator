@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=250';
-import { MODELS } from './models.js?v=250';
-import { PROCESSORS } from './processor-data.js?v=250';
-import { processorRequirements } from './processor-limits.js?v=250';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=250';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=250';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=250';
-import { parseCasesText, normalizeDate } from './cases.js?v=250';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=251';
+import { MODELS } from './models.js?v=251';
+import { PROCESSORS } from './processor-data.js?v=251';
+import { processorRequirements } from './processor-limits.js?v=251';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=251';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=251';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=251';
+import { parseCasesText, normalizeDate } from './cases.js?v=251';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -733,6 +733,51 @@ function renderProcessors() {
   renderBuild(req, ranked);
 }
 
+// 08 데이터 흐름(IG): 화면을 S-Box 입력 영역(제품별 지원 해상도, 현재 4K)으로 나눠 담당 캐비닛을 보여준다.
+//   계산은 engine.js의 r.ig(igLayout) 결과만 사용 — 여기선 표시만 한다(중복 계산 금지).
+function dfTopProcessorName(r) {
+  try {
+    const ranked = rankProcessors(PROCESSORS, processorRequirements(r));
+    const best = ranked.find(x => x.label !== '부적합');
+    return best ? `${best.proc.manufacturer} · ${best.proc.model}` : null;
+  } catch { return null; }
+}
+function renderDataFlow() {
+  const host = $('#dfDiagram'); if (!host) return;
+  const m = models.find(x => x.id === selectedId);
+  if (!m) { host.innerHTML = '<div class="previewEmpty">모델을 선택하면 표시됩니다.</div>'; return; }
+  const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
+  if (!r.fits || !r.ig) { host.innerHTML = '<div class="previewEmpty">배열이 없어 데이터 흐름을 계산할 수 없습니다.</div>'; return; }
+  const ig = r.ig;
+  if (ig.integrated) { host.innerHTML = '<div class="notice">이 모델은 통합 컨트롤러라 별도 S-Box(신호 그룹)가 필요 없습니다.</div>'; return; }
+  if (ig.boxes == null || !ig.regions.length) { host.innerHTML = '<div class="notice warn">S-Box 지원 해상도 데이터가 없어 신호 구성을 표시할 수 없습니다.</div>'; return; }
+  const proc = dfTopProcessorName(r);
+  const flow = `<div class="dfFlow">
+    <span class="dfNode">영상 소스</span><span class="dfArrow">→</span>
+    <span class="dfNode proc">${proc ? esc(proc) : '프로세서'}<em class="muted-note"> (05 추천)</em></span><span class="dfArrow">→</span>
+    <span class="dfNode sbox">S-Box ${ig.boxes}대${r.redundancy ? ' <em class="muted-note">+이중화</em>' : ''}</span><span class="dfArrow">→</span>
+    <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
+  </div>`;
+  // 영역 맵: 화면 비율 사각형을 S-Box 담당 구역으로 분할(색=구역). 가짜 값 없이 r.ig만 사용.
+  const W = 560, H = Math.max(120, Math.min(360, Math.round(W * r.resH / r.resW)));
+  const blocks = ig.regions.map((rg, i) => {
+    const x = (rg.px0 / r.resW) * W, y = (rg.py0 / r.resH) * H;
+    const w = (rg.pxW / r.resW) * W, h = (rg.pxH / r.resH) * H;
+    const hue = (i * 47) % 360;
+    const colLbl = rg.colStart != null ? `열 ${rg.colStart + 1}~${rg.colEnd + 1}` : '—';
+    const rowLbl = rg.rowStart != null ? `행 ${rg.rowStart + 1}~${rg.rowEnd + 1}` : '—';
+    return `<div class="dfBlk" style="left:${x}px;top:${y}px;width:${Math.max(0, w - 2)}px;height:${Math.max(0, h - 2)}px;--h:${hue}">
+      <b>S-Box ${i + 1}</b>
+      <span class="dfBlkCab">${colLbl} · ${rowLbl}</span>
+      <span class="dfBlkN">${rg.cabinets}대</span>
+      <span class="dfBlkPx">${fmt(rg.pxW)}×${fmt(rg.pxH)}px</span>
+    </div>`;
+  }).join('');
+  host.innerHTML = flow
+    + `<div class="dfMapWrap"><div class="dfMap" style="width:${W}px;height:${H}px">${blocks}</div></div>`
+    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 색 구역 = 각 S-Box가 담당하는 캐비닛</div>`;
+}
+
 // 05 '내 장비 구성으로 검증': 사용자가 계획한 카드 수가 이 LED에 충분한지 확인.
 let vpBuildProcInit = false;
 function renderBuild(req, ranked) {
@@ -874,7 +919,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); saveLastSession(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.

@@ -14,7 +14,7 @@ import {
   outputCapacity,
   outputCapacity2k,
   validateOutputCardLayers,
-} from './processor-limits.js?v=250';
+} from './processor-limits.js?v=251';
 
 // ── 제조사별 Layer validator (SoT §6 — 반드시 분리) ────────────────────────────
 function validateAnalogWayLayers(proc, req, numCheck) {

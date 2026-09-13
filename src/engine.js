@@ -96,6 +96,42 @@ export function gbicSets(resW, resH, opts = {}) {
 }
 
 /**
+ * IG(신호 입력 그룹) · 데이터 흐름 레이아웃.
+ * 화면(resW×resH)을 S-Box 1대가 담당하는 입력 영역(모델별 지원 해상도 capW×capH, 현재 전 제품 4K)으로
+ * 나누고, 각 영역이 담당하는 캐비닛 열/행 범위를 매핑한다(캐비닛 '중심' 픽셀이 속한 영역에 배정 → 온전한
+ * 캐비닛 단위 그룹). S-Box 대수 규칙(sboxCount)과 같은 타일 방식이라 정합성 일치.
+ *   영역 격자 = ceil(resW/capW) × ceil(resH/capH). 이중화(redundancy)는 신호 영역 수를 늘리지 않으므로
+ *   여기서는 기본(백업 제외) 영역 맵만 반환한다. 통합 컨트롤러 모델은 boxes=0.
+ * 값을 알 수 없으면 null(가짜 수치 금지).
+ */
+export function igLayout(model, resW, resH, cols, rows) {
+  if (model.integratedController) return { integrated: true, boxes: 0, regCols: 0, regRows: 0, capW: null, capH: null, controller: model.sbox ?? null, regions: [] };
+  const capW = model.maxInputW, capH = model.maxInputH;
+  if (capW == null || capH == null || !(resW > 0) || !(resH > 0) || !(cols > 0) || !(rows > 0)) return null;
+  const { resW: cRW, resH: cRH } = cabinetResolution(model);
+  if (!(cRW > 0) || !(cRH > 0)) return null;
+  const regCols = Math.ceil(resW / capW), regRows = Math.ceil(resH / capH);
+  const regions = [];
+  for (let rr = 0; rr < regRows; rr++) {
+    for (let rc = 0; rc < regCols; rc++) {
+      const px0 = rc * capW, py0 = rr * capH;
+      const px1 = Math.min((rc + 1) * capW, resW), py1 = Math.min((rr + 1) * capH, resH);
+      const cabCols = [], cabRows = [];
+      for (let c = 0; c < cols; c++) { const cx = (c + 0.5) * cRW; if (cx >= px0 && cx < px1) cabCols.push(c); }
+      for (let r = 0; r < rows; r++) { const cy = (r + 0.5) * cRH; if (cy >= py0 && cy < py1) cabRows.push(r); }
+      regions.push({
+        index: rr * regCols + rc, regCol: rc, regRow: rr,
+        px0, py0, px1, py1, pxW: px1 - px0, pxH: py1 - py0,
+        colStart: cabCols.length ? cabCols[0] : null, colEnd: cabCols.length ? cabCols[cabCols.length - 1] : null,
+        rowStart: cabRows.length ? cabRows[0] : null, rowEnd: cabRows.length ? cabRows[cabRows.length - 1] : null,
+        cabinetCols: cabCols.length, cabinetRows: cabRows.length, cabinets: cabCols.length * cabRows.length,
+      });
+    }
+  }
+  return { integrated: false, boxes: regCols * regRows, regCols, regRows, capW, capH, controller: model.sbox ?? null, regions };
+}
+
+/**
  * Decide how many cabinets fit.
  * mode 'fill'   -> floor((space - 2*clearance) / cabinet) on each axis (pure max-fill)
  * mode 'manual' -> caller-supplied cols/rows
@@ -177,6 +213,9 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     ? Math.sqrt((res169W * model.pitch) ** 2 + (res169H * model.pitch) ** 2) / MM_PER_INCH
     : 0;
 
+  // IG(신호 입력 그룹)·데이터 흐름 레이아웃 — S-Box 입력 영역 ↔ 캐비닛 매핑(별도 계통도 표시용).
+  const ig = fits ? igLayout(model, resW, resH, cols, rows) : null;
+
   const deadW = Math.max(0, spaceW - actualW);
   const deadH = Math.max(0, spaceH - baseHeight - actualH);   // 벽면 대비 위 남는 세로(하단 높이 제외 후)
 
@@ -191,6 +230,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy,
+    ig,
     deadW, deadH, baseHeight,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
