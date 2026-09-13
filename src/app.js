@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=250';
-import { MODELS } from './models.js?v=250';
-import { PROCESSORS } from './processor-data.js?v=250';
-import { processorRequirements } from './processor-limits.js?v=250';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=250';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=250';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=250';
-import { parseCasesText, normalizeDate } from './cases.js?v=250';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=253';
+import { MODELS } from './models.js?v=253';
+import { PROCESSORS } from './processor-data.js?v=253';
+import { processorRequirements } from './processor-limits.js?v=253';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=253';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=253';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=253';
+import { parseCasesText, normalizeDate } from './cases.js?v=253';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -733,6 +733,88 @@ function renderProcessors() {
   renderBuild(req, ranked);
 }
 
+// 08 데이터 흐름(IG): 화면을 S-Box 입력 영역(제품별 지원 해상도, 현재 4K)으로 나눠 담당 캐비닛을 보여준다.
+//   계산은 engine.js의 r.ig(igLayout) 결과만 사용 — 여기선 표시만 한다(중복 계산 금지).
+function dfTopProcessorName(r) {
+  try {
+    const ranked = rankProcessors(PROCESSORS, processorRequirements(r));
+    const best = ranked.find(x => x.label !== '부적합');
+    return best ? `${best.proc.manufacturer} · ${best.proc.model}` : null;
+  } catch { return null; }
+}
+function renderDataFlow() {
+  const host = $('#dfDiagram'); if (!host) return;
+  const m = models.find(x => x.id === selectedId);
+  if (!m) { host.innerHTML = '<div class="previewEmpty">모델을 선택하면 표시됩니다.</div>'; return; }
+  const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
+  if (!r.fits || !r.ig) { host.innerHTML = '<div class="previewEmpty">배열이 없어 데이터 흐름을 계산할 수 없습니다.</div>'; return; }
+  const ig = r.ig;
+  if (ig.integrated) { host.innerHTML = '<div class="notice">이 모델은 통합 컨트롤러라 별도 S-Box(신호 그룹)가 필요 없습니다.</div>'; return; }
+  if (ig.boxes == null || !ig.regions.length) { host.innerHTML = '<div class="notice warn">S-Box 지원 해상도 데이터가 없어 신호 구성을 표시할 수 없습니다.</div>'; return; }
+  const proc = dfTopProcessorName(r);
+  const flow = `<div class="dfFlow">
+    <span class="dfNode">영상 소스</span><span class="dfArrow">→</span>
+    <span class="dfNode proc">${proc ? esc(proc) : '프로세서'}<em class="muted-note"> (05 추천)</em></span><span class="dfArrow">→</span>
+    <span class="dfNode sbox">S-Box ${ig.boxes}대${r.redundancy ? ' <em class="muted-note">+이중화</em>' : ''}</span><span class="dfArrow">→</span>
+    <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
+  </div>`;
+  // 영역 맵: 화면 비율 사각형을 S-Box 담당 구역으로 분할(색=구역). 가짜 값 없이 r.ig만 사용.
+  const W = 560, H = Math.max(120, Math.min(360, Math.round(W * r.resH / r.resW)));
+  const blocks = ig.regions.map((rg, i) => {
+    const x = (rg.px0 / r.resW) * W, y = (rg.py0 / r.resH) * H;
+    const w = (rg.pxW / r.resW) * W, h = (rg.pxH / r.resH) * H;
+    const hue = (i * 47) % 360;
+    const colLbl = rg.colStart != null ? `열 ${rg.colStart + 1}~${rg.colEnd + 1}` : '—';
+    const rowLbl = rg.rowStart != null ? `행 ${rg.rowStart + 1}~${rg.rowEnd + 1}` : '—';
+    return `<div class="dfBlk" style="left:${x}px;top:${y}px;width:${Math.max(0, w - 2)}px;height:${Math.max(0, h - 2)}px;--h:${hue}">
+      <b>S-Box ${i + 1}</b>
+      <span class="dfBlkCab">${colLbl} · ${rowLbl}</span>
+      <span class="dfBlkN">${rg.cabinets}대</span>
+      <span class="dfBlkPx">${fmt(rg.pxW)}×${fmt(rg.pxH)}px</span>
+    </div>`;
+  }).join('');
+  // 배경 캐비닛 격자: 셀 = 맵폭/열 × 맵높이/행 (resW=열×캐비닛px 이므로 정확히 캐비닛 경계와 일치).
+  const cw = W / r.cols, ch = H / r.rows;
+  const gridBg = `background-image:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px ${cw}px),repeating-linear-gradient(0deg,var(--line) 0 1px,transparent 1px ${ch}px)`;
+  host.innerHTML = flow
+    + `<div class="dfMapWrap"><div class="dfMap" style="width:${W}px;height:${H}px;${gridBg}">${blocks}</div></div>`
+    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 색 구역 = 각 S-Box가 담당하는 캐비닛</div>`;
+}
+
+// 09 전원 구성: 삼성 데이터시트 알고리즘(회로당=⌊V×A×0.8/Wcab⌋, 회로수=⌈총/회로당⌉). r.power만 사용.
+function renderPower() {
+  const host = $('#pwPanel'); if (!host) return;
+  const m = models.find(x => x.id === selectedId);
+  if (!m) { host.innerHTML = '<div class="previewEmpty">모델을 선택하면 표시됩니다.</div>'; return; }
+  const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
+  if (!r.fits) { host.innerHTML = '<div class="previewEmpty">배열이 없어 전원 구성을 계산할 수 없습니다.</div>'; return; }
+  if (!r.power) { host.innerHTML = '<div class="notice warn">이 모델은 캐비닛 최대전력(W) 데이터시트 값이 없어 전원 구성을 산출할 수 없습니다.</div>'; return; }
+  const p = r.power;
+  const kw = v => v == null ? '—' : fmt(v / 1000, 2);
+  const rows = p.rows.map(x => {
+    return `<tr class="${x.primary ? 'pw230' : ''}">
+      <td class="pwV">${esc(x.label)}${x.primary ? ' <span class="pwTag">주 사용</span>' : ''}</td>
+      <td>${x.cabinetsPerCircuit ?? '—'} 대</td>
+      <td><b>${x.circuits ?? '—'}</b> 회로</td>
+      <td>${x.cabinetsPerDaisyChain ?? '—'} 대</td>
+      <td>${x.daisyChains ?? '—'} 줄</td>
+    </tr>`;
+  }).join('');
+  host.innerHTML = `
+    <div class="pwSummary">
+      <span>총 캐비닛 <b>${fmt(p.total)}</b>대</span>
+      <span>캐비닛당 최대 <b>${fmt(p.perCabinetW)}</b>W</span>
+      <span>총 최대전력 <b>${kw(r.maxW)}</b>kW</span>
+      <span>연속부하 여유 <b>${Math.round(p.derate * 100)}%</b></span>
+    </div>
+    <div class="tableWrap"><table class="pwTable">
+      <thead><tr><th>전압 / 차단기</th><th>회로당 캐비닛</th><th>필요 회로</th><th>데이지체인당</th><th>데이지체인</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="pwNote">회로당 캐비닛 = ⌊전압 × 차단기A × ${Math.round(p.derate * 100)}% ÷ 캐비닛최대W⌋, 필요 회로 = ⌈총 캐비닛 ÷ 회로당⌉.
+      데이지체인당 = ⌊전압 × ${p.chainAmps}A ÷ 캐비닛최대W⌋. (삼성 IF015R-M 데이터시트 알고리즘 · 230V 국내 기준)</div>`;
+}
+
 // 05 '내 장비 구성으로 검증': 사용자가 계획한 카드 수가 이 LED에 충분한지 확인.
 let vpBuildProcInit = false;
 function renderBuild(req, ranked) {
@@ -874,7 +956,7 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); saveLastSession(); }
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -972,6 +1054,15 @@ $('#signalMode').addEventListener('click', e => {
   signalMode = b.dataset.sig;
   $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   renderPreview(); renderReadout();
+});
+// 08 데이터 흐름 · 전원 구성 전환 토글(기본 = 데이터). 버튼에 따라 해당 패널만 표시.
+$('#dfpwSeg')?.addEventListener('click', e => {
+  const b = e.target.closest('button[data-dfpw]'); if (!b) return;
+  const showPower = b.dataset.dfpw === 'power';
+  $('#dfpwSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  const df = $('#dfDiagram'), pw = $('#pwPanel');
+  if (df) df.hidden = showPower;
+  if (pw) pw.hidden = !showPower;
 });
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 버튼 표시를 실제 상태와 일치시킨다.
 //   눈높이선은 사람에 종속 — 사람이 꺼지면 눈높이선도 꺼진 것으로 표시(비활성)하고 클릭도 막는다.

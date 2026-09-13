@@ -629,3 +629,41 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
   .pvZoomClose{background:rgba(255,255,255,.1);color:#e8eaf0}
   .pvZoomClose:hover{background:rgba(255,255,255,.18)}
 }
+
+/* 08 데이터 흐름(IG) 계통도 — 라이트/다크 공통(테마 변수 사용), 인쇄 대응 */
+.dfDiagram{display:flex;flex-direction:column;gap:14px}
+.dfFlow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.dfNode{padding:7px 12px;border-radius:var(--r-pill);border:1px solid var(--line-2);background:var(--field-fill);color:var(--ink);font-weight:600;font-size:13px}
+.dfNode.proc{background:var(--accent-tint);border-color:var(--accent)}
+.dfNode.sbox{background:var(--warn-tint);border-color:var(--warn)}
+.dfNode .muted-note{font-weight:500}
+.dfArrow{color:var(--muted);font-weight:700}
+.dfMapWrap{overflow-x:auto;padding:2px}
+.dfMap{position:relative;border:1px solid var(--line-2);border-radius:var(--r-inner);background:var(--grid);max-width:100%}
+.dfBlk{position:absolute;box-sizing:border-box;border-radius:8px;padding:6px 8px;overflow:hidden;
+  border:1.5px solid hsl(var(--h) 60% 45%);background:hsla(var(--h),70%,50%,.16);color:var(--ink);
+  display:flex;flex-direction:column;gap:1px;font-size:11px;line-height:1.25}
+.dfBlk b{font-size:12px}
+.dfBlkCab{font-weight:600}
+.dfBlkN{color:var(--ink-2)}
+.dfBlkPx{color:var(--muted);font-size:10px}
+.dfLegend{font-size:12px;color:var(--muted)}
+.dfLegend b{color:var(--ink-2)}
+@media print{
+  .dfBlk{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* 09 전원 구성 */
+.pwPanel{display:flex;flex-direction:column;gap:12px}
+.pwSummary{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink-2)}
+.pwSummary b{color:var(--ink)}
+.pwTable{width:100%;border-collapse:collapse;font-size:13px}
+.pwTable th,.pwTable td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.pwTable th{color:var(--muted);font-weight:600}
+.pwTable tr.pw230{background:var(--accent-tint)}
+.pwTable .pwV{font-weight:600;color:var(--ink)}
+.pwTag{font-size:10px;font-weight:600;color:var(--accent-2);border:1px solid var(--accent);border-radius:var(--r-pill);padding:1px 6px;margin-left:4px}
+.pwNote{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* 08 데이터/전원 전환 토글 */
+.dfpwSeg{margin-bottom:12px;width:max-content;max-width:100%}

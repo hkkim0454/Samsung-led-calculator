@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
+import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, igLayout, powerConfig, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -20,6 +20,100 @@ test('MP012F 7x6 reproduces Samsung reference figures', () => {
   assert.equal(r.maxW, 6132);
   assert.ok(Math.abs(r.typW - 3234) < 8, `typ=${r.typW}`); // Samsung 3234 (pf 0.527)
   assert.ok(Math.abs(r.heatMaxBTU - 20916) < 20, `btu=${r.heatMaxBTU}`);
+});
+
+// ── IG(신호 입력 그룹)·데이터 흐름 레이아웃 ──────────────────────────────────
+// MP012F 6×3.4m(7×6=42캐비닛, 4480×2160): S-Box 2대 → 4K영역 2개(가로 분할).
+//   영역0 = 좌측 3840px = 캐비닛 6열(0~5)×6행 = 36대, 영역1 = 우측 640px = 1열(6)×6행 = 6대.
+test('igLayout: MP012F 4480x2160 -> 2 S-Box regions matching Samsung sbox count', () => {
+  const ig = igLayout(MP012F, 4480, 2160, 7, 6);
+  assert.equal(ig.integrated, false);
+  assert.equal(ig.boxes, 2);                 // sboxCount base(이중화 제외)와 일치
+  assert.equal(ig.boxes, sboxCount(MP012F, 4480, 2160));
+  assert.equal(ig.regCols, 2);
+  assert.equal(ig.regRows, 1);
+  assert.equal(ig.capW, 3840); assert.equal(ig.capH, 2160);
+  assert.equal(ig.regions.length, 2);
+  const r0 = ig.regions[0], r1 = ig.regions[1];
+  assert.deepEqual({ c0: r0.colStart, c1: r0.colEnd, n: r0.cabinets }, { c0: 0, c1: 5, n: 36 });
+  assert.deepEqual({ c0: r1.colStart, c1: r1.colEnd, n: r1.cabinets }, { c0: 6, c1: 6, n: 6 });
+  // 모든 캐비닛이 정확히 한 영역에 배정(합 = 총 캐비닛).
+  assert.equal(ig.regions.reduce((s, r) => s + r.cabinets, 0), 42);
+});
+test('igLayout: single 4K wall -> 1 region covering all cabinets', () => {
+  const ig = igLayout(MP012F, 3840, 2160, 6, 6);   // 6×640=3840, 6×360=2160
+  assert.equal(ig.boxes, 1);
+  assert.equal(ig.regions.length, 1);
+  assert.equal(ig.regions[0].cabinets, 36);
+});
+test('igLayout: unknown/invalid inputs -> null (no fake numbers)', () => {
+  assert.equal(igLayout(MP012F, 0, 2160, 7, 6), null);
+  assert.equal(igLayout({ ...MP012F, maxInputW: null }, 4480, 2160, 7, 6), null);
+});
+test('igLayout: integrated controller -> boxes 0', () => {
+  const ig = igLayout({ ...MP012F, integratedController: true }, 4480, 2160, 7, 6);
+  assert.equal(ig.integrated, true);
+  assert.equal(ig.boxes, 0);
+});
+test('computeConfig exposes ig layout consistent with sbox', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.ok(r.ig);
+  assert.equal(r.ig.boxes, r.sbox);   // 이중화 꺼짐 기준 동일
+  assert.equal(r.ig.regions.reduce((s, x) => s + x.cabinets, 0), r.total);
+});
+
+// ── 전원 구성(회로/데이지체인) — Samsung IF015R-M 데이터시트 검증(이사 제공) ──────────
+// 캐비닛 최대 190W. 회로당 = ⌊V×A×0.8/190⌋: 110V20A→9, 208V20A→17, 230V13A→12, 230V16A→15.
+// 데이지체인당 = ⌊V×3.9/190⌋: 110V→2, 208V→4, 230V→4.
+const IF015RM = { maxPower: 190 };
+function powRow(total, id) { return powerConfig(IF015RM, total).rows.find(r => r.id === id); }
+test('powerConfig: cabinets-per-circuit matches IF015R-M datasheet (190W)', () => {
+  const r = powerConfig(IF015RM, 169);   // 13×13
+  const by = id => r.rows.find(x => x.id === id);
+  assert.equal(by('110v20a').cabinetsPerCircuit, 9);
+  assert.equal(by('208v20a').cabinetsPerCircuit, 17);
+  assert.equal(by('230v13a').cabinetsPerCircuit, 12);
+  assert.equal(by('230v16a').cabinetsPerCircuit, 15);
+  assert.equal(by('110v20a').cabinetsPerDaisyChain, 2);
+  assert.equal(by('208v20a').cabinetsPerDaisyChain, 4);
+  assert.equal(by('230v13a').cabinetsPerDaisyChain, 4);
+  assert.equal(by('230v16a').cabinetsPerDaisyChain, 4);
+});
+test('powerConfig: circuit counts match datasheet — 13x13=169 cabinets', () => {
+  assert.equal(powRow(169, '110v20a').circuits, 19);   // 데이터시트 19
+  assert.equal(powRow(169, '208v20a').circuits, 10);   // 10
+  assert.equal(powRow(169, '230v13a').circuits, 15);   // 15
+  assert.equal(powRow(169, '230v16a').circuits, 12);   // 12
+});
+test('powerConfig: circuit counts match datasheet — 9x3=27 cabinets', () => {
+  assert.equal(powRow(27, '110v20a').circuits, 3);     // 데이터시트 3
+  assert.equal(powRow(27, '208v20a').circuits, 2);     // 2
+  assert.equal(powRow(27, '230v13a').circuits, 3);     // 3
+  assert.equal(powRow(27, '230v16a').circuits, 2);     // 2
+});
+test('powerConfig: 230V 20A (국내 주 사용) — 190W cabinet, 6x6=36 -> 19/circuit, 2 circuits', () => {
+  const r = powerConfig(IF015RM, 36);
+  const row = r.rows.find(x => x.id === '230v20a');
+  assert.ok(row.primary, '230V 20A는 primary(주 사용)');
+  assert.equal(row.cabinetsPerCircuit, 19);   // ⌊230×20×0.8/190⌋=19
+  assert.equal(row.circuits, 2);              // ⌈36/19⌉=2
+  assert.equal(row.cabinetsPerDaisyChain, 4);
+  assert.equal(row.daisyChains, 9);           // ⌈36/4⌉=9
+  assert.equal(r.rows[0].id, '230v20a');      // 맨 앞(주 사용)
+});
+test('powerConfig: null when per-cabinet power unknown (no fake numbers)', () => {
+  assert.equal(powerConfig({ maxPower: null }, 36), null);
+  assert.equal(powerConfig({ maxPower: 190 }, 0), null);
+});
+test('computeConfig exposes power config (MP012F 190W? uses model maxPower)', () => {
+  const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.ok(r.power);
+  assert.equal(r.power.total, 42);
+  assert.equal(r.power.perCabinetW, MP012F.maxPower);   // 146W
+  // 230V 16A: ⌊230×16×0.8/146⌋=20/회로 → ⌈42/20⌉=3
+  const row = r.power.rows.find(x => x.id === '230v16a');
+  assert.equal(row.cabinetsPerCircuit, 20);
+  assert.equal(row.circuits, 3);
 });
 
 test('cabinet resolution derives from size/pitch when absent', () => {
