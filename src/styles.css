@@ -266,9 +266,9 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* 방 모서리(구조 edge) — 2D 오버레이 선으로 확실히(3D 면 테두리 대체). */
 .rs3EdgeLayer{position:absolute;inset:0;pointer-events:none}
 .rs3Edge{position:absolute;height:0;border-top:1px solid rgba(243,245,249,.75);transform-origin:left center;pointer-events:none}  /* 경계선: 천장 그라데이션 밝은 톤(#f3f5f9)으로 아주 은은하게 */
-/* 바닥 격자: 가로 격자(깊이로 물러나는 좌우 방향 선 = to bottom)를 더 진하게, 세로(수렴) 선은 은은하게. */
-.rs3FloorGrid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(28,34,48,.16) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(28,34,48,.34) 0 1.5px,transparent 1.5px);background-repeat:repeat;background-position:0 100%;
-  -webkit-mask-image:linear-gradient(to top,#000 42%,transparent 90%);mask-image:linear-gradient(to top,#000 42%,transparent 90%)}   /* 격자 기준을 앞쪽 끝(front)+좌측벽에. 먼 쪽(뒷벽)으로 갈수록 흐려지게 해 가로선이 몰려 지저분해 보이지 않게(이사 요청) */
+/* 바닥 격자(2D 투영선): 600mm 타일을 선으로 직접 그림. 두께는 인라인(1/fit 역보정), 농도는 인라인 opacity(먼 쪽 흐림). */
+.rs3GridLayer{position:absolute;inset:0;pointer-events:none}
+.rs3GridLn{position:absolute;height:0;border-top:1px solid rgba(28,34,48,.55);transform-origin:left center;pointer-events:none}
 /* 깊이 단서 높이·offset은 mm 환산값을 인라인으로 넘긴다(v2 2-3) — CSS 고정 px 제거. */
 .rs3Ao{position:absolute;left:0;right:0;top:0;background:linear-gradient(to bottom,rgba(16,18,22,.22),transparent)}
 .rs3FloorGlow{position:absolute;top:0;background:radial-gradient(120% 100% at 50% 0%,rgba(47,127,246,.20),transparent 70%)}
@@ -284,7 +284,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
   .rs3Face.wallL{background:linear-gradient(to left,#2a3344,#354056)}  /* 좌우벽: 중간, 안쪽(소실점)으로 살짝 밝게 */
   .rs3Face.wallR{background:linear-gradient(to left,#354056,#2a3344)}
   .rs3Edge{border-top-color:rgba(61,71,89,.85)}                  /* 모서리선: 다크 천장 밝은 톤(#3d4759)으로 은은하게 */
-  .rs3FloorGrid{background-image:linear-gradient(to right,rgba(160,174,205,.22) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(160,174,205,.4) 0 1.5px,transparent 1.5px)}
+  .rs3GridLn{border-top-color:rgba(160,174,205,.6)}
   .rs3Ao{background:linear-gradient(to bottom,rgba(0,0,0,.4),transparent)}
 }
 .rs3Led{position:absolute;transform:translateZ(10px);border-radius:2px;background:#14161a}
@@ -324,10 +324,10 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* 치수 라벨 크기(이사 요청 2026-09-13: 작은 공간·Fullscreen에서 너무 작아 다시 키움). */
 .rs3Dlbl.key{background:#14161a;color:#fff;font-size:calc(11.5px / var(--fit,1));font-weight:600;padding:2px 6px;border-radius:6px}
 .rs3Dlbl.sub{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(10px / var(--fit,1));font-weight:600;padding:1px 5px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
-.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:calc(8.05px / var(--fit,1));font-weight:700;padding:2px 8px;border-radius:999px}
+.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:calc(12.1px / var(--fit,1));font-weight:700;padding:2px 8px;border-radius:999px}   /* 캐비넷 수 표기 1.5배(이사 요청 2026-09-13) */
 .rs3Dlbl.person{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(7px / var(--fit,1));font-weight:600;padding:1px 5px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
 .rs3Dlbl.vlbl{transform:translate(-50%,-50%) rotate(-90deg)}
-.rs3Frame.noGrid .rs3FloorGrid{display:none}
+.rs3Frame.noGrid .rs3GridLayer{display:none}
 .rs3Frame.noEye .rs3Eye,.rs3Frame.noEye .rs3EyeLbl{display:none}
 .rs3Frame.noPerson .rs3Person,.rs3Frame.noPerson .rs3Dlbl.person,.rs3Frame.noPerson .rs3Eye,.rs3Frame.noPerson .rs3EyeLbl{display:none}
 .rs3Frame.noDims .rs3Overlay{display:none}   /* 치수 오버레이(치수선·라벨·캐비닛 번호)만 숨김. 신호(FHD/UHD) 태그는 배선정보라 유지(v2 3-1) */
