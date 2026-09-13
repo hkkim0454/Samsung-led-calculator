@@ -322,6 +322,32 @@ test('[AW] confirmed total input counts; Aquilon RS AUX not-main-resource, Zenit
   assert.equal(getProcessor('aw-alta-zenith-100').aux.usesMainLayerResources, null); // Zenith: 미확인(추정 금지)
 });
 
+// ── UNKNOWN(null) 원칙: 요구되면 CONDITIONAL, 요구 없으면 PASS 방해 안 함 (C mini split4k=null) ──
+test('[UNKNOWN] C mini split4k=null: no split requirement -> not forced CONDITIONAL', () => {
+  const cm = getProcessor('aw-aquilon-cmini');
+  assert.equal(cm.layers.split4k, null);
+  // 필요 4K출력 1(3840×2160), split 요구 없음 → split4k=null이 PASS를 막지 않아야 함.
+  const v = validateProcessor(cm, processorRequirements({ resW: 3840, resH: 2160 }));
+  assert.equal(findCheck(v, '4K 레이어(믹싱/분할)'), undefined);   // split 검사 자체 없음
+  assert.equal(v.verdict, 'PASS');
+});
+test('[UNKNOWN] C mini split4k=null: split required -> CONDITIONAL (not PASS via mixing fallback, not FAIL)', () => {
+  const cm = getProcessor('aw-aquilon-cmini');
+  const v = validateProcessor(cm, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 4 }));
+  const c = findCheck(v, '4K 레이어(믹싱/분할)');
+  assert.equal(c.have, null);        // split4k=null → mixing4k(4)로 대체하지 않음
+  assert.equal(c.ok, null);          // UNKNOWN
+  assert.equal(v.verdict, 'CONDITIONAL');   // PASS 아님, FAIL 아님
+});
+test('[UNKNOWN] null !== false and null !== PASS (fixture: required feature unknown -> CONDITIONAL)', () => {
+  const cm = getProcessor('aw-aquilon-cmini');
+  // split4k=null이 known 값으로 채워졌다고 가정하면 PASS가 되는지 대조(원칙 확인).
+  const known = { ...cm, layers: { ...cm.layers, split4k: 6 } };
+  assert.equal(validateProcessor(known, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 4 })).verdict, 'PASS');
+  const fewer = { ...cm, layers: { ...cm.layers, split4k: 3 } };
+  assert.equal(validateProcessor(fewer, processorRequirements({ resW: 3840, resH: 2160 }, { simultaneous4kLayers: 4 })).verdict, 'FAIL');
+});
+
 // ── Operation Fit: 공간 5종 성향 ─────────────────────────────────────────────
 test('operationFit preferred by application', () => {
   assert.equal(operationFit(getProcessor('aw-alta-zenith-200'), processorRequirements({ resW: 3840, resH: 2160 }, { application: 'auditorium' })).preferred, true);  // 강당=Alta 최우선

@@ -22,8 +22,14 @@ const AW = 'Analog Way', NS = 'NovaStar', CL = 'Colorlight';
 
 // 누락 필드는 null(확인 필요). comboHdmi14Sdi3g: HDMI1.4/3G-SDI 겸용 입력 수(표시용).
 const emptySlots = () => ({ physicalInputSlots: null, physicalOutputSlots: null, maxInputBoards: null, maxOutputBoards: null, sharedIoSlots: null });
-// total: 공식 확인된 "총 입력 수". maxIndependent4k/2k(용량)와 다른 개념 — 확인 안 되면 null.
-const emptyInputs = () => ({ total: null, maxIndependent2k: null, maxIndependent4k: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null, comboHdmi14Sdi3g: null });
+// 입력 필드 의미(혼동 금지):
+//   total             : 공식 확인된 "총 입력 수".
+//   maxIndependent4k  : 4K60 신호를 독립적으로 받을 수 있는 최대 입력 수(용량).
+//   maxIndependent2k  : 2K60 신호를 독립적으로 받을 수 있는 최대 입력 수(용량). 4K 포트도 2K를 받으면
+//                       여기에 포함된다 → "2K 전용 입력 수"가 아니다.
+//   dedicated2kInputs : 2K 전용(4K 불가) 입력 포트 수. maxIndependent2k와 완전히 다른 개념. 미확인 null.
+// 확인 안 되면 모두 null(추정 금지).
+const emptyInputs = () => ({ total: null, maxIndependent2k: null, maxIndependent4k: null, dedicated2kInputs: null, hdmi14: null, hdmi20: null, dp12: null, sdi3g: null, sdi12g: null, comboHdmi14Sdi3g: null });
 // 출력: Active / 독립4K출력 / 4K PGM / 독립2K를 각각 분리(지침 1). max4k/max2k 단일값 사용 금지.
 const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null });
 const emptyLayers = () => ({ model: null, maxWindows: null, maxLayers: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, chassisMaxLayers2k: null });
@@ -87,7 +93,7 @@ export const PROCESSORS = [
   ].map(m => proc({
     id: 'aw-midra-' + m.slug,
     manufacturer: AW, family: 'Midra 4K', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { total: 10, maxIndependent4k: 8, maxIndependent2k: 10, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },
+    inputs: { total: 10, maxIndependent4k: 8, maxIndependent2k: 10, dedicated2kInputs: 2, hdmi20: 4, dp12: 2, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 8×4K60 + 2×2K60(전용)
     outputs: { maxActiveOutputs: 2, maxIndependent4kOutputs: 2, maxIndependent4kPgm: 2, maxIndependent2k: null },
     layers: { model: 'mixing_split', mixing4k: 2, split4k: 4 },
     canvas: m.canvas,
@@ -104,7 +110,7 @@ export const PROCESSORS = [
   proc({
     id: 'aw-alta-zenith-100',
     manufacturer: AW, family: 'Alta 4K', model: 'Zenith 100', lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { total: 13, maxIndependent4k: 11, maxIndependent2k: 13, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },
+    inputs: { total: 13, maxIndependent4k: 11, maxIndependent2k: 13, dedicated2kInputs: 2, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 11×4K60 + 2×2K60(전용)
     outputs: { maxActiveOutputs: 4, maxIndependent4kOutputs: 4, maxIndependent4kPgm: 3, maxIndependent2k: null },   // Active 4 / PGM 3
     layers: { model: 'mixing_split', mixing4k: 3, split4k: 6 },   // 공식 재검증(2026-09-13): 믹싱3 / 분할6
     canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: null },   // Hard/Soft Edge 지원(공식 비교표). 최대 캔버스 출력수 미확인→null
@@ -116,7 +122,7 @@ export const PROCESSORS = [
   proc({
     id: 'aw-alta-zenith-200',
     manufacturer: AW, family: 'Alta 4K', model: 'Zenith 200', lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { total: 16, maxIndependent4k: 14, maxIndependent2k: 16, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },
+    inputs: { total: 16, maxIndependent4k: 14, maxIndependent2k: 16, dedicated2kInputs: 2, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 14×4K60 + 2×2K60(전용)
     outputs: { maxActiveOutputs: 6, maxIndependent4kOutputs: 6, maxIndependent4kPgm: 4, maxIndependent2k: null },   // Active 6 / PGM 4
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
     canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: null },   // Hard/Soft Edge 지원(공식 비교표). 최대 캔버스 출력수 미확인→null

@@ -16,17 +16,14 @@ import {
   validateOutputCardLayers,
 } from './processor-limits.js?v=249';
 
-function maxNullable(...vals) {
-  const nums = vals.filter(v => v != null);
-  return nums.length ? Math.max(...nums) : null;
-}
-
 // ── 제조사별 Layer validator (SoT §6 — 반드시 분리) ────────────────────────────
 function validateAnalogWayLayers(proc, req, numCheck) {
   const L = proc.layers ?? {};
   // True A/B가 필요하면 반드시 '믹싱' 레이어만(분할로 대체 불가, SoT §7).
   if (req.requiredMixingLayers > 0) numCheck('4K 믹싱 레이어(A/B)', req.requiredMixingLayers, L.mixing4k ?? null);
-  if (req.requiredSplitLayers > 0) numCheck('4K 레이어(믹싱/분할)', req.requiredSplitLayers, maxNullable(L.split4k, L.mixing4k));
+  // 분할(일반) 레이어 요구는 split4k만 본다. split4k가 null이면 mixing4k로 대체 추정하지 않고
+  //   ok=null(→ CONDITIONAL) 처리한다(UNKNOWN=null≠PASS, 이사 지침).
+  if (req.requiredSplitLayers > 0) numCheck('4K 레이어(믹싱/분할)', req.requiredSplitLayers, L.split4k ?? null);
 }
 function validateX100Windows(proc, req, numCheck) {
   const L = proc.layers ?? {};
