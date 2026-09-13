@@ -773,8 +773,11 @@ function renderDataFlow() {
       <span class="dfBlkPx">${fmt(rg.pxW)}×${fmt(rg.pxH)}px</span>
     </div>`;
   }).join('');
+  // 배경 캐비닛 격자: 셀 = 맵폭/열 × 맵높이/행 (resW=열×캐비닛px 이므로 정확히 캐비닛 경계와 일치).
+  const cw = W / r.cols, ch = H / r.rows;
+  const gridBg = `background-image:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px ${cw}px),repeating-linear-gradient(0deg,var(--line) 0 1px,transparent 1px ${ch}px)`;
   host.innerHTML = flow
-    + `<div class="dfMapWrap"><div class="dfMap" style="width:${W}px;height:${H}px">${blocks}</div></div>`
+    + `<div class="dfMapWrap"><div class="dfMap" style="width:${W}px;height:${H}px;${gridBg}">${blocks}</div></div>`
     + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 색 구역 = 각 S-Box가 담당하는 캐비닛</div>`;
 }
 
