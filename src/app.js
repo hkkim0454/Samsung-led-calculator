@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=244';
-import { MODELS } from './models.js?v=244';
-import { PROCESSORS } from './processor-data.js?v=244';
-import { processorRequirements } from './processor-limits.js?v=244';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=244';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=244';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=244';
-import { parseCasesText, normalizeDate } from './cases.js?v=244';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=245';
+import { MODELS } from './models.js?v=245';
+import { PROCESSORS } from './processor-data.js?v=245';
+import { processorRequirements } from './processor-limits.js?v=245';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=245';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=245';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=245';
+import { parseCasesText, normalizeDate } from './cases.js?v=245';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -449,10 +449,10 @@ function renderPreview() {
 
   // 상단 가로 치수선(LED 가로) + 좌우 여백 — 같은 좌우 선상(topDimV)에 한 줄로(이사 요청).
   hDim(Lx, Lx + Lw, topDimV, 0, mmL(r.actualW), 'key');
-  vDim(Lx + Lw + px(140), Ly, Ly + Lh, 0, mmL(r.actualH), 'key');
+  vDim(Lx + Lw + px(300), Ly, Ly + Lh, 0, mmL(r.actualH), 'key');
   if (mount > 0) {
-    if (topGapMM > 40) vDim(Lx + Lw + px(140), 0, Ly, 0, mmL(topGapMM), 'sub');
-    vDim(Lx + Lw + px(140), Ly + Lh, SHp, 0, mmL(mount), 'sub');
+    if (topGapMM > 40) vDim(Lx + Lw + px(300), 0, Ly, 0, mmL(topGapMM), 'sub');
+    vDim(Lx + Lw + px(300), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
   if (r.marginW > 40) {
     hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
