@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=252';
-import { MODELS } from './models.js?v=252';
-import { PROCESSORS } from './processor-data.js?v=252';
-import { processorRequirements } from './processor-limits.js?v=252';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=252';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=252';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=252';
-import { parseCasesText, normalizeDate } from './cases.js?v=252';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=253';
+import { MODELS } from './models.js?v=253';
+import { PROCESSORS } from './processor-data.js?v=253';
+import { processorRequirements } from './processor-limits.js?v=253';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=253';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=253';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=253';
+import { parseCasesText, normalizeDate } from './cases.js?v=253';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -1054,6 +1054,15 @@ $('#signalMode').addEventListener('click', e => {
   signalMode = b.dataset.sig;
   $('#signalMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   renderPreview(); renderReadout();
+});
+// 08 데이터 흐름 · 전원 구성 전환 토글(기본 = 데이터). 버튼에 따라 해당 패널만 표시.
+$('#dfpwSeg')?.addEventListener('click', e => {
+  const b = e.target.closest('button[data-dfpw]'); if (!b) return;
+  const showPower = b.dataset.dfpw === 'power';
+  $('#dfpwSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  const df = $('#dfDiagram'), pw = $('#pwPanel');
+  if (df) df.hidden = showPower;
+  if (pw) pw.hidden = !showPower;
 });
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 버튼 표시를 실제 상태와 일치시킨다.
 //   눈높이선은 사람에 종속 — 사람이 꺼지면 눈높이선도 꺼진 것으로 표시(비활성)하고 클릭도 막는다.
