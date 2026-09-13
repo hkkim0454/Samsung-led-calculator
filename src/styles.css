@@ -675,3 +675,24 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 
 /* 08 데이터/전원 전환 토글 */
 .dfpwSeg{margin-bottom:12px;width:max-content;max-width:100%}
+
+/* 삼성 공식 도면 스타일(Power/Data Flow) — 물리 도면이라 항상 흰 배경 */
+.fxTitle{font-size:13px;font-weight:700;color:var(--ink);margin:2px 0 8px}
+.fxWrap{overflow-x:auto;background:#ffffff;border:1px solid #d8d8de;border-radius:var(--r-inner);padding:12px}
+.fx{display:block;max-width:none}
+.fxCell{fill:none;stroke:#e6e6ea;stroke-width:1}
+.fxIo{fill:#c6c6ce}
+.fxGroup{fill:none;stroke:#e2001a;stroke-width:1.5}
+.fxCable{fill:none;stroke:#2b2f8f;stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.fxStart{fill:#2b2f8f}
+.pxLine{stroke:#2b2f8f;stroke-width:2.4;stroke-linecap:round}
+.pxEnd{fill:#2b2f8f}
+.pxChev{fill:none;stroke:#2b2f8f;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
+.fxLegend{display:flex;flex-wrap:wrap;gap:7px 18px;font-size:12px;color:var(--ink-2);margin-top:10px}
+.fxLegend i{display:inline-flex;align-items:center;gap:7px;font-style:normal}
+.fxLegend .k-dot{width:12px;height:12px;border-radius:50%;background:#2b2f8f}
+.fxLegend .k-io{width:12px;height:12px;background:#c6c6ce}
+.fxLegend .k-sq{width:12px;height:12px;background:#2b2f8f}
+.fxLegend .k-line{width:20px;height:0;border-top:3px solid #2b2f8f}
+.fxLegend .k-grp{width:15px;height:12px;border:1.5px solid #e2001a}
+.fxLegend .k-chev{color:#2b2f8f;font-weight:800;font-size:14px;line-height:1}
