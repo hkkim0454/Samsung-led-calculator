@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=249';
-import { MODELS } from './models.js?v=249';
-import { PROCESSORS } from './processor-data.js?v=249';
-import { processorRequirements } from './processor-limits.js?v=249';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=249';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=249';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=249';
-import { parseCasesText, normalizeDate } from './cases.js?v=249';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=250';
+import { MODELS } from './models.js?v=250';
+import { PROCESSORS } from './processor-data.js?v=250';
+import { processorRequirements } from './processor-limits.js?v=250';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=250';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=250';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=250';
+import { parseCasesText, normalizeDate } from './cases.js?v=250';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -455,8 +455,8 @@ function renderPreview() {
     vDim(Lx + Lw + px(300), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
   if (r.marginW > 40) {
-    hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
-    hDim(Lx + Lw, SWp, topDimV, 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
+    hDim(0, Lx, topDimV, 0, mmL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽) — mm(벽공간만 m, 나머지 mm)
+    hDim(Lx + Lw, SWp, topDimV, 0, mmL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽) — mm
   }
   // 벽 크기(가로·세로): 방 좌측 모서리(u=0)에서 시작 → 세로선은 좌측 천장·바닥 모서리선과,
   //   가로선은 바닥 좌·우 모서리선과 만나고, 좌하단에서 L자로 코너가 맞물림(이사 요청).
