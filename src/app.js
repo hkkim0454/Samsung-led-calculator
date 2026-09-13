@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=247';
-import { MODELS } from './models.js?v=247';
-import { PROCESSORS } from './processor-data.js?v=247';
-import { processorRequirements } from './processor-limits.js?v=247';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=247';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=247';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=247';
-import { parseCasesText, normalizeDate } from './cases.js?v=247';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=250';
+import { MODELS } from './models.js?v=250';
+import { PROCESSORS } from './processor-data.js?v=250';
+import { processorRequirements } from './processor-limits.js?v=250';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=250';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=250';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=250';
+import { parseCasesText, normalizeDate } from './cases.js?v=250';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -455,8 +455,8 @@ function renderPreview() {
     vDim(Lx + Lw + px(300), Ly + Lh, SHp, 0, mmL(mount), 'sub');
   }
   if (r.marginW > 40) {
-    hDim(0, Lx, topDimV, 0, mL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽)
-    hDim(Lx + Lw, SWp, topDimV, 0, mL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽)
+    hDim(0, Lx, topDimV, 0, mmL(r.marginW), 'sub');            // 좌 여백(벽 왼쪽~LED 왼쪽) — mm(벽공간만 m, 나머지 mm)
+    hDim(Lx + Lw, SWp, topDimV, 0, mmL(r.marginW), 'sub');     // 우 여백(LED 오른쪽~벽 오른쪽) — mm
   }
   // 벽 크기(가로·세로): 방 좌측 모서리(u=0)에서 시작 → 세로선은 좌측 천장·바닥 모서리선과,
   //   가로선은 바닥 좌·우 모서리선과 만나고, 좌하단에서 L자로 코너가 맞물림(이사 요청).
@@ -615,7 +615,7 @@ function procHasFixedPorts(p) {
   const i = p.inputs || {}, o = p.outputs || {};
   return ['hdmi14', 'hdmi20', 'dp12', 'sdi3g', 'sdi12g'].some(k => i[k] != null)
     || i.maxIndependent4k != null || i.maxIndependent2k != null
-    || o.max4k != null || o.max2k != null;
+    || o.maxIndependent4kOutputs != null || o.maxIndependent4kPgm != null || o.maxActiveOutputs != null || o.maxIndependent2k != null;
 }
 function vpItemHTML(item) {
   const p = item.proc;
@@ -646,7 +646,7 @@ function openPortPopup(id) {
     .filter(([, v]) => v != null);
   const inRows = connRows.length ? connRows : indepRows;
   const inTitle = connRows.length ? '입력 포트' : '입력 (최대)';
-  const outRows = [['4K 출력', p.outputs.max4k], ['2K 출력', p.outputs.max2k]].filter(([, v]) => v != null);
+  const outRows = [['Active 출력', p.outputs.maxActiveOutputs], ['독립 4K 출력', p.outputs.maxIndependent4kOutputs], ['4K PGM 출력', p.outputs.maxIndependent4kPgm], ['2K 출력', p.outputs.maxIndependent2k]].filter(([, v]) => v != null);
   const inHTML = inRows.length ? inRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요(데이터시트 미확보)</td></tr>`;
   const outHTML = outRows.length ? outRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요</td></tr>`;
   // 커넥터를 보여줄 때만 독립 입력 최대를 참고로 덧붙임(카드형은 이미 위에 표시됨).
