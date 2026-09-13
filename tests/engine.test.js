@@ -298,16 +298,15 @@ test('GBIC: gbicSets = 1 SET per 1920x2160 region, doubled by redundancy', () =>
   assert.equal(gbicSets(0, 0), null);
 });
 
-test('GBIC는 CS4B 계열 컨트롤러에서만 산출 (MMF 자동, 그 외는 CS4B 선택 시)', () => {
-  // MPF 기본 SNOWAAE -> GBIC 없음.
-  const mpOff = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
-  assert.equal(mpOff.controller, 'SBB-SNOWAAE');
-  assert.equal(mpOff.gbic, null);
-  // MPF + CS4B(광전송) 선택 -> 컨트롤러 CS4B, GBIC 3 (4480x2160).
+test('GBIC는 CS4B 계열 컨트롤러에서만 산출 (MMF·MPF 모두 CS4BPGS 기본 -> 자동)', () => {
+  // MPF 기본 컨트롤러 = SBB-CS4BPGS (삼성 검증 S-Box·이사 지침) -> GBIC 자동 산출(4480x2160 -> 3 SET).
+  const mp = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
+  assert.equal(mp.controller, 'SBB-CS4BPGS');
+  assert.equal(mp.gbic, 3);
+  // CS4B(광전송) 옵션은 이미 CS4B라 GBIC 수량 동일(옵션과 무관하게 산출).
   const mpOn = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, cs4b: true });
-  assert.equal(mpOn.controller, 'SBB-CS4B');
   assert.equal(mpOn.gbic, 3);
-  assert.equal(mpOn.sbox, mpOff.sbox); // S-Box 수량은 CS4B 옵션과 무관.
+  assert.equal(mpOn.sbox, mp.sbox); // S-Box 수량은 CS4B 옵션과 무관.
   // MMF는 기본 컨트롤러가 CS4BPGS -> GBIC 자동 산출 (10x10 = 3840x2160 -> 2 SET).
   const MM015F = MODELS.find(m => m.id === 'MM015F');
   const mm = computeConfig(MM015F, 6000, 3400, { mode: 'fill' });
@@ -401,12 +400,13 @@ test('MMF P0.9375 / P1.25 verified against Samsung configurator export', () => {
 test('computeQuote: 품목별 원가/견적/마진 (가짜 단가)', () => {
   const P = {
     panels: { MP012F: { cost: 1000, sell: 1500 } },
-    sbox: { 'SBB-SNOWAAE': { cost: 200, sell: 300 } },
+    sbox: { 'SBB-CS4BPGS': { cost: 200, sell: 300 } },   // MPF 기본 컨트롤러 = CS4BPGS
+    gbic: { cost: 50, sell: 75 },
     install: { costPerM2: 10, sellPerM2: 20 },
   };
   // 예비 SBOX는 이 테스트에서 0으로 두어 패널/설치 검증에 집중(예비 SBOX는 별도 테스트).
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6, sboxSpares: 0 });
-  // 42 캐비닛, MP 예비율 7% → 예비 3 → 총 45. SBOX 2대(4480x2160). CS4B 아님 → Gbic 없음.
+  // 42 캐비닛, MP 예비율 7% → 예비 3 → 총 45. SBOX 2대. MPF는 CS4BPGS → Gbic 3 SET(=6 EA).
   const q = computeQuote(MP012F, r, P);
   const panel = q.lines.find(l => l.label.includes('LED 패널'));
   assert.equal(panel.qty, 45, `panel qty=${panel.qty}`);      // 예비 포함
@@ -415,13 +415,15 @@ test('computeQuote: 품목별 원가/견적/마진 (가짜 단가)', () => {
   const sbox = q.lines.find(l => l.label.includes('S-BOX'));
   assert.equal(sbox.qty, 2);
   assert.equal(sbox.cost, 400);
-  assert.ok(!q.lines.some(l => l.label.includes('Gbic')), 'no gbic without CS4B');
+  const gbic = q.lines.find(l => l.label.includes('Gbic'));
+  assert.equal(gbic.qty, 6);          // 3 SET × 2 = 6 EA
+  assert.equal(gbic.cost, 300);
   // 설치: 면적 × ㎡단가
   const inst = q.lines.find(l => l.label.includes('설치'));
   assert.ok(Math.abs(inst.cost - r.areaM2 * 10) < 1e-6);
   // 합계·마진
-  assert.ok(Math.abs(q.totalCost - (45000 + 400 + r.areaM2 * 10)) < 1e-6);
-  assert.ok(Math.abs(q.totalSell - (67500 + 600 + r.areaM2 * 20)) < 1e-6);
+  assert.ok(Math.abs(q.totalCost - (45000 + 400 + 300 + r.areaM2 * 10)) < 1e-6);
+  assert.ok(Math.abs(q.totalSell - (67500 + 600 + 450 + r.areaM2 * 20)) < 1e-6);
   assert.ok(Math.abs(q.margin - (q.totalSell - q.totalCost) / q.totalSell) < 1e-9);
   assert.equal(q.incomplete, false);
 });
@@ -479,7 +481,7 @@ test('computeQuote: 고소작업 시 설치비에 할증배수 적용', () => {
 });
 
 test('예비 SBOX: 기본 1대, 직접 지정, 견적 수량 반영', () => {
-  const P = { panels: {}, sbox: { 'SBB-SNOWAAE': { cost: 200, sell: 300 } } };
+  const P = { panels: {}, sbox: { 'SBB-CS4BPGS': { cost: 200, sell: 300 } } };   // MPF 기본 컨트롤러 = CS4BPGS
   // 기본: SBOX 2대 + 예비 1 = 3
   const base = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
   assert.equal(base.sbox, 2);

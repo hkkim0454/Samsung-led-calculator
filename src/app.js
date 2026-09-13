@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=258';
-import { MODELS } from './models.js?v=258';
-import { PROCESSORS } from './processor-data.js?v=258';
-import { processorRequirements } from './processor-limits.js?v=258';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=258';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=258';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=258';
-import { parseCasesText, normalizeDate } from './cases.js?v=258';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=259';
+import { MODELS } from './models.js?v=259';
+import { PROCESSORS } from './processor-data.js?v=259';
+import { processorRequirements } from './processor-limits.js?v=259';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=259';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=259';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=259';
+import { parseCasesText, normalizeDate } from './cases.js?v=259';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -820,10 +820,15 @@ function renderDataFlow() {
   if (ig.integrated) { host.innerHTML = '<div class="notice">이 모델은 통합 컨트롤러라 별도 S-Box(신호 그룹)가 필요 없습니다.</div>'; return; }
   if (ig.boxes == null || !ig.regions.length) { host.innerHTML = '<div class="notice warn">S-Box 지원 해상도 데이터가 없어 신호 구성을 표시할 수 없습니다.</div>'; return; }
   const proc = dfTopProcessorName(r);
+  // CS4B 계열 컨트롤러(광지빅 사용)면 S-Box → 광지빅(GBIC) → LED 경로를 흐름에 표시.
+  const gbicNode = (r.gbic != null)
+    ? `<span class="dfArrow">→</span><span class="dfNode gbic">광지빅(GBIC) ${fmt(r.gbic)} SET</span>`
+    : '';
+  const ctrlLbl = r.controller ? ` <em class="muted-note">${esc(r.controller)}</em>` : '';
   const flow = `<div class="dfFlow">
     <span class="dfNode">영상 소스</span><span class="dfArrow">→</span>
     <span class="dfNode proc">${proc ? esc(proc) : '프로세서'}<em class="muted-note"> (05 추천)</em></span><span class="dfArrow">→</span>
-    <span class="dfNode sbox">S-Box ${ig.boxes}대${r.redundancy ? ' <em class="muted-note">+이중화</em>' : ''}</span><span class="dfArrow">→</span>
+    <span class="dfNode sbox">S-Box ${ig.boxes}대${ctrlLbl}${r.redundancy ? ' <em class="muted-note">+이중화</em>' : ''}</span>${gbicNode}<span class="dfArrow">→</span>
     <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
   </div>`;
   // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형 배선.

@@ -22,20 +22,20 @@ export const MODELS = [
     pitch: 0.84, cabW: 806.4, cabH: 453.6, depth: 49.4, resW: 960, resH: 540,
     brightnessPeak: 1800, brightnessReduced: 1000, refreshHz: 3840, ovd_m: 2.9,
     weight: 9.2, maxPower: 122, typicalPower: 64, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-SNOWAAE', cabinetPart: 'LH008MPFAAA', dataStatus: 'verified' }, // MPF 기본 컨트롤러 SNOWAAE (또는 CS4B). part code: Samsung DE datasheet
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH008MPFAAA', dataStatus: 'verified' }, // MPF 컨트롤러 CS4BPGS(CS4B 광지빅) — 이사 지침/삼성 검증. SNOWAAE도 가능
 
   { id: 'MP012F', name: 'MP012F', category: 'LED Indoor (The Wall)', series: 'MP',
     pitch: 1.26, cabW: 806.4, cabH: 453.6, depth: 49.4, resW: 640, resH: 360,
     brightnessPeak: 1800, brightnessReduced: 1000, refreshHz: 3840, ovd_m: 4.4,
     weight: 9.2, maxPower: 146, typicalPower: 77, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-SNOWAAE', cabinetPart: 'LH012MPFAAA', dataStatus: 'verified' }, // MPF 기본 컨트롤러 SNOWAAE (또는 CS4B)
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH012MPFAAA', dataStatus: 'verified' }, // MPF 컨트롤러 CS4BPGS(CS4B 광지빅) — 삼성 공식 검증 S-Box=CS4BPGS
 
   // CONFIRMED via Samsung US MPF datasheet (LH016MPFAAA), 2026-07-24.
   { id: 'MP016F', name: 'MP016F', category: 'LED Indoor (The Wall)', series: 'MP',
     pitch: 1.68, cabW: 806.4, cabH: 453.6, depth: 49.4, resW: 480, resH: 270,
     brightnessPeak: 1600, brightnessReduced: 1200, refreshHz: 3840, ovd_m: 5.8,
     weight: 9.2, maxPower: 161, typicalPower: 68, maxInputW: 3840, maxInputH: 2160,
-    sbox: 'SBB-SNOWAAE', cabinetPart: 'LH016MPFAAA', dataStatus: 'verified' }, // MPF 기본 컨트롤러 SNOWAAE (또는 CS4B)
+    sbox: 'SBB-CS4BPGS', cabinetPart: 'LH016MPFAAA', dataStatus: 'verified' }, // MPF 컨트롤러 CS4BPGS(CS4B 광지빅) — 이사 지침
 
   // (The Wall IW series removed 2026-07-24 — discontinued, superseded by MPF.)
 

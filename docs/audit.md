@@ -78,6 +78,7 @@
 
 | ID | Timestamp | Decision | Rationale | Owner | Status |
 |---|---|---|---|---|---|
+| DEC-043 | 2026-09-13 | MPF(MP008F/012F/016F) 기본 컨트롤러를 SBB-SNOWAAE → **SBB-CS4BPGS**로 변경(DEC-015 대체). MMF·MPF 모두 CS4B 계열 → 광지빅(GBIC) 자동 산출. 08 데이터 흐름 '구성도'에 S-Box→광지빅(GBIC)→LED 경로 노드 표시 | 이사 지침(MMF·MPF 모두 CS4B·광지빅 사용) + 삼성 공식 검증(MP012F Fit-to-wall 시 S-Box=SBB-CS4BPGS). S-Box 수량 산식(박스당 4K)·전력·해상도 등 계산 불변, 컨트롤러 표시명과 GBIC 산출만 변경. 정합성 회귀 테스트(GBIC/견적)를 새 기준으로 갱신, 142/142 green | 김현규 | Approved |
 | DEC-001 | 2026-07-23 | vanilla JS 단일 HTML 채택, engine/data/UI 분리 | 배포 단순, 의존성 0, 사내 오프라인 실행 용이 | 김현규 | Approved |
 | DEC-002 | 2026-07-23 | 산출 항목·데이터 스키마를 삼성 실측 기준으로 정렬(Pitch, W×H×D, weight, max/typ power, resolution, brightness, OVD, BOM) | 사내 견적 정합성 확보 | 김현규 | Proposed |
 | DEC-003 | 2026-07-23 | 평균전력 계수 0.35 → 0.53 정정 | 삼성 MP012F 실측(3234/6132=0.527) 반영 | 김현규 | Proposed |

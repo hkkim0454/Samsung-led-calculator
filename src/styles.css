@@ -696,3 +696,5 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .fxLegend .k-line{width:20px;height:0;border-top:3px solid #2b2f8f}
 .fxLegend .k-grp{width:15px;height:12px;border:1.5px solid #e2001a}
 .fxLegend .k-chev{color:#2b2f8f;font-weight:800;font-size:14px;line-height:1}
+
+.dfNode.gbic{background:rgba(30,158,82,.14);border-color:var(--ok)}   /* 광지빅(GBIC) 노드 */
