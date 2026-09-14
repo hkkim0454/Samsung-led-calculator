@@ -63,11 +63,58 @@ test('signage: 확인 안 된 값은 null (추정 금지) — video wall model/f
   }
 });
 
-test('signage: 미확인 값은 null 유지 (io 전체 · powerMax · features.soc)', () => {
+test('signage: 미확인 값은 null 유지 (powerMax · features.soc)', () => {
   for (const m of SIGNAGE_MODELS) {
-    for (const v of Object.values(m.io)) assert.equal(v, null, `io 미확인은 null 유지: ${m.modelCode}`);
     assert.equal(m.power.maxW, null, `powerMax 미확인은 null 유지: ${m.modelCode}`);
     assert.equal(m.features.soc, null, `features.soc 미확인은 null 유지: ${m.modelCode}`);
+  }
+});
+
+// ── I/O(입출력 단자) 회귀 테스트 (2026-09-14 오너 공식 표) ──
+const byCode = c => SIGNAGE_MODELS.find(m => m.modelCode === c);
+test('io: 20모델 모두 io 객체 + ioVerification(official_samsung) 존재', () => {
+  for (const m of SIGNAGE_MODELS) {
+    assert.ok(m.io && typeof m.io === 'object', `io 없음: ${m.modelCode}`);
+    for (const k of ['hdmiIn', 'hdmiOut', 'displayPortIn', 'displayPortOut', 'usb', 'rs232In', 'rs232Out', 'rj45', 'note']) {
+      assert.ok(k in m.io, `io.${k} 필드 없음: ${m.modelCode}`);
+    }
+    assert.equal(m.ioVerification.status, 'official_samsung', `ioVerification 없음: ${m.modelCode}`);
+    assert.ok(typeof m.ioVerification.sourceUrl === 'string' && m.ioVerification.sourceUrl.length > 0, `io sourceUrl 없음: ${m.modelCode}`);
+  }
+});
+test('io: QMC/QHC HDMI In = 3 (전 모델)', () => {
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'standalone_signage'))
+    assert.equal(m.io.hdmiIn, 3, `hdmiIn 3 아님: ${m.modelCode}`);
+});
+test('io: QM32C displayPortIn = 0 (공식 No), 나머지 단독형 = 1', () => {
+  assert.equal(byCode('LH32QMCEBGCXKR').io.displayPortIn, 0);
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'standalone_signage' && x.modelCode !== 'LH32QMCEBGCXKR'))
+    assert.equal(m.io.displayPortIn, 1, `displayPortIn 1 아님: ${m.modelCode}`);
+});
+test('io: QH115FX 상세값', () => {
+  const q = byCode('LH115QHFEBGXKR');
+  assert.equal(q.io.hdmiIn, 3); assert.equal(q.io.displayPortIn, 1); assert.equal(q.io.usb, 2);
+  assert.equal(q.io.rs232In, 1); assert.equal(q.io.rs232Out, 1); assert.equal(q.io.rj45, 1);
+});
+test('io: Video Wall 6종 hdmiIn = 2', () => {
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'video_wall'))
+    assert.equal(m.io.hdmiIn, 2, `VW hdmiIn 2 아님: ${m.modelCode}`);
+});
+test('io: VMB(46)·VHC-R hdmiOut=0 & displayPortOut=1 (공식 확인)', () => {
+  for (const c of ['LH46VMBUBGBXKR', 'LH55VHCRBGBXKR']) {
+    assert.strictEqual(byCode(c).io.hdmiOut, 0, `${c} hdmiOut 0 아님`);
+    assert.strictEqual(byCode(c).io.displayPortOut, 1, `${c} dpOut 1 아님`);
+  }
+});
+test('io: VMHX-E·VHHX-E displayPortOut = null (개수 미확인 → 0으로 바꾸지 않음)', () => {
+  for (const c of ['LH55VMHEBGBXKR', 'LH55VHHEBGBXKR']) {
+    assert.strictEqual(byCode(c).io.displayPortOut, null, `${c} dpOut null 아님(0 변환 금지)`);
+  }
+});
+test('io: 단독형 hdmiOut·displayPortOut 은 미확인 → null(0 변환 금지)', () => {
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'standalone_signage')) {
+    assert.strictEqual(m.io.hdmiOut, null, `${m.modelCode} hdmiOut null 아님`);
+    assert.strictEqual(m.io.displayPortOut, null, `${m.modelCode} dpOut null 아님`);
   }
 });
 

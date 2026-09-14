@@ -64,12 +64,22 @@ function baseSchema() {
 
     io: {
       hdmiIn: null,
+      hdmiOut: null,
       displayPortIn: null,
       displayPortOut: null,
-      hdmiOut: null,
       usb: null,
-      rs232: null,
+      rs232In: null,
+      rs232Out: null,
       rj45: null,
+      note: null,
+    },
+
+    // I/O 전용 출처(물리/디스플레이 verification과 분리 추적). 미채움이면 status=null.
+    ioVerification: {
+      status: null,
+      sourceUrl: null,
+      verifiedAt: null,
+      notes: null,
     },
 
     power: {
@@ -219,6 +229,52 @@ for (const m of SIGNAGE_MODELS) {
   //   (QM55C 15.7kg / QM98C 48.1mm·56.3kg / QH115FX 2565.2×1467.6×34.1mm·83.7kg·VESA1000×600).
   m.verification.status = 'verified';
   m.verification.notes = '외형·무게·VESA·전력(typical)·스피커·해상도: Samsung 데이터시트 수집 + KR SKU 교차검증 완료(2026-09-14, 독립출처 정확 일치·물리스펙 지역공통). powerMax·SoC·일부 HDR 등 미확인 값은 null 유지.';
+}
+
+// ── I/O(입출력 단자) — 모델별 Samsung 공식 페이지/데이터시트 확인값 (2026-09-14) ──────
+//   규칙: 확인 안 된 항목 = null(0 아님). 공식 "No" 명시만 0. 시리즈 공통이라도 자동 복사 금지 —
+//   각 값은 해당 모델의 공식 출처(sourceUrl)에서 확인됨. rs232는 In/Out 분리. null 을 0 으로 바꾸지 말 것.
+//   [hdmiIn, hdmiOut, displayPortIn, displayPortOut, usb, rs232In, rs232Out, rj45, note, sourceUrl]
+const V = '2026-09-14';
+const IO_DATA = {
+  // QMC
+  LH32QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 0, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 1.4; DP In=No', sourceUrl: 'https://www.samsung.com/in/business/smart-signage/uhd-4k-signage/smart-signage-qm32c-32-inch-lh32qmcebgcxxl/' },
+  LH43QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/ca/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qmc-lh43qmcebgcxgo/' },
+  LH50QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/in/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qmc-50-inch-lh50qmcebgcxxl/' },
+  LH55QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/au/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qmc-lh55qmcebgcxxy/' },
+  LH65QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/au/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qmc-lh65qmcebgcxxy/' },
+  LH75QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/ca/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qmc-lh75qmcebgcxgo/' },
+  LH85QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/au/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qmc-lh85qmcebgcxxy/' },
+  LH98QMCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/sa_en/smart-signage/uhd-4k-signage/uhd-signage-qm98c-98-inch-lh98qmcebgcxue/' },
+  // QHC
+  LH43QHCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/sg/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qhc-43-inch-lh43qhcebgcxxs/' },
+  LH50QHCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/in/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qhc-series-50-inch-lh50qhcebgcxxl/' },
+  LH55QHCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qhc-lh55qhcebgcxxk/' },
+  LH65QHCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/sg/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qhc-65-inch-lh65qhcebgcxxs/' },
+  LH75QHCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/sg/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qhc-75-inch-lh75qhcebgcxxs/' },
+  LH115QHFEBGXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.1; DP 1.4; USB-A x2', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/uhd-4k-signage/qh115-fxuhd-signage-lh115qhfebgxxk/' },
+  // Video Wall
+  LH46VMBUBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/jp/business/displays/250709_Summary_Specifications_Catalog.pdf' },
+  LH55VMBUBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/vn/offer/07292024/Samsung_Video_Wall_Displays_series_Leaflet_FINAL.pdf' },
+  LH55VMHEBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; official page lists Video Out=Yes but DP Out port count is not specified', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/video-wall/video-wall-vmhx-e-lh55vmhebgbxxk/' },
+  LH55VMCRBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/vn/offer/07292024/Samsung_Video_Wall_Displays_series_Leaflet_FINAL.pdf' },
+  LH55VHHEBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; official page lists Video Out=Yes but DP Out port count is not specified', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/video-wall/video-wall-vhhx-e-lh55vhhebgbxxk/' },
+  LH55VHCRBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/jp/business/displays/250709_Summary_Specifications_Catalog.pdf' },
+};
+for (const m of SIGNAGE_MODELS) {
+  const d = IO_DATA[m.modelCode];
+  if (!d) continue;
+  // 직접 대입(null/0 그대로 보존 — ??나 ||로 0 변환하지 않음).
+  m.io.hdmiIn = d.hdmiIn;
+  m.io.hdmiOut = d.hdmiOut;
+  m.io.displayPortIn = d.displayPortIn;
+  m.io.displayPortOut = d.displayPortOut;
+  m.io.usb = d.usb;
+  m.io.rs232In = d.rs232In;
+  m.io.rs232Out = d.rs232Out;
+  m.io.rj45 = d.rj45;
+  m.io.note = d.note;
+  m.ioVerification = { status: 'official_samsung', sourceUrl: d.sourceUrl, verifiedAt: V, notes: null };
 }
 
 // 허용값(검증 기준).
