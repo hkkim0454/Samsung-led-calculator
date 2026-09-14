@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=269"/>
+<link rel="stylesheet" href="./styles.css?v=272"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -113,6 +113,11 @@
           <button class="tiny primary" id="btnLoadModel">+ 기존 모델 추가</button>
           <button class="tiny ghost" id="btnAddModel">+ 신규 모델 직접 입력</button>
           <button class="tiny ghost" id="btnResetModels">기본값 복원</button>
+        </div>
+        <div class="svPickRow">
+          <span class="svPickRowLbl">삼성 LCD 사이니지</span>
+          <button class="tiny ghost" id="svPickStandalone" type="button">단독형 선택</button>
+          <button class="tiny ghost" id="svPickVideoWall" type="button">비디오월 선택</button>
         </div>
       </div>
     </div>
@@ -241,6 +246,19 @@
         <div id="pwPanel" class="pwPanel" hidden></div>
       </details>
 
+      <details class="card vpSection" id="signageCard">
+        <summary class="vpSectionHead"><h2><span class="idx">10</span> 사이니지 배치 <span class="muted-note">— 삼성 LCD 사이니지(단독형·비디오월) 공간 배치</span></h2></summary>
+        <div class="svControls">
+          <span class="svField" id="svPicked">왼쪽 <b>02 모델 라이브러리</b>에서 <b>단독형</b> 또는 <b>비디오월</b>을 선택하세요.</span>
+          <span id="svArrayCtl" class="svField" hidden>
+            <label>가로(장) <input type="number" id="svCols" min="1" max="30" step="1" value="2"></label>
+            <label>세로(장) <input type="number" id="svRows" min="1" max="30" step="1" value="2"></label>
+          </span>
+        </div>
+        <div id="svView" class="svView"></div>
+        <div id="svSummary" class="svSummary"></div>
+      </details>
+
       <div class="footnote">
         <strong>계산 규칙</strong> — cols = ⌊W/캐비닛W⌋, rows = ⌊H/캐비닛H⌋. 총량 = (cols×rows)×단위값.
         평균전력 = 모델 실측 typical(없으면 최대 × 0.527), 발열(BTU/hr) = W × 3.412 (삼성 MP012F 실측 일치).
@@ -249,7 +267,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v269</span>
+        <span class="verTag">화면 버전 v272</span>
       </div>
     </div>
   </div>
@@ -344,6 +362,6 @@
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록).
      app.js가 import하는 모든 모듈의 v=, 그리고 모듈끼리의 내부 import(processor-validator.js → processor-limits.js)의 v=도 함께 올릴 것. -->
-<script type="module" src="./app.js?v=269"></script>
+<script type="module" src="./app.js?v=272"></script>
 </body>
 </html>
