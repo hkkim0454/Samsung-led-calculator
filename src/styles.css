@@ -735,3 +735,17 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .rs3LedGridOv{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right,rgba(0,0,0,.5) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.5) 0 1px,transparent 1px);background-position:0 0}
 /* LED 격자 OFF → 그냥 검정(픽셀 텍스처·이음새 제거) */
 .rs3Frame.noCellGrid .rs3Grid>i{background:#0a0c10!important}
+
+/* 10 사이니지 배치 */
+.svControls{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;margin:6px 0 12px}
+.svField{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+.svField select,.svField input[type=number]{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--field-fill);color:var(--ink)}
+.svField input[type=number]{width:64px}
+#svArrayCtl{display:inline-flex;gap:12px}
+.svView{background:#0c0e13;border:1px solid var(--line);border-radius:var(--r-inner);padding:8px;overflow:auto}
+.svView .svSvg{display:block;max-width:100%;height:auto;background:#0c0e13}
+.svView .previewEmpty,.svView .notice{color:var(--ink-2)}
+.svSummary{margin-top:10px;font-size:13px;color:var(--ink-2)}
+.svSumRow{margin-bottom:6px}
+.svSumGrid{display:flex;flex-wrap:wrap;gap:6px 18px}
+.svSumGrid b{color:var(--ink)}
