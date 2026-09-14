@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=260';
-import { MODELS } from './models.js?v=260';
-import { PROCESSORS } from './processor-data.js?v=260';
-import { processorRequirements } from './processor-limits.js?v=260';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=260';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=260';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=260';
-import { parseCasesText, normalizeDate } from './cases.js?v=260';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=261';
+import { MODELS } from './models.js?v=261';
+import { PROCESSORS } from './processor-data.js?v=261';
+import { processorRequirements } from './processor-limits.js?v=261';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=261';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=261';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=261';
+import { parseCasesText, normalizeDate } from './cases.js?v=261';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -243,7 +243,8 @@ function moveModel(id, dir) {
 }
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
-const pvShow = { person: true, eye: true, grid: true, dims: true };
+const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true };
+let pvImage = null;   // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
 
 // 미리보기를 CSS 3D 1점 투시로 그린다(원근감 스펙 2026-09-12). 치수 값·계산은 engine 결과 그대로 쓰고
 //   위치만 3D 화면에 맞춰 투영한다. 벽 크기·모델·배열이 바뀌어도 동적으로 맞는다(고정 좌표 없음).
@@ -466,7 +467,7 @@ function renderPreview() {
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
-  const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims'].filter(Boolean).join(' ');
+  const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', pvShow.cellgrid ? '' : 'noCellGrid'].filter(Boolean).join(' ');
   // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
   const ledGlow = `box-shadow:0 0 0 2px #2f7ff6,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
 
@@ -484,7 +485,7 @@ function renderPreview() {
           <div class="rs3Face front" style="${faceStyle}">
             <div class="rs3Led" style="left:${Lx}px;top:${Ly}px;width:${Lw}px;height:${Lh}px;${ledGlow}">
               <div class="rs3Grid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr);gap:${gap}px;padding:${gap}px">${cells}</div>
-              <div class="rs3Glow"></div>
+              ${pvImage ? `<img class="rs3LedImg" src="${pvImage}" alt="LED 화면 이미지"/>` : '<div class="rs3Glow"></div>'}
             </div>
             ${sigHTML}
           </div>
@@ -1138,7 +1139,10 @@ function syncPvToggles() {
   set('person', pvShow.person);
   set('grid', pvShow.grid);
   set('dims', pvShow.dims);
+  set('cellgrid', pvShow.cellgrid);   // LED 셀 격자(끄면 이음새 없이 매끈)
   set('eye', pvShow.eye && pvShow.person, !pvShow.person);   // 사람 꺼지면 눈높이선 버튼도 꺼짐 표시
+  const ib = $('#pvImgBtn');
+  if (ib) { ib.classList.toggle('on', !!pvImage); ib.textContent = pvImage ? '이미지 제거' : '이미지 넣기'; }
 }
 $('#pvToggles')?.addEventListener('click', e => {
   const b = e.target.closest('button[data-tog]'); if (!b) return;
@@ -1147,6 +1151,18 @@ $('#pvToggles')?.addEventListener('click', e => {
   pvShow[key] = !pvShow[key];
   syncPvToggles();
   renderPreview();
+});
+// LED 화면 이미지 넣기/제거: 이미지가 있으면 클릭 시 제거, 없으면 파일 선택.
+$('#pvImgBtn')?.addEventListener('click', () => {
+  if (pvImage) { pvImage = null; syncPvToggles(); renderPreview(); }
+  else { $('#pvImgFile')?.click(); }
+});
+$('#pvImgFile')?.addEventListener('change', e => {
+  const f = e.target.files?.[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { pvImage = rd.result; syncPvToggles(); renderPreview(); };
+  rd.readAsDataURL(f);
+  e.target.value = '';   // 같은 파일 다시 선택 가능하게 초기화
 });
 syncPvToggles();
 
