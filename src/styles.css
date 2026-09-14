@@ -625,7 +625,8 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 /* 04 산출 스펙 입출력 단자: 커넥터별 칩(정신없던 한 줄 나열 정리, 이사 요청 2026-09-14) */
 .metric.ioFull{grid-column:1 / -1}
 .ioRow{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:6px}
-.ioChip{display:inline-flex;align-items:baseline;gap:5px;background:var(--field-fill);border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:12.5px;color:var(--ink)}
+/* 입출력 단자 칩 글자 = 스펙 값(.metric .v)과 동일 크기(21px)로(이사 요청 2026-09-14). */
+.ioChip{display:inline-flex;align-items:baseline;gap:6px;background:var(--field-fill);border:1px solid var(--line);border-radius:9px;padding:4px 11px;font-size:21px;font-weight:600;line-height:1.15;color:var(--ink)}
 .ioChip b{color:var(--accent);font-weight:700}
 /* 이미지 넣기 방식(가로/세로 고정) 선택 팝업 */
 /* 풀스크린(#pvZoom, z-index:1000)에서도 항상 맨 앞에 뜨도록 더 높은 z-index. */
