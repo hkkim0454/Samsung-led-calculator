@@ -214,7 +214,7 @@ function renderModelList() {
   vis.forEach((m, i) => {
     const row = document.createElement('div');
     row.dataset.id = m.id;
-    row.className = 'modelRow' + (m.id === selectedId ? ' sel' : '');
+    row.className = 'modelRow' + ((!svCode && m.id === selectedId) ? ' sel' : '');   // 사이니지 모드면 LED 선택 하이라이트 해제
     row.title = '클릭하여 이 모델 적용';
     row.innerHTML = `
       <div class="mvcol">
@@ -325,12 +325,18 @@ function renderPreview() {
   //   단독형=1×1, 비디오월=가로 N×세로 M(패널). 이미지 넣기·검은 테두리 등 LED 기능이 그대로 적용된다.
   const svf = svCode ? computeSvFit() : null;
   const svm = svf ? svf.m : null;
-  let m = null, r, svMode = false;
+  let m = null, r, svMode = false, svSizeInfo = null;   // svSizeInfo: 우상단 인치 라벨용 {isVW,inch,N,M}
   if (svm) {
     svMode = true;
     const isVW = svf.isVW;
     const N = svf.N, M = svf.M;   // 공간에 들어가는 최대치로 제한된 장수(초과분은 잘림 — 이사 요청)
     const pw = svf.pw, ph = svf.ph;
+    // 인치 표기: 비디오월은 개별 화면 인치(데이터), 단독형은 모델명(예 QM55C→55)에서, 없으면 cm→inch 환산(표시 전용).
+    let inch = null;
+    if (isVW) inch = svm.display.screenSizeInch;
+    else if (svm.model && /(\d+)/.test(svm.model)) inch = parseInt(svm.model.match(/(\d+)/)[1], 10);
+    else if (svm.display.screenSizeCm != null) inch = Math.round(svm.display.screenSizeCm / 2.54);
+    svSizeInfo = { isVW, inch, N, M };
     const nm = svm.model || ('삼성 ' + svm.display.screenSizeInch + '형');
     $('#pvModelName').textContent = isVW ? `${nm} · 비디오월 ${N}×${M}` : `${nm} · 단독형`;
     if (pw == null || ph == null) { stage.innerHTML = '<div class="previewEmpty">이 사이니지는 외형(mm) 데이터가 없어 미리보기를 표시할 수 없습니다.</div>'; return; }
@@ -555,7 +561,8 @@ function renderPreview() {
   //   가로선은 바닥 좌·우 모서리선과 만나고, 좌하단에서 L자로 코너가 맞물림(이사 요청).
   hDim(0, SWp, SHp, dWall, mL(sW), 'sub');
   vDim(0, 0, SHp, dWall, mL(sH), 'sub');
-  pt(Lx + Lw / 2, Ly + Lh / 2, 0, svMode ? (r.total > 1 ? `${r.cols} × ${r.rows} = ${r.total} 장` : '단독형 1장') : `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
+  // 캐비닛 수 중앙 라벨은 LED만. 사이니지는 중앙 '장' 표기 대신 우상단 인치 라벨(아래 svSizeHTML)로 표시(이사 요청 2026-09-14).
+  if (!svMode) pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
@@ -588,6 +595,14 @@ function renderPreview() {
     ledExtra = '<div class="rs3Glow"></div>';
   }
 
+  // 사이니지 우상단 인치 라벨(흰색, 폰트 크기는 패널 가로에 비례). 비디오월은 배열·장수도 작게 함께 표기(제안).
+  let svSizeHTML = '';
+  if (svSizeInfo && svSizeInfo.inch != null) {
+    const pad = Lw * 0.03, fs = Math.max(9, Lw * 0.06);
+    const sub = svSizeInfo.isVW ? `<span class="sub">${svSizeInfo.N}×${svSizeInfo.M} · ${svSizeInfo.N * svSizeInfo.M}장</span>` : '';
+    svSizeHTML = `<div class="rs3SvSize" style="right:${pad}px;top:${pad}px;font-size:${fs}px">${svSizeInfo.inch}"${sub}</div>`;
+  }
+
   stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${frameH}px;--fit:${effFit}">
     <div class="rs3Canvas" style="width:${CW}px;height:${CH}px;transform:${canvasT};">
       <div class="rs3Persp" style="perspective:${P}px;perspective-origin:50% 50%">
@@ -603,6 +618,7 @@ function renderPreview() {
             <div class="rs3Led" style="left:${Lx}px;top:${Ly}px;width:${Lw}px;height:${Lh}px;${ledGlow}">
               <div class="rs3Grid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr);gap:${gap}px;padding:${gap}px">${cells}</div>
               ${ledExtra}
+              ${svSizeHTML}
             </div>
             ${sigHTML}
           </div>
@@ -644,9 +660,61 @@ function updateVSplit(r, sH) {
     el.innerHTML = `바닥 여백 <b>${mm(baseH)}</b> · LED 세로 <b>${mm(ledH)}</b> · 위 남는 높이 <b>${mm(top)}</b> <span style="opacity:.7">(자동 채움 시 행 수 자동 조정)</span>`;
   }
 }
+// 사이니지(단독형·비디오월) 산출 스펙 — svCode가 있으면 04 칸을 LED 대신 사이니지 스펙으로 채운다.
+//   표시 전용(계산·정합성 무관). 확인 안 된 값은 '—'. 비디오월은 배열(N×M) 합산 값도 함께 보여준다.
+function renderSignageReadout(box) {
+  const m = SIGNAGE_MODELS.find(x => x.modelCode === svCode);
+  if (!m) { box.innerHTML = ''; return; }
+  const f = computeSvFit();                       // 공간에 맞춘 N×M
+  const isVW = m.category === 'video_wall';
+  const N = f ? f.N : 1, M = f ? f.M : 1, panels = N * M;
+  const d = m.display, p = m.physical, io = m.io;
+  const nz = v => (v == null ? '—' : v);          // 0은 유효값(그대로), null만 '—'
+  const sizeLabel = isVW
+    ? (d.screenSizeInch != null ? `${d.screenSizeInch}"` : '—')
+    : (d.screenSizeCm != null ? `${d.screenSizeCm} cm` : '—');
+  const resLabel = (d.resolution?.width != null) ? `${d.resolution.label || ''} ${fmt(d.resolution.width)}×${fmt(d.resolution.height)}`.trim() : '—';
+  const ioText = `HDMI In ${nz(io.hdmiIn)} · Out ${nz(io.hdmiOut)} / DP In ${nz(io.displayPortIn)} · Out ${nz(io.displayPortOut)} / USB ${nz(io.usb)} / RS232 In ${nz(io.rs232In)} · Out ${nz(io.rs232Out)} / RJ45 ${nz(io.rj45)}`;
+  const cells = [];
+  if (isVW) {
+    const totW = (p.widthMm != null) ? p.widthMm * N : null;
+    const totH = (p.heightMm != null) ? p.heightMm * M : null;
+    const totKg = (p.weightKg != null) ? p.weightKg * panels : null;
+    cells.push(
+      { k: '구성', v: `비디오월 ${N} × ${M}`, u: `= ${panels}장`, hero: true },
+      { k: '개별 화면', v: sizeLabel, u: '' },
+      { k: '개별 해상도', v: resLabel, u: 'px' },
+      { k: '전체 해상도', v: (d.resolution?.width != null) ? `${fmt(d.resolution.width * N)} × ${fmt(d.resolution.height * M)}` : '—', u: 'px' },
+      { k: '전체 크기', v: (totW != null) ? `${fmt(totW)} × ${fmt(totH)}` : '—', u: 'mm' },
+      { k: '개별 패널(WxHxD)', v: (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—', u: 'mm' },
+      { k: '총 중량', v: (totKg != null) ? fmt(totKg, 1) : '—', u: 'kg' },
+      { k: '베젤(Bezel-to-Bezel)', v: nz(m.videoWall?.bezelMm), u: 'mm' },
+    );
+  } else {
+    cells.push(
+      { k: '모델', v: esc(m.model || m.modelCode), u: '', hero: true },
+      { k: '화면 크기', v: sizeLabel, u: '' },
+      { k: '해상도', v: resLabel, u: 'px' },
+      { k: '외형(WxHxD)', v: (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—', u: 'mm' },
+      { k: '무게', v: nz(p.weightKg == null ? null : fmt(p.weightKg, 1)), u: 'kg' },
+      { k: 'VESA', v: nz(p.vesaMm), u: '' },
+    );
+  }
+  cells.push(
+    { k: '밝기', v: nz(d.brightnessNit), u: 'nit' },
+    { k: '명암비', v: nz(d.contrastRatio), u: '' },
+    { k: '응답속도', v: nz(d.responseTimeMs), u: 'ms' },
+    { k: '소비전력(typ/max)', v: `${nz(m.power?.typicalW)} / ${nz(m.power?.maxW)}`, u: 'W' },
+    { k: '입출력 단자', v: ioText, u: '' },
+    { k: '모델코드', v: esc(m.modelCode), u: '' },
+  );
+  box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
+}
+
 function renderReadout() {
-  const m = models.find(x => x.id === selectedId);
   const box = $('#readout'), nt = $('#notices'); nt.innerHTML = '';
+  if (svCode) { renderSignageReadout(box); const vs = $('#vSplitInfo'); if (vs) vs.hidden = true; return; }
+  const m = models.find(x => x.id === selectedId);
   if (!m) { box.innerHTML = ''; const vs = $('#vSplitInfo'); if (vs) vs.hidden = true; return; }
   const sW = spaceWmm(), sH = spaceHmm();
   const r = computeConfig(m, sW, sH, opts());
@@ -1239,7 +1307,18 @@ function renderQuote() {
   box.querySelector('.indirectDetails')?.addEventListener('toggle', e => { indirectOpen = e.target.open; });
 }
 
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); saveLastSession(); }
+// 사이니지 선택 상태를 화면에 동기화한다: (1) 02 선택 버튼(단독형/비디오월) 실제 선택을 색상(on) 표시,
+//   (2) 01 ② LED 설치 크기 입력 비활성화(디스플레이 하단 높이는 유지 — 이사 요청 2026-09-14).
+function syncSignageMode() {
+  const svm = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
+  $('#svPickStandalone')?.classList.toggle('on', svm?.category === 'standalone_signage');
+  $('#svPickVideoWall')?.classList.toggle('on', svm?.category === 'video_wall');
+  const on = !!svm;
+  $('#ledBox')?.classList.toggle('svDisabled', on);
+  $('#ledSizeLabel')?.classList.toggle('svDisabled', on);
+  ['ledW', 'ledH'].forEach(id => { const e = $('#' + id); if (e) e.disabled = on; });
+}
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -2264,7 +2343,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
       + ` <button type="button" class="tiny ghost" id="svRepick">다시 선택</button>`
       + ` <button type="button" class="tiny ghost" id="svClear">LED로</button>`;
     $('#svRepick')?.addEventListener('click', () => openSvPick(m.category));
-    $('#svClear')?.addEventListener('click', () => { svCode = null; render(); renderPreview(); });
+    $('#svClear')?.addEventListener('click', () => { svCode = null; renderAll(); });
     if (arrCtl) arrCtl.hidden = !isVW;
     // 요약(3D는 renderPreview가 그림). 단독형 외형 미확인이면 안내.
     if (m.physical.widthMm == null || m.physical.heightMm == null) {
@@ -2299,7 +2378,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
       el.addEventListener('click', e => {
         if (e.target === el || e.target.closest('[data-svclose]')) { el.hidden = true; return; }
         const it = e.target.closest('[data-svpick]');
-        if (it) { svCode = it.dataset.svpick; el.hidden = true; render(); renderPreview(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        if (it) { svCode = it.dataset.svpick; el.hidden = true; renderAll(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       });
     }
     const list = SIGNAGE_MODELS.filter(m => m.category === category);
@@ -2320,7 +2399,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
 
   $('#svPickStandalone')?.addEventListener('click', () => openSvPick('standalone_signage'));
   $('#svPickVideoWall')?.addEventListener('click', () => openSvPick('video_wall'));
-  ['svCols', 'svRows'].forEach(id => $('#' + id)?.addEventListener('input', () => { render(); renderPreview(); }));
+  ['svCols', 'svRows'].forEach(id => $('#' + id)?.addEventListener('input', () => { render(); renderPreview(); renderReadout(); }));
   ['spaceW', 'spaceH'].forEach(id => $('#' + id)?.addEventListener('input', render));
   syncSignageCard = render;   // 모듈 전역에 노출(LED 모델 선택 시 바 갱신용)
   render();
