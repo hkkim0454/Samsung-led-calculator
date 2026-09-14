@@ -34,6 +34,7 @@ function baseSchema() {
 
       brightnessNit: null,
       contrastRatio: null,
+      panelType: null,
 
       viewingAngle: {
         horizontal: null,
@@ -54,6 +55,7 @@ function baseSchema() {
       depthMm: null,
       weightKg: null,
       vesaMm: null,
+      bezelMm: null,
     },
 
     operation: {
@@ -85,6 +87,7 @@ function baseSchema() {
     power: {
       typicalW: null,
       maxW: null,
+      sleepW: null,
     },
 
     features: {
@@ -92,6 +95,9 @@ function baseSchema() {
       speakerW: null,
       soc: null,
       tizen: null,
+      wifi: null,
+      bluetooth: null,
+      ir: null,
     },
 
     verification: {
@@ -172,7 +178,7 @@ export const SIGNAGE_MODELS = [
 
   // ── QHC (Standalone, 6종) ──
   standalone('QHC', 'QH43C', 'LH43QHCEBGCXKR', 108, 3840, 2160, 'UHD', 700, '4000:1', 8),
-  standalone('QHC', 'QH50C', 'LH50QHCEBGCXKR', 125, 3840, 2160, 'UHD', 700, '4000:1', 8),
+  standalone('QHC', 'QH50C', 'LH50QHCEBGCXKR', 125, 3840, 2160, 'UHD', 700, '4000:1', 10),
   standalone('QHC', 'QH55C', 'LH55QHCEBGCXKR', 138, 3840, 2160, 'UHD', 700, '4000:1', 8),
   standalone('QHC', 'QH65C', 'LH65QHCEBGCXKR', 163, 3840, 2160, 'UHD', 700, '4000:1', 8),
   standalone('QHC', 'QH75C', 'LH75QHCEBGCXKR', 189, 3840, 2160, 'UHD', 700, '4000:1', 8),
@@ -206,12 +212,13 @@ const STANDALONE_DATASHEET = {
   LH75QMCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 33.4, vesaMm: '400x400', typicalW: 151, speakerW: '10+10', hdr: null, tizen: true },
   LH85QMCEBGCXKR: { widthMm: 1904.3, heightMm: 1085.3, depthMm: 28.5, weightKg: 41.9, vesaMm: '600x400', typicalW: 237, speakerW: '10+10', hdr: null, tizen: true },
   LH98QMCEBGCXKR: { widthMm: 2193.2, heightMm: 1248.8, depthMm: 48.1, weightKg: 56.3, vesaMm: '600x400', typicalW: 197, speakerW: '10+10', hdr: null, tizen: true },
-  LH43QHCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 9.3, vesaMm: '200x200', typicalW: 84, speakerW: '10+10', hdr: null, tizen: true },
-  LH50QHCEBGCXKR: { widthMm: 1124.1, heightMm: 644.8, depthMm: 28.5, weightKg: 12.4, vesaMm: '200x200', typicalW: 108, speakerW: '10+10', hdr: null, tizen: true },
-  LH55QHCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 16.9, vesaMm: '200x200', typicalW: 109, speakerW: '10+10', hdr: null, tizen: true },
-  LH65QHCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 22.7, vesaMm: '400x300', typicalW: 148, speakerW: '10+10', hdr: null, tizen: true },
-  LH75QHCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 34.6, vesaMm: '400x400', typicalW: 185, speakerW: '10+10', hdr: null, tizen: true },
-  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 359, speakerW: 60, hdr: true, tizen: true },
+  // QHC: 소비전력 typicalW = 삼성 공식 KR 페이지 '소비전력(On Mode)'로 교체(이사 승인 2026-09-14). 핵심 항목 추가.
+  LH43QHCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 9.3, vesaMm: '200x200', typicalW: 132, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH50QHCEBGCXKR: { widthMm: 1124.1, heightMm: 644.8, depthMm: 28.5, weightKg: 12.4, vesaMm: '200x200', typicalW: 165, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH55QHCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 16.9, vesaMm: '200x200', typicalW: 187, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH65QHCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 22.7, vesaMm: '400x300', typicalW: 203.5, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH75QHCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 34.6, vesaMm: '400x400', typicalW: 275, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 13.4, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 836, speakerW: 60, hdr: true, tizen: true, ratedUsage: '24/7' },
 };
 for (const m of SIGNAGE_MODELS) {
   const d = STANDALONE_DATASHEET[m.modelCode];
@@ -221,14 +228,23 @@ for (const m of SIGNAGE_MODELS) {
   m.physical.depthMm = d.depthMm;
   m.physical.weightKg = d.weightKg;
   m.physical.vesaMm = d.vesaMm ?? null;
-  m.power.typicalW = d.typicalW ?? null;   // powerMaxW 는 미확인 → null 유지
+  m.power.typicalW = d.typicalW ?? null;   // powerMaxW 는 미확인 → null 유지. typicalW = 공식 On Mode(있으면).
+  m.power.sleepW = d.sleepW ?? null;
   m.features.speakerW = d.speakerW ?? null;
   m.features.hdr = d.hdr ?? null;
   m.features.tizen = d.tizen ?? null;
+  // 핵심 추가 항목(삼성 공식 KR 페이지 확인값, 있으면만). 미확인은 null 유지.
+  if (d.panelType != null) m.display.panelType = d.panelType;
+  if (d.bezelMm != null) m.physical.bezelMm = d.bezelMm;
+  if (d.soc != null) m.features.soc = d.soc;
+  if (d.wifi != null) m.features.wifi = d.wifi;
+  if (d.bluetooth != null) m.features.bluetooth = d.bluetooth;
+  if (d.ir != null) m.features.ir = d.ir;
+  if (d.ratedUsage != null) m.operation.ratedUsage = d.ratedUsage;
   // KR SKU(BXKR) 교차검증 완료(2026-09-14): 물리 스펙은 지역 공통(동일 패널)이며 독립 출처와 정확 일치
   //   (QM55C 15.7kg / QM98C 48.1mm·56.3kg / QH115FX 2565.2×1467.6×34.1mm·83.7kg·VESA1000×600).
   m.verification.status = 'verified';
-  m.verification.notes = '외형·무게·VESA·전력(typical)·스피커·해상도: Samsung 데이터시트 수집 + KR SKU 교차검증 완료(2026-09-14, 독립출처 정확 일치·물리스펙 지역공통). powerMax·SoC·일부 HDR 등 미확인 값은 null 유지.';
+  m.verification.notes = '외형·무게·VESA·해상도: Samsung 데이터시트 + KR SKU 교차검증(2026-09-14). 소비전력(typical=공식 On Mode)·Sleep전력·패널타입·베젤·SoC/OS·WiFi/BT/IR·사용시간(24/7): 삼성 공식 KR 제품페이지 확인(있는 모델만). powerMax 등 미확인 값은 null 유지.';
 }
 
 // ── I/O(입출력 단자) — 모델별 Samsung 공식 페이지/데이터시트 확인값 (2026-09-14) ──────

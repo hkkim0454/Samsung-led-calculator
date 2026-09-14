@@ -63,11 +63,39 @@ test('signage: 확인 안 된 값은 null (추정 금지) — video wall model/f
   }
 });
 
-test('signage: 미확인 값은 null 유지 (powerMax · features.soc)', () => {
+test('signage: powerMax 는 전 모델 미확인 → null 유지', () => {
   for (const m of SIGNAGE_MODELS) {
     assert.equal(m.power.maxW, null, `powerMax 미확인은 null 유지: ${m.modelCode}`);
-    assert.equal(m.features.soc, null, `features.soc 미확인은 null 유지: ${m.modelCode}`);
   }
+});
+// SoC: 공식 KR 페이지에서 확인된 모델만 값(예: 'Tizen 7.0'), 미확인 모델은 null 유지(추정 금지).
+test('signage: features.soc 는 문자열이거나 null (추정 금지)', () => {
+  for (const m of SIGNAGE_MODELS) {
+    assert.ok(m.features.soc === null || typeof m.features.soc === 'string', `soc 타입 이상: ${m.modelCode}`);
+  }
+});
+
+// ── QHC 단독형 공식 KR 페이지 반영(2026-09-14): On Mode 전력·SoC·패널타입·베젤·Sleep·사용시간 ──
+test('io/spec: QHC 소비전력 typicalW = 공식 On Mode 값', () => {
+  const byCode = c => SIGNAGE_MODELS.find(m => m.modelCode === c);
+  assert.equal(byCode('LH43QHCEBGCXKR').power.typicalW, 132);
+  assert.equal(byCode('LH50QHCEBGCXKR').power.typicalW, 165);
+  assert.equal(byCode('LH55QHCEBGCXKR').power.typicalW, 187);
+  assert.equal(byCode('LH65QHCEBGCXKR').power.typicalW, 203.5);
+  assert.equal(byCode('LH75QHCEBGCXKR').power.typicalW, 275);
+  assert.equal(byCode('LH115QHFEBGXKR').power.typicalW, 836);
+});
+test('spec: QHC 핵심 추가 항목(패널·SoC·베젤·Sleep·사용시간)', () => {
+  const q75 = SIGNAGE_MODELS.find(m => m.modelCode === 'LH75QHCEBGCXKR');
+  assert.equal(q75.display.panelType, 'VA');
+  assert.equal(q75.features.soc, 'Tizen 7.0');
+  assert.equal(q75.features.wifi, true);
+  assert.equal(q75.features.bluetooth, true);
+  assert.equal(q75.features.ir, true);
+  assert.equal(q75.physical.bezelMm, 13.4);
+  assert.equal(q75.power.sleepW, 0.5);
+  assert.equal(q75.operation.ratedUsage, '24/7');
+  assert.equal(SIGNAGE_MODELS.find(m => m.modelCode === 'LH50QHCEBGCXKR').display.responseTimeMs, 10);
 });
 
 // ── I/O(입출력 단자) 회귀 테스트 (2026-09-14 오너 공식 표) ──
