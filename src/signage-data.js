@@ -45,8 +45,9 @@ function baseSchema() {
     },
 
     videoWall: {
-      bezelMm: null,
+      bezelMm: null,             // Bezel-to-Bezel(설치 시 패널 간 총 이음새)
       bezelDefinition: null,
+      individualBezelMm: null,   // 개별 패널 테두리 두께(문자열, 예 '0.44(even)')
     },
 
     physical: {
@@ -68,7 +69,8 @@ function baseSchema() {
       hdmiIn: null,
       hdmiOut: null,
       displayPortIn: null,
-      displayPortOut: null,
+      displayPortOut: null,   // DisplayPort Loop-out
+      dviIn: null,
       usb: null,
       rs232In: null,
       rs232Out: null,
@@ -109,6 +111,8 @@ function baseSchema() {
       verifiedAt: '2026-09-14',
       notes: null,
     },
+
+    sourceUrls: [],   // 사양 근거 URL(모델별, 04 화면에서 클릭 링크로 제공)
   };
 }
 
@@ -152,7 +156,7 @@ function videoWall(modelCode, productGroup, screenSizeInch, resW, resH, resLabel
   s.display.contrastRatio = contrastRatio;
   s.display.viewingAngle = { horizontal: 178, vertical: 178 };
   s.display.responseTimeMs = responseTimeMs;
-  s.videoWall = { bezelMm, bezelDefinition: 'bezel_to_bezel' };   // 교차확인(VMC-R: 0.88mm=B2B, 개별 0.44mm) + 삼성 표기 관례
+  s.videoWall = { bezelMm, bezelDefinition: 'bezel_to_bezel', individualBezelMm: null };   // 교차확인(VMC-R: 0.88mm=B2B, 개별 0.44mm) + 삼성 표기 관례
   s.physical.widthMm = widthMm;
   s.physical.heightMm = heightMm;
   s.physical.depthMm = depthMm;
@@ -276,12 +280,12 @@ const IO_DATA = {
   LH75QHCEBGCXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2', sourceUrl: 'https://www.samsung.com/sg/business/smart-signage/uhd-4k-signage/crystal-uhd-signage-qhc-75-inch-lh75qhcebgcxxs/' },
   LH115QHFEBGXKR: { hdmiIn: 3, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 2, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.1; DP 1.4; USB-A x2', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/uhd-4k-signage/qh115-fxuhd-signage-lh115qhfebgxxk/' },
   // Video Wall
-  LH46VMBUBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/jp/business/displays/250709_Summary_Specifications_Catalog.pdf' },
-  LH55VMBUBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/vn/offer/07292024/Samsung_Video_Wall_Displays_series_Leaflet_FINAL.pdf' },
+  LH46VMBUBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, dviIn: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://samsungsmartsignage.co.kr/LH46VMBUBGBXKR' },
+  LH55VMBUBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, dviIn: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://www.samsung.com/sec/business/smart-signage/videowall-vmb-u-series/LH55VMBUBGBXKR/' },
   LH55VMHEBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; official page lists Video Out=Yes but DP Out port count is not specified', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/video-wall/video-wall-vmhx-e-lh55vmhebgbxxk/' },
-  LH55VMCRBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/vn/offer/07292024/Samsung_Video_Wall_Displays_series_Leaflet_FINAL.pdf' },
+  LH55VMCRBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, dviIn: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://www.samsung.com/sec/business/smart-signage/videowall-vmc-r-series/LH55VMCRBGBXKR/' },
   LH55VHHEBGBXKR: { hdmiIn: 2, hdmiOut: null, displayPortIn: 1, displayPortOut: null, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; official page lists Video Out=Yes but DP Out port count is not specified', sourceUrl: 'https://www.samsung.com/hk_en/business/smart-signage/video-wall/video-wall-vhhx-e-lh55vhhebgbxxk/' },
-  LH55VHCRBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://images.samsung.com/is/content/samsung/assets/jp/business/displays/250709_Summary_Specifications_Catalog.pdf' },
+  LH55VHCRBGBXKR: { hdmiIn: 2, hdmiOut: 0, displayPortIn: 1, displayPortOut: 1, dviIn: 1, usb: 1, rs232In: 1, rs232Out: 1, rj45: 1, note: 'HDMI 2.0; DP 1.2; DP Out=Loop-out; USB=F/W upgrade only', sourceUrl: 'https://www.samsung.com/sec/business/smart-signage/videowall-vhc-r-series/LH55VHCRBGBXKR/' },
 };
 for (const m of SIGNAGE_MODELS) {
   const d = IO_DATA[m.modelCode];
@@ -291,6 +295,7 @@ for (const m of SIGNAGE_MODELS) {
   m.io.hdmiOut = d.hdmiOut;
   m.io.displayPortIn = d.displayPortIn;
   m.io.displayPortOut = d.displayPortOut;
+  m.io.dviIn = d.dviIn ?? null;   // DVI 입력(비디오월 일부). 미기재 모델은 null.
   m.io.usb = d.usb;
   m.io.rs232In = d.rs232In;
   m.io.rs232Out = d.rs232Out;
@@ -305,6 +310,29 @@ for (const m of SIGNAGE_MODELS) {
   m.features.soc = 'X (외장셋탑필요)';
   m.features.magicInfo = false;
   m.features.vxt = false;
+}
+
+// 비디오월 하드웨어 상세(삼성 공식 + 에스큐브랩 등 유통사 확인, GPT Work 2026-09-14).
+//   VMHE/VHHE는 패널·전력·VESA·개별베젤·IR 미확인 → 여기 없음(기존 검증값 유지, 신규 항목 null).
+//   크기·무게·베젤(1.74mm)은 회사 공식 목록과 일치 확인.
+const VW_OFFICIAL = {
+  LH46VMBUBGBXKR: { panelType: 'IPS', vesaMm: '600x400', onW: 160, sleepW: 0.5, maxW: null, ir: true, ratedUsage: '24/7', individualBezelMm: '2.25(U/L), 1.25(R/B)', sources: ['https://www.samsung.com/sec/business/smart-signage/videowall-vmb-u-series/', 'https://samsungsmartsignage.co.kr/LH46VMBUBGBXKR'] },
+  LH55VMBUBGBXKR: { panelType: 'IPS', vesaMm: '600x400', onW: 220, sleepW: 0.5, maxW: null, ir: true, ratedUsage: '24/7', individualBezelMm: '2.25(U/L), 1.25(R/B)', sources: ['https://www.samsung.com/sec/business/smart-signage/videowall-vmb-u-series/LH55VMBUBGBXKR/', 'https://samsungsmartsignage.co.kr/LH55VMBUBGBXKR'] },
+  LH55VMCRBGBXKR: { panelType: 'IPS', vesaMm: '600x400', onW: 270, sleepW: 0.5, maxW: null, ir: true, ratedUsage: '24/7', individualBezelMm: '0.44(even)', sources: ['https://www.samsung.com/sec/business/smart-signage/videowall-vmc-r-series/LH55VMCRBGBXKR/', 'https://samsungsmartsignage.co.kr/LH55VMCRBGBXKR'] },
+  LH55VHCRBGBXKR: { panelType: 'IPS', vesaMm: '600x400', onW: 250, sleepW: 0.5, maxW: null, ir: true, ratedUsage: '24/7', individualBezelMm: '0.44(even)', sources: ['https://www.samsung.com/sec/business/smart-signage/videowall-vhc-r-series/LH55VHCRBGBXKR/', 'https://samsungsmartsignage.co.kr/LH55VHCRBGBXKR'] },
+};
+for (const m of SIGNAGE_MODELS) {
+  const d = VW_OFFICIAL[m.modelCode];
+  if (!d) continue;
+  m.display.panelType = d.panelType;
+  m.physical.vesaMm = d.vesaMm;
+  m.videoWall.individualBezelMm = d.individualBezelMm;
+  m.power.typicalW = d.onW;
+  m.power.sleepW = d.sleepW;
+  m.power.maxW = d.maxW;   // 공식 미명시 → null
+  m.operation.ratedUsage = d.ratedUsage;
+  m.features.ir = d.ir;
+  m.sourceUrls = d.sources;
 }
 
 // 단독형 13종(QMC 8 + QHC 43~75C): MagicINFO·VXT 둘 다 지원(오너 확인 2026-09-14).

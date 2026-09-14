@@ -124,6 +124,35 @@ test('spec: 단독형 13종(QH115FX 제외) MagicINFO·VXT 둘 다 지원', () =
     assert.equal(m.features.vxt, true, `${m.modelCode} vxt true 아님`);
   }
 });
+test('spec: 비디오월 4종(VMBU46/55·VMCR·VHCR) 하드웨어 상세 반영', () => {
+  const byCode = c => SIGNAGE_MODELS.find(m => m.modelCode === c);
+  for (const [c, on] of [['LH46VMBUBGBXKR', 160], ['LH55VMBUBGBXKR', 220], ['LH55VMCRBGBXKR', 270], ['LH55VHCRBGBXKR', 250]]) {
+    const m = byCode(c);
+    assert.equal(m.display.panelType, 'IPS', `${c} panel`);
+    assert.equal(m.power.typicalW, on, `${c} On`);
+    assert.equal(m.power.sleepW, 0.5);
+    assert.equal(m.power.maxW, null);          // Max 미명시 → null
+    assert.equal(m.physical.vesaMm, '600x400');
+    assert.equal(m.io.hdmiIn, 2); assert.equal(m.io.hdmiOut, 0);
+    assert.equal(m.io.displayPortIn, 1); assert.equal(m.io.displayPortOut, 1);
+    assert.equal(m.io.dviIn, 1);
+    assert.equal(m.features.ir, true);
+    assert.equal(m.operation.ratedUsage, '24/7');
+    assert.ok(m.videoWall.individualBezelMm, `${c} 개별베젤`);
+    assert.ok(Array.isArray(m.sourceUrls) && m.sourceUrls.length >= 1);
+  }
+});
+test('spec: 비디오월 VMHE/VHHE 상세 미상은 null 유지(추정 금지)', () => {
+  for (const c of ['LH55VMHEBGBXKR', 'LH55VHHEBGBXKR']) {
+    const m = SIGNAGE_MODELS.find(x => x.modelCode === c);
+    assert.equal(m.display.panelType, null, `${c} panel null`);
+    assert.equal(m.power.typicalW, null, `${c} power null`);
+    assert.equal(m.io.dviIn, null);
+    // 크기·무게·베젤은 회사 공식 목록 확인값이라 유지(1.74mm, 19.5kg)
+    assert.equal(m.videoWall.bezelMm, 1.74);
+    assert.equal(m.physical.weightKg, 19.5);
+  }
+});
 test('spec: 비디오월 6종 OS 없음 · MagicINFO/VXT 미지원(false)', () => {
   for (const m of SIGNAGE_MODELS.filter(x => x.category === 'video_wall')) {
     assert.equal(m.features.magicInfo, false, `${m.modelCode} magicInfo false 아님`);

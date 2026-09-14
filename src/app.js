@@ -685,6 +685,7 @@ function renderSignageReadout(box) {
   const ioChips = [];
   if (io.hdmiIn != null || io.hdmiOut != null) ioChips.push(['HDMI', ioPair(io.hdmiIn, io.hdmiOut)]);
   if (io.displayPortIn != null || io.displayPortOut != null) ioChips.push(['DisplayPort', ioPair(io.displayPortIn, io.displayPortOut)]);
+  if (io.dviIn != null) ioChips.push(['DVI', `In ${io.dviIn}`]);
   if (io.usb != null) ioChips.push(['USB', String(io.usb)]);
   if (io.rs232In != null || io.rs232Out != null) ioChips.push(['RS232', ioPair(io.rs232In, io.rs232Out)]);
   if (io.rj45 != null) ioChips.push(['LAN(RJ45)', String(io.rj45)]);
@@ -733,6 +734,7 @@ function renderSignageReadout(box) {
   const addIf = (k, v, u) => { if (v != null && v !== '') cells.push({ k, v, u: u || '' }); };
   addIf('패널', d.panelType, '');
   addIf('베젤', p.bezelMm, 'mm');
+  if (isVW) addIf('개별 베젤', m.videoWall?.individualBezelMm, 'mm');   // 비디오월: 패널 한 대 테두리
   addIf('SoC/OS', m.features?.soc, '');
   // 콘텐츠 플랫폼: MagicINFO/VXT 지원(둘 다면 둘 다). 둘 다 '미지원(false)' 확인 시 안내.
   const mi = m.features?.magicInfo, vx = m.features?.vxt;
@@ -743,7 +745,12 @@ function renderSignageReadout(box) {
   addIf('사용시간', m.operation?.ratedUsage, '');
   addIf('무선/제어', wireless, '');
   cells.push({ k: '모델코드', v: esc(m.modelCode), u: '' });
-  box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('') + ioHTML;
+  // 출처(있으면): 사양 근거 URL을 클릭 링크로.
+  const srcs = Array.isArray(m.sourceUrls) ? m.sourceUrls.filter(Boolean) : [];
+  const srcHTML = srcs.length
+    ? `<div class="metric ioFull"><div class="k">출처</div><div class="srcRow">${srcs.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">공식자료 ${i + 1}</a>`).join('')}</div></div>`
+    : '';
+  box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('') + ioHTML + srcHTML;
 }
 
 function renderReadout() {
@@ -1003,6 +1010,7 @@ function vpGroupsHTML(good) {
 function renderProcessors() {
   const auto = $('#vpAuto'), out = $('#vpResult');
   if (!auto || !out) return;
+  if (svCode) { auto.innerHTML = '<div class="previewEmpty">삼성 LCD 사이니지에는 해당 없습니다 (비디오 프로세서는 LED 전용).</div>'; out.innerHTML = ''; const b = $('#vpBuildResult'); if (b) b.innerHTML = ''; return; }
   const m = models.find(x => x.id === selectedId);
   if (!m) { auto.innerHTML = '<div class="previewEmpty">모델을 선택하면 추천이 표시됩니다.</div>'; out.innerHTML = ''; return; }
   const sW = spaceWmm(), sH = spaceHmm();
@@ -1153,6 +1161,7 @@ const PW_LEGEND = `<div class="fxLegend">
 
 function renderDataFlow() {
   const host = $('#dfDiagram'); if (!host) return;
+  if (svCode) { host.innerHTML = '<div class="previewEmpty">삼성 LCD 사이니지에는 해당 없습니다 (데이터 흐름·전원 구성은 LED 전용).</div>'; return; }
   const m = models.find(x => x.id === selectedId);
   if (!m) { host.innerHTML = '<div class="previewEmpty">모델을 선택하면 표시됩니다.</div>'; return; }
   const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());
@@ -1392,6 +1401,9 @@ function syncSignageMode() {
   $('#ledBox')?.classList.toggle('svDisabled', on);
   $('#ledSizeLabel')?.classList.toggle('svDisabled', on);
   ['ledW', 'ledH'].forEach(id => { const e = $('#' + id); if (e) e.disabled = on; });
+  // 사이니지 선택 시 LED 전용 05(비디오 프로세서)·08(데이터 흐름) 카드 비활성화(이사 요청 2026-09-14).
+  $('#vpCard')?.classList.toggle('svDisabled', on);
+  $('#dfpwCard')?.classList.toggle('svDisabled', on);
 }
 function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); saveLastSession(); }
 
