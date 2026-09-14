@@ -693,7 +693,7 @@ function renderSignageReadout(box) {
   const ioPair = (inV, outV) => { const a = []; if (inV != null) a.push(`In ${inV}`); if (outV != null) a.push(`Out ${outV}`); return a.join(' · '); };
   const ioChips = [];
   if (io.hdmiIn != null || io.hdmiOut != null) ioChips.push(['HDMI', ioPair(io.hdmiIn, io.hdmiOut)]);
-  if (io.displayPortIn != null || io.displayPortOut != null) ioChips.push(['DisplayPort', ioPair(io.displayPortIn, io.displayPortOut)]);
+  if (io.displayPortIn != null || io.displayPortOut != null) ioChips.push(['DP', ioPair(io.displayPortIn, io.displayPortOut)]);
   if (io.dviIn != null) ioChips.push(['DVI', `In ${io.dviIn}`]);
   if (io.usb != null) ioChips.push(['USB', String(io.usb)]);
   if (io.rs232In != null || io.rs232Out != null) ioChips.push(['RS232', ioPair(io.rs232In, io.rs232Out)]);

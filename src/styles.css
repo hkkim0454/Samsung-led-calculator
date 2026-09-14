@@ -634,7 +634,7 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 #readout.svSpec .metric .v{font-size:16.8px}
 #readout.svSpec .metric .k{font-size:8.4px}
 #readout.svSpec .metric .u{font-size:8.8px}
-#readout.svSpec .ioChip{font-size:16.8px}
+#readout.svSpec .ioChip{font-size:8.4px;padding:2px 7px}   /* 입출력 세부 폰트 50% 축소(이사 요청 2026-09-14) */
 #readout.svSpec .srcRow a{font-size:11.2px}
 /* 이미지 넣기 방식(가로/세로 고정) 선택 팝업 */
 /* 풀스크린(#pvZoom, z-index:1000)에서도 항상 맨 앞에 뜨도록 더 높은 z-index. */
