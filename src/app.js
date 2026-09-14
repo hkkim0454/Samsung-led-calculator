@@ -246,6 +246,27 @@ function moveModel(id, dir) {
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
 const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true, handle: true };
+// 사람(스케일 기준 인물): 성별별 기본 비즈니스 실루엣 내장 + 실사 PNG 선택 시 성별 키에 맞춰 스케일(이사 요청 2026-09-14).
+let pvPersonSex = 'male';                          // 'male'(남 173cm) | 'female'(여 165cm)
+const pvPersonImg = { male: null, female: null };  // 성별별 실사 PNG(dataURL). 있으면 실루엣 대신 사진 사용(세션 한정).
+const PERSON_H_MM = { male: 1730, female: 1650 };  // 실루엣·실사 공통 키(mm). 남 173 / 여 165.
+// 비즈니스 남/여 실루엣(내장, 밝은 회색). 높이 100%·폭은 뷰박스 비율로 자동. 성별별 체형 구분.
+function personSilhouetteSVG(sex) {
+  const head = '#a9a9b7', body = '#b4b4c1';
+  if (sex === 'female') {
+    return `<svg class="rs3PersonSvg" viewBox="0 0 42 168" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
+      + `<circle cx="21" cy="13" r="10" fill="${head}"/>`
+      + `<path d="M9 36 Q21 27 33 36 L31 70 L11 70 Z" fill="${body}"/>`          /* 상의(어깨~허리) */
+      + `<path d="M11 68 L31 68 L38 118 L4 118 Z" fill="${body}"/>`              /* A라인 스커트 */
+      + `<rect x="15" y="116" width="5.5" height="52" rx="2.5" fill="${body}"/>`  /* 다리 */
+      + `<rect x="21.5" y="116" width="5.5" height="52" rx="2.5" fill="${body}"/></svg>`;
+  }
+  return `<svg class="rs3PersonSvg" viewBox="0 0 46 176" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
+    + `<circle cx="23" cy="15" r="11" fill="${head}"/>`
+    + `<path d="M9 42 Q23 31 37 42 L38 62 L35 104 L11 104 L8 62 Z" fill="${body}"/>`  /* 정장 상의 */
+    + `<rect x="12" y="100" width="9.5" height="76" rx="3" fill="${body}"/>`          /* 바지(좌) */
+    + `<rect x="24.5" y="100" width="9.5" height="76" rx="3" fill="${body}"/></svg>`; /* 바지(우) */
+}
 let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
 let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산).
 let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / 'height'=세로 고정(세로 꽉·좌우 이동).
@@ -666,7 +687,7 @@ function renderPreview() {
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person" style="left:${personX}px;top:${SHp - px(1700)}px;width:${px(320)}px;height:${px(1700)}px;transform:translate(-50%,0) translateZ(${personDeff}px)"><div class="h"></div><div class="b"></div><div class="l"></div></div>
+          <div class="rs3Person ${pvPersonSex}" style="left:${personX}px;top:${SHp - px(PERSON_H_MM[pvPersonSex])}px;height:${px(PERSON_H_MM[pvPersonSex])}px;transform:translate(-50%,0) translateZ(${personDeff}px)">${pvPersonImg[pvPersonSex] ? `<img class="rs3PersonImg" src="${pvPersonImg[pvPersonSex]}" alt="사람" draggable="false"/>` : personSilhouetteSVG(pvPersonSex)}</div>
         </div>
       </div>
       <div class="rs3GridLayer">${floorGrid}</div>
@@ -676,7 +697,7 @@ function renderPreview() {
         ${dims.join('')}
         ${numHTML}
         ${heightHandleHTML}
-        <div class="rs3Dlbl person" style="left:${clx(personFoot.x)}px;top:${cly(personFoot.y + 14)}px;transform:translate(-50%,-50%)">키 170 cm</div>
+        <div class="rs3Dlbl person" style="left:${clx(personFoot.x)}px;top:${cly(personFoot.y + 14)}px;transform:translate(-50%,-50%)">키 ${Math.round(PERSON_H_MM[pvPersonSex] / 10)} cm</div>
       </div>
     </div>
   </div>`;
@@ -1684,6 +1705,15 @@ function syncPvToggles() {
   set('eye', pvShow.eye && pvShow.person, !pvShow.person);   // 사람 꺼지면 눈높이선 버튼도 꺼짐 표시
   const ib = $('#pvImgBtn');
   if (ib) { ib.classList.toggle('on', !!pvImage); ib.textContent = pvImage ? '이미지 제거' : '이미지 넣기'; }
+  // 사람 성별 선택 + 실사 사진 버튼 상태 동기화.
+  const psx = $('#pvPersonSex'); if (psx) psx.value = pvPersonSex;
+  const pb = $('#pvPersonImgBtn');
+  if (pb) {
+    const has = !!pvPersonImg[pvPersonSex];
+    pb.classList.toggle('on', has);
+    pb.textContent = has ? '사람 사진 제거' : '사람 사진';
+    pb.classList.toggle('pvTogDim', !pvShow.person);   // 사람 꺼져 있으면 흐리게(참고용)
+  }
 }
 $('#pvToggles')?.addEventListener('click', e => {
   const b = e.target.closest('button[data-tog]'); if (!b) return;
@@ -1697,6 +1727,23 @@ $('#pvToggles')?.addEventListener('click', e => {
 $('#pvImgBtn')?.addEventListener('click', () => {
   if (pvImage) { pvImage = null; syncPvToggles(); renderPreview(); }
   else openImgModePopup();
+});
+// 사람 성별 선택(남 173 / 여 165). 선택 시 실루엣·키 라벨·실사 사진 성별이 바뀐다.
+$('#pvPersonSex')?.addEventListener('change', e => {
+  pvPersonSex = e.target.value === 'female' ? 'female' : 'male';
+  syncPvToggles(); renderPreview();
+});
+// 사람 실사 사진 넣기/제거(성별별). 있으면 제거, 없으면 파일 선택 → 성별 키(남173/여165)에 맞춰 표시.
+$('#pvPersonImgBtn')?.addEventListener('click', () => {
+  if (pvPersonImg[pvPersonSex]) { pvPersonImg[pvPersonSex] = null; syncPvToggles(); renderPreview(); }
+  else $('#pvPersonFile')?.click();
+});
+$('#pvPersonFile')?.addEventListener('change', e => {
+  const f = e.target.files?.[0]; e.target.value = '';
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { pvPersonImg[pvPersonSex] = rd.result; if (!pvShow.person) pvShow.person = true; syncPvToggles(); renderPreview(); };
+  rd.readAsDataURL(f);
 });
 // 이미지 넣기 방식(가로 고정 / 세로 고정) 선택 팝업. index.html 마크업을 건드리지 않게 동적 생성.
 function openImgModePopup() {
