@@ -697,7 +697,7 @@ function renderSignageReadout(box) {
       { k: '개별 해상도', v: resLabel, u: 'px' },
       { k: '전체 해상도', v: (d.resolution?.width != null) ? `${fmt(d.resolution.width * N)} × ${fmt(d.resolution.height * M)}` : '—', u: 'px' },
       { k: '전체 크기', v: (totW != null) ? `${fmt(totW)} × ${fmt(totH)}` : '—', u: 'mm' },
-      { k: '개별 패널(WxHxD)', v: (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—', u: 'mm' },
+      { k: '개별 패널(가로x세로x깊이)', v: (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—', u: 'mm' },
       { k: '총 중량', v: (totKg != null) ? fmt(totKg, 1) : '—', u: 'kg' },
       { k: '베젤(Bezel-to-Bezel)', v: nz(m.videoWall?.bezelMm), u: 'mm' },
     );
@@ -706,7 +706,7 @@ function renderSignageReadout(box) {
       { k: '모델', v: esc(m.model || m.modelCode), u: '', hero: true },
       { k: '화면 크기', v: sizeLabel, u: '' },
       { k: '해상도', v: resLabel, u: 'px' },
-      { k: '외형(WxHxD)', v: (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—', u: 'mm' },
+      { k: '외형(가로x세로x깊이)', v: (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—', u: 'mm' },
       { k: '무게', v: nz(p.weightKg == null ? null : fmt(p.weightKg, 1)), u: 'kg' },
       { k: 'VESA', v: nz(p.vesaMm), u: '' },
     );
@@ -2438,7 +2438,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
     let body;
     if (category === 'standalone_signage') {
       const grp = fam => list.filter(m => m.family === fam).map(svRow).join('');
-      body = `<div class="svPickGrp">QMC</div>${grp('QMC')}<div class="svPickGrp">QHC</div>${grp('QHC')}`;
+      body = `<div class="svPickGrp">QHC</div>${grp('QHC')}<div class="svPickGrp">QMC</div>${grp('QMC')}`;
     } else {
       const grp = pg => list.filter(m => m.productGroup === pg).map(svRow).join('');
       body = `<div class="svPickGrp">VM · 500nit</div>${grp('VM_500nit')}<div class="svPickGrp">VH · 700nit</div>${grp('VH_700nit')}`;
