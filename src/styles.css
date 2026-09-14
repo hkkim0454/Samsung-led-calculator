@@ -749,3 +749,20 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .svSumRow{margin-bottom:6px}
 .svSumGrid{display:flex;flex-wrap:wrap;gap:6px 18px}
 .svSumGrid b{color:var(--ink)}
+
+/* 02 모델 라이브러리 → 사이니지 선택 진입 버튼 */
+.svPickRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.svPickRowLbl{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px}
+/* 사이니지 선택 팝업 */
+#svPickPop{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
+  background:rgba(20,26,40,.45);backdrop-filter:saturate(140%) blur(4px);padding:16px}
+.svPickCard{width:min(520px,95vw);max-height:88vh;overflow:auto;background:var(--panel-solid);color:var(--ink);border-radius:var(--r-card);box-shadow:var(--shadow-pop);border:1px solid var(--line)}
+.svPickHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 8px;position:sticky;top:0;background:var(--panel-solid)}
+.svPickTitle{font-weight:700;font-size:16px}
+.svPickBody{padding:4px 14px 16px;display:flex;flex-direction:column;gap:6px}
+.svPickGrp{font-size:12px;font-weight:700;color:var(--muted);margin:10px 4px 2px}
+.svPickItem{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-inner);background:var(--field-fill);color:var(--ink);cursor:pointer}
+.svPickItem:hover{border-color:var(--accent,#2f7ff6);background:var(--line-2)}
+.svPickName{font-size:14px;font-weight:700}
+.svPickSpec{grid-column:1;font-size:12px;color:var(--ink-2)}
+.svPickCode{grid-row:1 / span 2;align-self:center;font-family:var(--mono);font-size:11px;color:var(--muted)}

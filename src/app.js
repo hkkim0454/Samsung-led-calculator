@@ -1,13 +1,13 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=270';
-import { MODELS } from './models.js?v=270';
-import { PROCESSORS } from './processor-data.js?v=270';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=270';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=270';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=270';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=270';
-import { parseCasesText, normalizeDate } from './cases.js?v=270';
-import { SIGNAGE_MODELS } from './signage-data.js?v=270';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=271';
+import { MODELS } from './models.js?v=271';
+import { PROCESSORS } from './processor-data.js?v=271';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=271';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=271';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=271';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=271';
+import { parseCasesText, normalizeDate } from './cases.js?v=271';
+import { SIGNAGE_MODELS } from './signage-data.js?v=271';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -2141,19 +2141,13 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
 //   signage-data.js를 읽어 공간(가로·세로)에 실제 크기로 배치해 보여준다(표시 전용).
 //   비디오월은 가로 N × 세로 M 장으로 이어붙여 크기를 키운다. LED 계산·프로세서 로직과 무관.
 (function setupSignage() {
-  const catSel = $('#svCat'), modelSel = $('#svModel'), view = $('#svView'), summary = $('#svSummary'), arrCtl = $('#svArrayCtl');
-  if (!catSel || !modelSel || !view) return;
+  const view = $('#svView'), summary = $('#svSummary'), arrCtl = $('#svArrayCtl'), picked = $('#svPicked');
+  if (!view) return;
+  let svCode = null;   // 02 모델 라이브러리 팝업에서 고른 사이니지 modelCode
 
   const svLabel = (m) => (m.category === 'video_wall')
-    ? `삼성 ${m.display.screenSizeInch}형 · 베젤 ${m.videoWall.bezelMm}mm · ${m.display.brightnessNit}nit (${m.modelCode})`
-    : `${m.model} · 화면 ${m.display.screenSizeCm}cm · ${m.display.resolution.label} (${m.modelCode})`;
-
-  function fillModels() {
-    const cat = catSel.value;
-    const list = SIGNAGE_MODELS.filter(m => m.category === cat);
-    modelSel.innerHTML = list.map(m => `<option value="${esc(m.modelCode)}">${esc(svLabel(m))}</option>`).join('');
-    if (arrCtl) arrCtl.hidden = (cat !== 'video_wall');
-  }
+    ? `삼성 ${m.display.screenSizeInch}형 · 베젤 ${m.videoWall.bezelMm}mm · ${m.display.brightnessNit}nit`
+    : `${m.model} · 화면 ${m.display.screenSizeCm}cm · ${m.display.resolution.label}`;
 
   // 공간(회색 점선 프레임)과 벽을 같은 중심에 놓고, 둘을 모두 담도록 스케일해서 앞면(front) 축소도로 그린다.
   function drawWall(N, M, pw, ph, m, spaceW, spaceH) {
@@ -2200,13 +2194,24 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
   }
 
   function render() {
-    const cat = catSel.value;
-    const m = SIGNAGE_MODELS.find(x => x.modelCode === modelSel.value);
-    if (!m) { view.innerHTML = '<div class="previewEmpty">모델을 선택하세요.</div>'; summary.innerHTML = ''; return; }
+    const m = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
+    if (!m) {
+      if (picked) picked.innerHTML = '왼쪽 <b>02 모델 라이브러리</b>에서 <b>단독형</b> 또는 <b>비디오월</b>을 선택하세요.';
+      if (arrCtl) arrCtl.hidden = true;
+      view.innerHTML = '<div class="previewEmpty">02 모델 라이브러리에서 사이니지를 선택하면 여기에 배치됩니다.</div>';
+      summary.innerHTML = '';
+      return;
+    }
+    const isVW = m.category === 'video_wall';
+    if (picked) {
+      picked.innerHTML = `${isVW ? '비디오월' : '단독형'} · <b>${esc(m.modelCode)}</b> <span class="muted-note">${esc(svLabel(m))}</span> <button type="button" class="tiny ghost" id="svRepick">다시 선택</button>`;
+      $('#svRepick')?.addEventListener('click', () => openSvPick(m.category));
+    }
+    if (arrCtl) arrCtl.hidden = !isVW;
     const spaceW = spaceWmm(), spaceH = spaceHmm();
-    if (cat === 'standalone_signage') {
+    if (!isVW) {
       if (m.physical.widthMm == null || m.physical.heightMm == null) {
-        view.innerHTML = `<div class="notice warn">이 단독형 모델은 <b>외형(mm) 데이터가 아직 없어</b> 실제 크기 배치를 표시할 수 없습니다. 데이터시트 외형값(가로·세로 mm)을 넣으면 자동으로 배치됩니다.</div>`;
+        view.innerHTML = `<div class="notice warn">이 단독형 모델은 <b>외형(mm) 데이터가 아직 없어</b> 실제 크기 배치를 표시할 수 없습니다.</div>`;
         summary.innerHTML = `<div class="svSumRow"><b>${esc(m.model)}</b> · 화면 ${m.display.screenSizeCm}cm · ${fmt(m.display.resolution.width)}×${fmt(m.display.resolution.height)} ${esc(m.display.resolution.label)}</div>`;
         return;
       }
@@ -2218,10 +2223,40 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
     drawWall(N, M, m.physical.widthMm, m.physical.heightMm, m, spaceW, spaceH);
   }
 
-  catSel.addEventListener('change', () => { fillModels(); render(); });
-  modelSel.addEventListener('change', render);
+  // 02 모델 라이브러리 → 사이니지 선택 팝업(동적 생성). 종류별 모델 목록에서 고른다.
+  const svRow = (m) => `<button type="button" class="svPickItem" data-svpick="${esc(m.modelCode)}">`
+    + `<span class="svPickName">${esc(m.category === 'video_wall' ? '삼성 ' + m.display.screenSizeInch + '형' : m.model)}</span>`
+    + `<span class="svPickSpec">${esc(svLabel(m))}</span>`
+    + `<span class="svPickCode">${esc(m.modelCode)}</span></button>`;
+  function openSvPick(category) {
+    let el = document.querySelector('#svPickPop');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'svPickPop'; el.hidden = true; document.body.appendChild(el);
+      el.addEventListener('click', e => {
+        if (e.target === el || e.target.closest('[data-svclose]')) { el.hidden = true; return; }
+        const it = e.target.closest('[data-svpick]');
+        if (it) { svCode = it.dataset.svpick; el.hidden = true; const c = $('#signageCard'); if (c) c.open = true; render(); c?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    }
+    const list = SIGNAGE_MODELS.filter(m => m.category === category);
+    const title = category === 'video_wall' ? '비디오월 모델 선택' : '단독형 모델 선택';
+    let body;
+    if (category === 'standalone_signage') {
+      const grp = fam => list.filter(m => m.family === fam).map(svRow).join('');
+      body = `<div class="svPickGrp">QMC</div>${grp('QMC')}<div class="svPickGrp">QHC</div>${grp('QHC')}`;
+    } else {
+      const grp = pg => list.filter(m => m.productGroup === pg).map(svRow).join('');
+      body = `<div class="svPickGrp">VM · 500nit</div>${grp('VM_500nit')}<div class="svPickGrp">VH · 700nit</div>${grp('VH_700nit')}`;
+    }
+    el.innerHTML = `<div class="svPickCard" role="dialog" aria-modal="true" aria-label="${esc(title)}">`
+      + `<div class="svPickHead"><div class="svPickTitle">${esc(title)}</div><button type="button" class="ppClose" data-svclose aria-label="닫기">✕</button></div>`
+      + `<div class="svPickBody">${body}</div></div>`;
+    el.hidden = false;
+  }
+
+  $('#svPickStandalone')?.addEventListener('click', () => openSvPick('standalone_signage'));
+  $('#svPickVideoWall')?.addEventListener('click', () => openSvPick('video_wall'));
   ['svCols', 'svRows'].forEach(id => $('#' + id)?.addEventListener('input', render));
   ['spaceW', 'spaceH'].forEach(id => $('#' + id)?.addEventListener('input', render));
-  fillModels();
   render();
 })();
