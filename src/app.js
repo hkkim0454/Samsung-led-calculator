@@ -498,7 +498,8 @@ function renderPreview() {
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
-  const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', pvShow.cellgrid ? '' : 'noCellGrid'].filter(Boolean).join(' ');
+  // 사이니지(단독형·비디오월)는 LED 캐비닛(픽셀 매트릭스)이 아니라 예전 LED 디자인의 '그라데이션 블록'으로 그린다(이사 요청 2026-09-14).
+  const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', pvShow.cellgrid ? '' : 'noCellGrid', svMode ? 'svPanel' : ''].filter(Boolean).join(' ');
   // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
   // 검은 테두리(베젤) + 그 뒤로 퍼지는 파란 네온 글로우(유지). ※ 인라인이라 CSS보다 우선.
   const ledGlow = `box-shadow:0 0 0 2px #050608,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
