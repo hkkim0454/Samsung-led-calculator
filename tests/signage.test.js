@@ -112,6 +112,12 @@ test('spec: QH115FX OS = Tizen 8.0 / VXT 지원', () => {
   assert.equal(q.features.soc, 'Tizen 8.0');
   assert.equal(q.features.vxt, true);
 });
+test('spec: 단독형 13종(QH115FX 제외) MagicINFO·VXT 둘 다 지원', () => {
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'standalone_signage' && x.modelCode !== 'LH115QHFEBGXKR')) {
+    assert.equal(m.features.magicInfo, true, `${m.modelCode} magicInfo true 아님`);
+    assert.equal(m.features.vxt, true, `${m.modelCode} vxt true 아님`);
+  }
+});
 test('spec: 비디오월 6종 OS 없음 · MagicINFO/VXT 미지원(false)', () => {
   for (const m of SIGNAGE_MODELS.filter(x => x.category === 'video_wall')) {
     assert.equal(m.features.magicInfo, false, `${m.modelCode} magicInfo false 아님`);
