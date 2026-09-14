@@ -609,7 +609,8 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppClose{border:none;background:var(--field-fill);color:var(--ink-2);width:30px;height:30px;border-radius:999px;font-size:15px;cursor:pointer;flex:0 0 auto}
 .ppClose:hover{background:var(--line-2)}
 /* 이미지 넣기 방식(가로/세로 고정) 선택 팝업 */
-#imgModePop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+/* 풀스크린(#pvZoom, z-index:1000)에서도 항상 맨 앞에 뜨도록 더 높은 z-index. */
+#imgModePop{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
   background:rgba(20,26,40,.45);backdrop-filter:saturate(140%) blur(4px);padding:16px}
 .imgModeCard{width:min(420px,94vw);background:var(--panel-solid);color:var(--ink);border-radius:var(--r-card);box-shadow:var(--shadow-pop);border:1px solid var(--line)}
 .imgModeHead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:16px 18px 6px}

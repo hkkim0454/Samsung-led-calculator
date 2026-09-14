@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=267';
-import { MODELS } from './models.js?v=267';
-import { PROCESSORS } from './processor-data.js?v=267';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=267';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=267';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=267';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=267';
-import { parseCasesText, normalizeDate } from './cases.js?v=267';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=268';
+import { MODELS } from './models.js?v=268';
+import { PROCESSORS } from './processor-data.js?v=268';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=268';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=268';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=268';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=268';
+import { parseCasesText, normalizeDate } from './cases.js?v=268';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -807,9 +807,10 @@ function dfTopProcessorName(r) {
 function fxCellSize(cols, rows) {
   return Math.max(16, Math.min(44, Math.floor(980 / Math.max(1, cols)), Math.floor(300 / Math.max(1, rows))));
 }
-// P19 Data Flow(Front View): 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형(serpentine) 영상/통신 배선 + 시작점(파란 점).
-function dataFlowSVG(r) {
-  const ig = r.ig; if (!ig || !ig.regions.length) return '';
+// P19 Data Flow(Front View): 캐비닛 격자 + 신호 그룹(빨간 테두리) + 뱀형(serpentine) 영상/통신 배선 + 시작점(파란 점).
+//   layout = 신호 영역 레이아웃(CS4B는 GBIC 1920×2160, 그 외는 S-Box 4K). labelPrefix = 라벨 접두사.
+function dataFlowSVG(r, layout, labelPrefix) {
+  const ig = layout; if (!ig || !ig.regions.length) return '';
   // CS4B 계열(광지빅)에서 광 이중화(Gbic 포워드/백워드, gbicFB) 또는 SBOX 이중화면 각 신호 그룹을
   //   양끝에서 급전(Primary ● / Redundant ▬)하는 광 I/G 이중화로 표시.
   //   (삼성 MM015F P23/25 Data Flow Diagram: 같은 데이터 체인을 Primary·Redundant 두 끝에서 급전.)
@@ -849,7 +850,7 @@ function dataFlowSVG(r) {
     //   좁은(1열) 영역엔 글자가 안 들어가므로 짧은 '#N'만, 넓으면 전체 라벨을 쓰고 영역 폭을 넘지 않게 맞춘다.
     const fsz = Math.max(6, Math.min(10, cs * 0.32));
     const colTxt = regCols > 1 ? `${rg.colStart + 1}~${rg.colEnd + 1}열` : `${rg.colStart + 1}열`;
-    const full = `S-Box #${sboxIdx} · ${colTxt}`, short = `#${sboxIdx}`;
+    const full = `${labelPrefix} #${sboxIdx} · ${colTxt}`, short = `#${sboxIdx}`;
     const charW = fsz * 0.56, avail = w - 6;
     const lbl = (full.length * charW + 8 <= avail) ? full : short;
     const lx = x0 + w / 2, ly = y0 + h - Math.max(2, cs * 0.14);
@@ -884,7 +885,7 @@ function powerFlowSVG(r, perDaisy) {
   }
   return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${wires}</svg></div>`;
 }
-function dfLegendHTML(dual) {
+function dfLegendHTML(dual, groupTerm) {
   // dual=true(CS4B 광지빅+이중화): Primary(주)·Redundant(예비) 급전점을 함께 안내.
   const primary = dual ? 'Primary Data Link (주 광 급전)' : 'Primary Video Cable Input (주 영상 입력)';
   const redundant = dual ? '<i><span class="k-redsq"></span>Redundant Data Link (예비 광 급전 · 광 I/G 이중화)</i>' : '';
@@ -893,7 +894,7 @@ function dfLegendHTML(dual) {
   ${redundant}
   <i><span class="k-io"></span>Video &amp; Communication Input (영상·통신 입력)</i>
   <i><span class="k-line"></span>Video &amp; Communication Cables (영상·통신 케이블)</i>
-  <i><span class="k-grp"></span>S-Box 신호 그룹</i>
+  <i><span class="k-grp"></span>${esc(groupTerm)} 신호 그룹</i>
 </div>`;
 }
 const PW_LEGEND = `<div class="fxLegend">
@@ -924,17 +925,25 @@ function renderDataFlow() {
     <span class="dfNode sbox">S-Box ${ig.boxes}대${ctrlLbl}${r.redundancy ? ' <em class="muted-note">+이중화</em>' : ''}</span>${gbicNode}<span class="dfArrow">→</span>
     <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
   </div>`;
-  // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형 배선.
+  // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + 신호 그룹(빨간 테두리) + 뱀형 배선.
+  // CS4B 계열은 신호 그룹을 GBIC(1920×2160) 단위로 나눈다(그 외는 S-Box 4K 단위).
+  const useGbic = !!(r.igGbic && r.igGbic.regions.length);
+  const layout = useGbic ? r.igGbic : ig;
+  const groupTerm = useGbic ? 'GBIC' : 'S-Box';
   const dual = !!(r.gbic != null && (r.gbicFB || r.redundancy));
   const dualTitle = dual ? ' · 광 I/G 이중화 (Primary/Redundant)' : '';
   const dualNote = dual
     ? ` · <b>광 I/G 이중화</b>: 각 그룹을 <span style="color:#2b2f8f">Primary(●)</span>·<span style="color:#e2001a">Redundant(▬)</span> 양끝에서 급전 — 한쪽 광선로 장애 시 반대쪽에서 계속 표시`
     : '';
+  const titleUnit = useGbic ? `광지빅(GBIC) ${layout.regions.length} SET` : `S-Box ${ig.boxes}대`;
+  const capNote = useGbic
+    ? `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · GBIC 1개 = <b>${fmt(layout.capW)}×${fmt(layout.capH)}</b>px(CS4B 광지빅 단위) · 빨간 그룹 = GBIC 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`
+    : `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`;
   host.innerHTML = flow
-    + `<div class="fxTitle">Data Flow Diagram (Front View) — S-Box ${ig.boxes}대${dualTitle}</div>`
-    + dataFlowSVG(r)
-    + dfLegendHTML(dual)
-    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로${dualNote}</div>`;
+    + `<div class="fxTitle">Data Flow Diagram (Front View) — ${titleUnit}${dualTitle}</div>`
+    + dataFlowSVG(r, layout, groupTerm)
+    + dfLegendHTML(dual, groupTerm)
+    + `<div class="dfLegend">${capNote}${dualNote}</div>`;
 }
 
 // 09 전원 구성: 삼성 데이터시트 알고리즘(회로당=⌊V×A×0.8/Wcab⌋, 회로수=⌈총/회로당⌉). r.power만 사용.

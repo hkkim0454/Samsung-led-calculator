@@ -104,12 +104,9 @@ export function gbicSets(resW, resH, opts = {}) {
  *   여기서는 기본(백업 제외) 영역 맵만 반환한다. 통합 컨트롤러 모델은 boxes=0.
  * 값을 알 수 없으면 null(가짜 수치 금지).
  */
-export function igLayout(model, resW, resH, cols, rows) {
-  if (model.integratedController) return { integrated: true, boxes: 0, regCols: 0, regRows: 0, capW: null, capH: null, controller: model.sbox ?? null, regions: [] };
-  const capW = model.maxInputW, capH = model.maxInputH;
-  if (capW == null || capH == null || !(resW > 0) || !(resH > 0) || !(cols > 0) || !(rows > 0)) return null;
-  const { resW: cRW, resH: cRH } = cabinetResolution(model);
-  if (!(cRW > 0) || !(cRH > 0)) return null;
+// 화면(resW×resH)을 capW×capH 입력 영역으로 나눠 각 영역이 담당하는 캐비닛 열/행을 매핑하는 공용 타일러.
+//   캐비닛 '중심' 픽셀이 속한 영역에 배정(온전한 캐비닛 단위 그룹). igLayout(S-Box)·gbicLayout(광지빅) 공용.
+function tileWall(cRW, cRH, resW, resH, cols, rows, capW, capH) {
   const regCols = Math.ceil(resW / capW), regRows = Math.ceil(resH / capH);
   const regions = [];
   for (let rr = 0; rr < regRows; rr++) {
@@ -128,7 +125,30 @@ export function igLayout(model, resW, resH, cols, rows) {
       });
     }
   }
+  return { regCols, regRows, regions };
+}
+
+export function igLayout(model, resW, resH, cols, rows) {
+  if (model.integratedController) return { integrated: true, boxes: 0, regCols: 0, regRows: 0, capW: null, capH: null, controller: model.sbox ?? null, regions: [] };
+  const capW = model.maxInputW, capH = model.maxInputH;
+  if (capW == null || capH == null || !(resW > 0) || !(resH > 0) || !(cols > 0) || !(rows > 0)) return null;
+  const { resW: cRW, resH: cRH } = cabinetResolution(model);
+  if (!(cRW > 0) || !(cRH > 0)) return null;
+  const { regCols, regRows, regions } = tileWall(cRW, cRH, resW, resH, cols, rows, capW, capH);
   return { integrated: false, boxes: regCols * regRows, regCols, regRows, capW, capH, controller: model.sbox ?? null, regions };
+}
+
+/**
+ * 광 지빅(GBIC) 신호 영역 레이아웃. CS4B 계열은 1920×2160 px마다 GBIC 1 SET을 쓰므로,
+ * 데이터 흐름 도면의 신호 그룹은 S-Box(4K)가 아니라 이 GBIC 격자(1920×2160)로 나눈다.
+ * 반환: { regCols, regRows, sets, capW, capH, regions } (통합 컨트롤러·해상도 미확인이면 null).
+ */
+export function gbicLayout(model, resW, resH, cols, rows) {
+  if (model.integratedController) return null;
+  const { resW: cRW, resH: cRH } = cabinetResolution(model);
+  if (!(cRW > 0) || !(cRH > 0) || !(resW > 0) || !(resH > 0) || !(cols > 0) || !(rows > 0)) return null;
+  const { regCols, regRows, regions } = tileWall(cRW, cRH, resW, resH, cols, rows, GBIC_REGION_W, GBIC_REGION_H);
+  return { regCols, regRows, sets: regCols * regRows, capW: GBIC_REGION_W, capH: GBIC_REGION_H, regions };
 }
 
 // ── 전원 구성(회로/데이지체인) — Samsung IF015R-M 데이터시트 알고리즘(이사 제공, 2026) ──────
@@ -258,6 +278,8 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
 
   // IG(신호 입력 그룹)·데이터 흐름 레이아웃 — S-Box 입력 영역 ↔ 캐비닛 매핑(별도 계통도 표시용).
   const ig = fits ? igLayout(model, resW, resH, cols, rows) : null;
+  // 광 지빅(GBIC) 신호 영역 — CS4B 계열은 1920×2160마다 GBIC. 데이터 흐름 도면 신호 그룹의 실제 단위.
+  const igGbic = (fits && usesCS4B) ? gbicLayout(model, resW, resH, cols, rows) : null;
   // 전원 구성(회로/데이지체인) — 데이터시트 알고리즘. maxPower 없으면 null.
   const power = (fits && total > 0) ? powerConfig(model, total, opts) : null;
 
@@ -275,7 +297,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy, gbicFB,
-    ig, power,
+    ig, igGbic, power,
     deadW, deadH, baseHeight,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
