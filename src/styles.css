@@ -686,6 +686,7 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .fxGroup{fill:none;stroke:#e2001a;stroke-width:1.5}
 .fxCable{fill:none;stroke:#2b2f8f;stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
 .fxStart{fill:#2b2f8f}
+.fxRedundant{fill:#e2001a}
 .pxLine{stroke:#2b2f8f;stroke-width:2.4;stroke-linecap:round}
 .pxEnd{fill:#2b2f8f}
 .pxChev{fill:none;stroke:#2b2f8f;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
@@ -694,6 +695,7 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .fxLegend .k-dot{width:12px;height:12px;border-radius:50%;background:#2b2f8f}
 .fxLegend .k-io{width:12px;height:12px;background:#c6c6ce}
 .fxLegend .k-sq{width:12px;height:12px;background:#2b2f8f}
+.fxLegend .k-redsq{width:12px;height:12px;background:#e2001a}
 .fxLegend .k-line{width:20px;height:0;border-top:3px solid #2b2f8f}
 .fxLegend .k-grp{width:15px;height:12px;border:1.5px solid #e2001a}
 .fxLegend .k-chev{color:#2b2f8f;font-weight:800;font-size:14px;line-height:1}
