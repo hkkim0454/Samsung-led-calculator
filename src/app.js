@@ -671,9 +671,14 @@ function renderSignageReadout(box) {
   const N = f ? f.N : 1, M = f ? f.M : 1, panels = N * M;
   const d = m.display, p = m.physical, io = m.io;
   const nz = v => (v == null ? '—' : v);          // 0은 유효값(그대로), null만 '—'
+  // 화면 크기 인치: 비디오월=개별 화면 인치(데이터), 단독형=모델명(QH115FX→115)에서, 없으면 cm→inch 환산.
+  let svInch = null;
+  if (isVW) svInch = d.screenSizeInch;
+  else if (m.model && /(\d+)/.test(m.model)) svInch = parseInt(m.model.match(/(\d+)/)[1], 10);
+  else if (d.screenSizeCm != null) svInch = Math.round(d.screenSizeCm / 2.54);
   const sizeLabel = isVW
-    ? (d.screenSizeInch != null ? `${d.screenSizeInch}"` : '—')
-    : (d.screenSizeCm != null ? `${d.screenSizeCm} cm` : '—');
+    ? (svInch != null ? `${svInch}"` : '—')
+    : (svInch != null ? `${svInch}"${d.screenSizeCm != null ? ` (${d.screenSizeCm}cm)` : ''}` : (d.screenSizeCm != null ? `${d.screenSizeCm} cm` : '—'));
   const resLabel = (d.resolution?.width != null) ? `${d.resolution.label || ''} ${fmt(d.resolution.width)}×${fmt(d.resolution.height)}`.trim() : '—';
   // 입출력 단자: 커넥터별 칩으로 정리(정신없던 한 줄 나열 대신). In/Out 중 확인된 값만, 미확인 커넥터는 생략.
   const ioPair = (inV, outV) => { const a = []; if (inV != null) a.push(`In ${inV}`); if (outV != null) a.push(`Out ${outV}`); return a.join(' · '); };
