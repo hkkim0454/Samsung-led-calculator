@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, igLayout, gbicLayout, powerConfig, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
+import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, igLayout, gbicLayout, fhdLayout, powerConfig, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -73,6 +73,22 @@ test('gbicLayout: MP012F 4480x2160 -> 3 GBIC regions across (ceil 4480/1920)', (
   assert.equal(g.regCols, 3);
   assert.equal(g.regRows, 1);
   assert.equal(g.regions.length, 3);
+});
+// 광 미사용(비-CS4B) 컨트롤러의 IG(신호 입력 그룹) = FHD 1920×1080 단위(이사 지침 2026-09-14).
+const IF015R = MODELS.find(m => m.id === 'IF015R');   // SNOWJMU(동선, 비-CS4B)
+test('fhdLayout: 3840x2160 -> 2x2 = 4 FHD(1920x1080) IG 그룹', () => {
+  const f = fhdLayout(IF015R, 3840, 2160, 6, 6);
+  assert.equal(f.capW, 1920); assert.equal(f.capH, 1080);
+  assert.equal(f.regCols, 2); assert.equal(f.regRows, 2);
+  assert.equal(f.units, 4);
+});
+test('computeConfig: 광 미사용(비-CS4B)은 igFhd(1920x1080), CS4B는 igGbic(1920x2160)', () => {
+  const rf = computeConfig(IF015R, 6000, 3400, {});
+  assert.equal(rf.igGbic, null);                 // 광 미사용 → GBIC 없음
+  assert.ok(rf.igFhd && rf.igFhd.capW === 1920 && rf.igFhd.capH === 1080);
+  const rc = computeConfig(MP012F, 6000, 3400, {});
+  assert.ok(rc.igGbic && rc.igGbic.capH === 2160);   // CS4B → GBIC 1920×2160
+  assert.equal(rc.igFhd, null);                  // CS4B는 FHD IG 아님
 });
 test('computeConfig exposes ig layout consistent with sbox', () => {
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });

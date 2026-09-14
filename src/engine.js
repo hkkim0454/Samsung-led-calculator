@@ -151,6 +151,17 @@ export function gbicLayout(model, resW, resH, cols, rows) {
   return { regCols, regRows, sets: regCols * regRows, capW: GBIC_REGION_W, capH: GBIC_REGION_H, regions };
 }
 
+// 광 미사용(동선) 컨트롤러(IFR-M CS4FPGS·IFR/IEA SNOWJMU 등, 즉 비-CS4B)의 IG(신호 입력 그룹) 단위 = FHD 1920×1080.
+//   (CS4B 광지빅은 1920×2160, 광 미사용은 1920×1080 — 이사 지침 2026-09-14.)
+export const IG_FHD_W = 1920, IG_FHD_H = 1080;
+export function fhdLayout(model, resW, resH, cols, rows) {
+  if (model.integratedController) return null;
+  const { resW: cRW, resH: cRH } = cabinetResolution(model);
+  if (!(cRW > 0) || !(cRH > 0) || !(resW > 0) || !(resH > 0) || !(cols > 0) || !(rows > 0)) return null;
+  const { regCols, regRows, regions } = tileWall(cRW, cRH, resW, resH, cols, rows, IG_FHD_W, IG_FHD_H);
+  return { regCols, regRows, units: regCols * regRows, capW: IG_FHD_W, capH: IG_FHD_H, regions };
+}
+
 // ── 전원 구성(회로/데이지체인) — Samsung IF015R-M 데이터시트 알고리즘(이사 제공, 2026) ──────
 // 연속부하 80% 여유. 회로당 캐비닛 = ⌊전압 × 차단기A × 0.8 / 캐비닛최대W⌋, 회로 수 = ⌈총/회로당⌉.
 //   데이터시트 검증(캐비닛 190W): 110V20A→9/회로, 208V20A→17, 230V13A→12, 230V16A→15.
@@ -280,6 +291,8 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
   const ig = fits ? igLayout(model, resW, resH, cols, rows) : null;
   // 광 지빅(GBIC) 신호 영역 — CS4B 계열은 1920×2160마다 GBIC. 데이터 흐름 도면 신호 그룹의 실제 단위.
   const igGbic = (fits && usesCS4B) ? gbicLayout(model, resW, resH, cols, rows) : null;
+  // 광 미사용(비-CS4B) 컨트롤러의 IG(신호 입력 그룹) = FHD 1920×1080. 데이터 흐름 도면 신호 그룹 단위.
+  const igFhd = (fits && !usesCS4B && !model.integratedController) ? fhdLayout(model, resW, resH, cols, rows) : null;
   // 전원 구성(회로/데이지체인) — 데이터시트 알고리즘. maxPower 없으면 null.
   const power = (fits && total > 0) ? powerConfig(model, total, opts) : null;
 
@@ -297,7 +310,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
     sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy, gbicFB,
-    ig, igGbic, power,
+    ig, igGbic, igFhd, power,
     deadW, deadH, baseHeight,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount
     brightnessPeak: model.brightnessPeak ?? null,
