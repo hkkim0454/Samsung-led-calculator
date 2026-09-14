@@ -686,6 +686,7 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .fxGroup{fill:none;stroke:#e2001a;stroke-width:1.5}
 .fxCable{fill:none;stroke:#2b2f8f;stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
 .fxStart{fill:#2b2f8f}
+.fxRedundant{fill:#e2001a}
 .pxLine{stroke:#2b2f8f;stroke-width:2.4;stroke-linecap:round}
 .pxEnd{fill:#2b2f8f}
 .pxChev{fill:none;stroke:#2b2f8f;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
@@ -694,6 +695,7 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .fxLegend .k-dot{width:12px;height:12px;border-radius:50%;background:#2b2f8f}
 .fxLegend .k-io{width:12px;height:12px;background:#c6c6ce}
 .fxLegend .k-sq{width:12px;height:12px;background:#2b2f8f}
+.fxLegend .k-redsq{width:12px;height:12px;background:#e2001a}
 .fxLegend .k-line{width:20px;height:0;border-top:3px solid #2b2f8f}
 .fxLegend .k-grp{width:15px;height:12px;border:1.5px solid #e2001a}
 .fxLegend .k-chev{color:#2b2f8f;font-weight:800;font-size:14px;line-height:1}
@@ -705,3 +707,11 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .rs3Frame.noCellGrid .rs3Grid>i{box-shadow:none!important;border-radius:0!important}
 /* LED 화면 이미지: LED 영역을 꽉 채움(같은 배율이면 잘림 없이 정확히 채워짐) */
 .rs3LedImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:2px;display:block}
+
+/* LED 이미지: 가로 꽉 + 세로 드래그 이동(넘침 크롭/모자람 검정). rs3Led가 넘침을 잘라냄. */
+.rs3Led{overflow:hidden}
+.rs3LedImg{position:absolute;object-fit:fill;cursor:grab;user-select:none;-webkit-user-drag:none;touch-action:none}
+.rs3LedImg:active{cursor:grabbing}
+.rs3LedGridOv{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right,rgba(0,0,0,.5) 0 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.5) 0 1px,transparent 1px);background-position:0 0}
+/* LED 격자 OFF → 그냥 검정(픽셀 텍스처·이음새 제거) */
+.rs3Frame.noCellGrid .rs3Grid>i{background:#0a0c10!important}

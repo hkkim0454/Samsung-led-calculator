@@ -78,6 +78,7 @@
 
 | ID | Timestamp | Decision | Rationale | Owner | Status |
 |---|---|---|---|---|---|
+| DEC-044 | 2026-09-14 | **CS4B 광 I/G 이중화 시각화(삼성 MM015F P23/25 Data Flow Diagram 준용).** 08 데이터 흐름 도면에서 이중화(redundancy) + CS4B(gbic≠null)일 때 각 S-Box 신호 그룹을 **Primary(파란 ●, 체인 시작)·Redundant(빨간 ▬, 체인 반대쪽 끝)** 두 끝에서 급전하는 것으로 표시(한쪽 광선로 장애 시 반대쪽 계속 동작). 1캐비닛 영역은 두 표식을 살짝 어긋나게 배치해 둘 다 보이게 함. 범례에 Redundant Data Link 항목·제목에 '광 I/G 이중화' 추가. 계산 로직·정합성 기준 불변(표시 전용). 142/142 green. 별도로 노바스타 등 카드형 프로세서 상세 팝업 표시 수정(v263) | 오너 요청("P23/25 참고 CS4B 광 I/G 이중화 이미지"). engine.js 계산 무변경, app.js dataFlowSVG 표시만 확장(중복 계산 금지 규칙 준수) | 김현규 | Approved |
 | DEC-043 | 2026-09-13 | MPF(MP008F/012F/016F) 기본 컨트롤러를 SBB-SNOWAAE → **SBB-CS4BPGS**로 변경(DEC-015 대체). MMF·MPF 모두 CS4B 계열 → 광지빅(GBIC) 자동 산출. 08 데이터 흐름 '구성도'에 S-Box→광지빅(GBIC)→LED 경로 노드 표시 | 이사 지침(MMF·MPF 모두 CS4B·광지빅 사용) + 삼성 공식 검증(MP012F Fit-to-wall 시 S-Box=SBB-CS4BPGS). S-Box 수량 산식(박스당 4K)·전력·해상도 등 계산 불변, 컨트롤러 표시명과 GBIC 산출만 변경. 정합성 회귀 테스트(GBIC/견적)를 새 기준으로 갱신, 142/142 green | 김현규 | Approved |
 | DEC-001 | 2026-07-23 | vanilla JS 단일 HTML 채택, engine/data/UI 분리 | 배포 단순, 의존성 0, 사내 오프라인 실행 용이 | 김현규 | Approved |
 | DEC-002 | 2026-07-23 | 산출 항목·데이터 스키마를 삼성 실측 기준으로 정렬(Pitch, W×H×D, weight, max/typ power, resolution, brightness, OVD, BOM) | 사내 견적 정합성 확보 | 김현규 | Proposed |

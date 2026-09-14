@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=261';
-import { MODELS } from './models.js?v=261';
-import { PROCESSORS } from './processor-data.js?v=261';
-import { processorRequirements } from './processor-limits.js?v=261';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=261';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=261';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=261';
-import { parseCasesText, normalizeDate } from './cases.js?v=261';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=264';
+import { MODELS } from './models.js?v=264';
+import { PROCESSORS } from './processor-data.js?v=264';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=264';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=264';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=264';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=264';
+import { parseCasesText, normalizeDate } from './cases.js?v=264';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -244,7 +244,10 @@ function moveModel(id, dir) {
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
 const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true };
-let pvImage = null;   // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
+let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
+let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산). 가로는 항상 꽉 채우고 세로는 팬.
+let pvImgPanY = 0.5;    // 세로 넘침 시 크롭 위치(0=위, 1=아래).
+let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {lw, lh, ih, overflow} — 드래그 팬 계산용.
 
 // 미리보기를 CSS 3D 1점 투시로 그린다(원근감 스펙 2026-09-12). 치수 값·계산은 engine 결과 그대로 쓰고
 //   위치만 3D 화면에 맞춰 투영한다. 벽 크기·모델·배열이 바뀌어도 동적으로 맞는다(고정 좌표 없음).
@@ -470,6 +473,21 @@ function renderPreview() {
   const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', pvShow.cellgrid ? '' : 'noCellGrid'].filter(Boolean).join(' ');
   // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
   const ledGlow = `box-shadow:0 0 0 2px #2f7ff6,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
+  // LED 화면 내용: 이미지가 있으면 가로 꽉 채우고 세로는 pvImgPanY로 위아래 이동(넘침=크롭/모자람=검정 슬라이드).
+  //   LED 격자 ON이면 이미지 위에 캐비닛 격자선 오버레이. 이미지 없으면 파란 글로우.
+  let ledExtra;
+  if (pvImage) {
+    const asp = pvImgAspect || (Lw / Lh);
+    const ih = Lw / asp, range = ih - Lh;                 // range>0: 세로 넘침(크롭), <0: 모자람(검정)
+    const top = (range > 0) ? (-range * pvImgPanY) : ((Lh - ih) * pvImgPanY);
+    pvLedGeom = { lw: Lw, lh: Lh, ih, range };
+    const ov = pvShow.cellgrid
+      ? `<div class="rs3LedGridOv" style="background-size:${(Lw / r.cols).toFixed(2)}px ${(Lh / r.rows).toFixed(2)}px"></div>` : '';
+    ledExtra = `<img class="rs3LedImg" src="${pvImage}" draggable="false" style="width:${Lw}px;height:${ih.toFixed(1)}px;left:0;top:${top.toFixed(1)}px"/>${ov}`;
+  } else {
+    pvLedGeom = null;
+    ledExtra = '<div class="rs3Glow"></div>';
+  }
 
   stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${frameH}px;--fit:${effFit}">
     <div class="rs3Canvas" style="width:${CW}px;height:${CH}px;transform:${canvasT};">
@@ -485,7 +503,7 @@ function renderPreview() {
           <div class="rs3Face front" style="${faceStyle}">
             <div class="rs3Led" style="left:${Lx}px;top:${Ly}px;width:${Lw}px;height:${Lh}px;${ledGlow}">
               <div class="rs3Grid" style="grid-template-columns:repeat(${r.cols},1fr);grid-template-rows:repeat(${r.rows},1fr);gap:${gap}px;padding:${gap}px">${cells}</div>
-              ${pvImage ? `<img class="rs3LedImg" src="${pvImage}" alt="LED 화면 이미지"/>` : '<div class="rs3Glow"></div>'}
+              ${ledExtra}
             </div>
             ${sigHTML}
           </div>
@@ -613,10 +631,12 @@ function vpCheckHTML(c) {
 // 입출력 정보(팝업으로 보여줄 값)가 있는 제품인지. 커넥터 수량(HDMI/DP/SDI) 또는
 //   최대 독립 입력(4K/2K)·최대 출력(4K/2K) 중 하나라도 있으면 대상. (Aquilon RS 등 카드형 포함, 이사 요청)
 function procHasFixedPorts(p) {
-  const i = p.inputs || {}, o = p.outputs || {};
+  const i = p.inputs || {}, o = p.outputs || {}, s = p.slots || {};
   return ['hdmi14', 'hdmi20', 'dp12', 'sdi3g', 'sdi12g'].some(k => i[k] != null)
     || i.maxIndependent4k != null || i.maxIndependent2k != null
-    || o.maxIndependent4kOutputs != null || o.maxIndependent4kPgm != null || o.maxActiveOutputs != null || o.maxIndependent2k != null;
+    || o.maxIndependent4kOutputs != null || o.maxIndependent4kPgm != null || o.maxActiveOutputs != null || o.maxIndependent2k != null
+    // 카드(슬롯)형 제품(NovaStar H 등): 입출력 커넥터 값이 없어도 슬롯 수로 용량을 유도해 팝업을 띄운다.
+    || s.maxInputBoards != null || s.maxOutputBoards != null;
 }
 function vpItemHTML(item) {
   const p = item.proc;
@@ -640,16 +660,45 @@ function openPortPopup(id) {
   if (!p) return;
   const nn = v => (v == null ? '<span class="muted-note">—</span>' : `<b>${v}</b>개`);
   const row = (label, v) => `<tr><td>${esc(label)}</td><td class="pp-n">${nn(v)}</td></tr>`;
+  const rowAssumed = (label, v, assumed) => `<tr><td>${esc(label)}${assumed ? ' <span class="muted-note">(카드 기준 추정)</span>' : ''}</td><td class="pp-n">${nn(v)}</td></tr>`;
   // 커넥터별 수량(고정형: Pulse/Eikos/Alta)이 있으면 그걸, 없으면 최대 독립 입력(카드형: Aquilon RS)을 보여줌.
   const connRows = [['HDMI 1.4', p.inputs.hdmi14], ['HDMI 2.0', p.inputs.hdmi20], ['DisplayPort 1.2', p.inputs.dp12], ['3G-SDI', p.inputs.sdi3g], ['12G-SDI', p.inputs.sdi12g], ['HDMI 1.4 / 3G-SDI 겸용', p.inputs.comboHdmi14Sdi3g]]
     .filter(([, v]) => v != null);
   const indepRows = [['독립 입력 · 4K', p.inputs.maxIndependent4k], ['독립 입력 · 2K', p.inputs.maxIndependent2k]]
     .filter(([, v]) => v != null);
-  const inRows = connRows.length ? connRows : indepRows;
-  const inTitle = connRows.length ? '입력 포트' : '입력 (최대)';
-  const outRows = [['Active 출력', p.outputs.maxActiveOutputs], ['독립 4K 출력', p.outputs.maxIndependent4kOutputs], ['4K PGM 출력', p.outputs.maxIndependent4kPgm], ['2K 출력', p.outputs.maxIndependent2k]].filter(([, v]) => v != null);
-  const inHTML = inRows.length ? inRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요(데이터시트 미확보)</td></tr>`;
-  const outHTML = outRows.length ? outRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요</td></tr>`;
+  // 카드(슬롯)형 제품(NovaStar H 등): 커넥터·독립입력 값이 없으면 슬롯 수로 용량을 유도해 표시.
+  const s = p.slots || {};
+  const isCardBased = connRows.length === 0 && indepRows.length === 0 && (s.maxInputBoards != null || s.maxOutputBoards != null);
+  const inCap = isCardBased ? inputsCapacity(p) : null;
+  const outCap = isCardBased ? outputCapacity(p) : null;
+  const outCap2k = isCardBased ? outputCapacity2k(p) : null;
+
+  let inTitle, inRows, inHTML;
+  if (isCardBased) {
+    inTitle = '입력 (카드 기준)';
+    inRows = [];
+    if (s.maxInputBoards != null) inRows.push(rowAssumed('입력 카드(보드)', s.maxInputBoards, false));
+    if (inCap.max4k != null) inRows.push(rowAssumed('독립 입력 · 4K', inCap.max4k, inCap.assumed4k));
+    if (inCap.max2k != null) inRows.push(rowAssumed('독립 입력 · 2K', inCap.max2k, inCap.assumed2k));
+    inHTML = inRows.length ? inRows.join('') : `<tr><td colspan="2" class="muted-note">확인 필요(데이터시트 미확보)</td></tr>`;
+  } else {
+    inRows = connRows.length ? connRows : indepRows;
+    inTitle = connRows.length ? '입력 포트' : '입력 (최대)';
+    inHTML = inRows.length ? inRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요(데이터시트 미확보)</td></tr>`;
+  }
+
+  let outTitle = '출력', outHTML;
+  if (isCardBased) {
+    const outRows = [];
+    if (s.maxOutputBoards != null) outRows.push(rowAssumed('출력 카드(보드)', s.maxOutputBoards, false));
+    if (outCap.value != null) outRows.push(rowAssumed('독립 4K 출력', outCap.value, outCap.assumed));
+    if (outCap2k.value != null) outRows.push(rowAssumed('독립 2K 출력', outCap2k.value, false));
+    outTitle = '출력 (카드 기준)';
+    outHTML = outRows.length ? outRows.join('') : `<tr><td colspan="2" class="muted-note">확인 필요</td></tr>`;
+  } else {
+    const outRows = [['Active 출력', p.outputs.maxActiveOutputs], ['독립 4K 출력', p.outputs.maxIndependent4kOutputs], ['4K PGM 출력', p.outputs.maxIndependent4kPgm], ['2K 출력', p.outputs.maxIndependent2k]].filter(([, v]) => v != null);
+    outHTML = outRows.length ? outRows.map(([l, v]) => row(l, v)).join('') : `<tr><td colspan="2" class="muted-note">확인 필요</td></tr>`;
+  }
   // 커넥터를 보여줄 때만 독립 입력 최대를 참고로 덧붙임(카드형은 이미 위에 표시됨).
   const showIndepNote = connRows.length && (p.inputs.maxIndependent4k != null || p.inputs.maxIndependent2k != null);
   const needsVer = p.verification?.status !== 'official';
@@ -671,7 +720,7 @@ function openPortPopup(id) {
         ${showIndepNote
           ? `<div class="ppNote">독립 입력 최대 · 4K ${p.inputs.maxIndependent4k ?? '—'} / 2K ${p.inputs.maxIndependent2k ?? '—'}</div>` : ''}
       </div>
-      <div class="ppSec"><div class="ppSecTitle">출력</div><table class="ppTable">${outHTML}</table></div>
+      <div class="ppSec"><div class="ppSecTitle">${outTitle}</div><table class="ppTable">${outHTML}</table></div>
     </div>
     ${needsVer ? '<div class="ppVer">※ 일부 값은 공식 확인 전이라 “—(확인 필요)”로 표시됩니다.</div>' : ''}
   </div>`;
@@ -750,6 +799,9 @@ function fxCellSize(cols, rows) {
 // P19 Data Flow(Front View): 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형(serpentine) 영상/통신 배선 + 시작점(파란 점).
 function dataFlowSVG(r) {
   const ig = r.ig; if (!ig || !ig.regions.length) return '';
+  // CS4B 계열(광지빅) + 이중화면 각 신호 그룹을 양끝에서 급전(Primary ● / Redundant ▬)하는 광 I/G 이중화로 표시.
+  //   (삼성 MM015F P23/25 Data Flow Diagram: 같은 데이터 체인을 Primary·Redundant 두 끝에서 급전.)
+  const dual = !!(r.redundancy && r.gbic != null);
   const cs = fxCellSize(r.cols, r.rows), W = r.cols * cs, H = r.rows * cs;
   const cx = c => c * cs + cs / 2, cy = k => k * cs + cs / 2;
   const io = Math.max(5, cs * 0.34);
@@ -768,7 +820,15 @@ function dataFlowSVG(r) {
       for (const c of cc) pts.push([cx(c), cy(ri)]);
     }
     const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-    cables += `<path class="fxCable" d="${d}"/><circle class="fxStart" cx="${pts[0][0].toFixed(1)}" cy="${pts[0][1].toFixed(1)}" r="${Math.max(4, cs * 0.18).toFixed(1)}"/>`;
+    const rr0 = Math.max(4, cs * 0.18);
+    cables += `<path class="fxCable" d="${d}"/><circle class="fxStart" cx="${pts[0][0].toFixed(1)}" cy="${pts[0][1].toFixed(1)}" r="${rr0.toFixed(1)}"/>`;
+    // 이중화: 체인 반대쪽 끝에 Redundant(예비) 급전점(빨간 사각)을 표시.
+    //   1캐비닛 영역은 Primary와 끝점이 겹치므로 살짝 좌상단으로 옮겨 둘 다 보이게 한다.
+    if (dual) {
+      const e = pts[pts.length - 1], sq = Math.max(6, cs * 0.30);
+      const off = (pts.length === 1) ? cs * 0.24 : 0;
+      cables += `<rect class="fxRedundant" x="${(e[0] - off - sq / 2).toFixed(1)}" y="${(e[1] - off - sq / 2).toFixed(1)}" width="${sq.toFixed(1)}" height="${sq.toFixed(1)}"/>`;
+    }
     groups += `<rect class="fxGroup" x="${x0 + 1}" y="${y0 + 1}" width="${w - 2}" height="${h - 2}"/>`;
   }
   return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${cables}${groups}</svg></div>`;
@@ -798,12 +858,18 @@ function powerFlowSVG(r, perDaisy) {
   }
   return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${wires}</svg></div>`;
 }
-const DF_LEGEND = `<div class="fxLegend">
-  <i><span class="k-dot"></span>Primary Video Cable Input (주 영상 입력)</i>
+function dfLegendHTML(dual) {
+  // dual=true(CS4B 광지빅+이중화): Primary(주)·Redundant(예비) 급전점을 함께 안내.
+  const primary = dual ? 'Primary Data Link (주 광 급전)' : 'Primary Video Cable Input (주 영상 입력)';
+  const redundant = dual ? '<i><span class="k-redsq"></span>Redundant Data Link (예비 광 급전 · 광 I/G 이중화)</i>' : '';
+  return `<div class="fxLegend">
+  <i><span class="k-dot"></span>${primary}</i>
+  ${redundant}
   <i><span class="k-io"></span>Video &amp; Communication Input (영상·통신 입력)</i>
   <i><span class="k-line"></span>Video &amp; Communication Cables (영상·통신 케이블)</i>
   <i><span class="k-grp"></span>S-Box 신호 그룹</i>
 </div>`;
+}
 const PW_LEGEND = `<div class="fxLegend">
   <i><span class="k-line"></span>Power Interconnect Cable (전원 연결 케이블)</i>
   <i><span class="k-io"></span>Power Cable Input/Output (전원 입·출력)</i>
@@ -833,11 +899,16 @@ function renderDataFlow() {
     <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
   </div>`;
   // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형 배선.
+  const dual = !!(r.redundancy && r.gbic != null);
+  const dualTitle = dual ? ' · 광 I/G 이중화 (Primary/Redundant)' : '';
+  const dualNote = dual
+    ? ` · <b>광 I/G 이중화</b>: 각 그룹을 <span style="color:#2b2f8f">Primary(●)</span>·<span style="color:#e2001a">Redundant(▬)</span> 양끝에서 급전 — 한쪽 광선로 장애 시 반대쪽에서 계속 표시`
+    : '';
   host.innerHTML = flow
-    + `<div class="fxTitle">Data Flow Diagram (Front View) — S-Box ${ig.boxes}대</div>`
+    + `<div class="fxTitle">Data Flow Diagram (Front View) — S-Box ${ig.boxes}대${dualTitle}</div>`
     + dataFlowSVG(r)
-    + DF_LEGEND
-    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로</div>`;
+    + dfLegendHTML(dual)
+    + `<div class="dfLegend">전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로${dualNote}</div>`;
 }
 
 // 09 전원 구성: 삼성 데이터시트 알고리즘(회로당=⌊V×A×0.8/Wcab⌋, 회로수=⌈총/회로당⌉). r.power만 사용.
@@ -1160,10 +1231,49 @@ $('#pvImgBtn')?.addEventListener('click', () => {
 $('#pvImgFile')?.addEventListener('change', e => {
   const f = e.target.files?.[0]; if (!f) return;
   const rd = new FileReader();
-  rd.onload = () => { pvImage = rd.result; syncPvToggles(); renderPreview(); };
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      pvImgAspect = (im.naturalWidth > 0 && im.naturalHeight > 0) ? im.naturalWidth / im.naturalHeight : null;
+      pvImage = rd.result; pvImgPanY = 0.5; pvShow.cellgrid = false;   // 이미지 넣으면 격자 기본 OFF
+      syncPvToggles(); renderPreview();
+    };
+    im.onerror = () => { pvImgAspect = null; pvImage = rd.result; pvImgPanY = 0.5; pvShow.cellgrid = false; syncPvToggles(); renderPreview(); };
+    im.src = rd.result;
+  };
   rd.readAsDataURL(f);
   e.target.value = '';   // 같은 파일 다시 선택 가능하게 초기화
 });
+// 이미지 세로 위치(팬) 드래그 — #stage에 위임(재렌더돼도 유지). LED 로컬↔화면 px는 rect로 환산.
+(function pvImagePan() {
+  const stage = $('#stage'); if (!stage) return;
+  let d = null;
+  stage.addEventListener('pointerdown', e => {
+    const img = e.target.closest?.('.rs3LedImg'); if (!img || !pvImage || !pvLedGeom) return;
+    const g = pvLedGeom; if (Math.abs(g.range) < 1) return;   // 넘침/모자람 없으면 이동 불필요
+    const led = img.closest('.rs3Led'); const rect = led.getBoundingClientRect();
+    const overflow = g.range > 0;
+    const min = overflow ? -g.range : 0, max = overflow ? 0 : (g.lh - g.ih);
+    const startTop = overflow ? (-g.range * pvImgPanY) : ((g.lh - g.ih) * pvImgPanY);
+    d = { y: e.clientY, top: startTop, scale: g.lh / rect.height, min, max, img, cur: startTop };
+    try { img.setPointerCapture(e.pointerId); } catch {}
+    e.preventDefault();
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!d) return;
+    let top = d.top + (e.clientY - d.y) * d.scale;
+    top = Math.max(d.min, Math.min(d.max, top));
+    d.cur = top; d.img.style.top = top.toFixed(1) + 'px';
+  });
+  const end = () => {
+    if (!d || !pvLedGeom) { d = null; return; }
+    const g = pvLedGeom, span = (g.range > 0) ? g.range : (g.lh - g.ih);
+    pvImgPanY = span ? Math.max(0, Math.min(1, (g.range > 0 ? -d.cur / g.range : d.cur / (g.lh - g.ih)))) : 0.5;
+    d = null;
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+})();
 syncPvToggles();
 
 // ── 03 미리보기 '크게 보기'(전체화면 팝업) ─────────────────────────────
