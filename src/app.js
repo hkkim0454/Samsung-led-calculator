@@ -359,7 +359,9 @@ function renderPreview() {
     if (isVW) inch = svm.display.screenSizeInch;
     else if (svm.model && /(\d+)/.test(svm.model)) inch = parseInt(svm.model.match(/(\d+)/)[1], 10);
     else if (svm.display.screenSizeCm != null) inch = Math.round(svm.display.screenSizeCm / 2.54);
-    svSizeInfo = { isVW, inch, N, M };
+    // 비디오월 전체(N×M 배열) 대각 인치 — 우상단 라벨에 '개별"(전체")'로 병기(이사 요청 2026-09-14).
+    const totInch = (isVW && pw != null && ph != null) ? Math.round(Math.sqrt((N * pw) ** 2 + (M * ph) ** 2) / 25.4) : null;
+    svSizeInfo = { isVW, inch, N, M, totInch };
     const nm = svm.model || ('삼성 ' + svm.display.screenSizeInch + '형');
     $('#pvModelName').textContent = isVW ? `${nm} · 비디오월 ${N}×${M}` : `${nm} · 단독형`;
     if (pw == null || ph == null) { stage.innerHTML = '<div class="previewEmpty">이 사이니지는 외형(mm) 데이터가 없어 미리보기를 표시할 수 없습니다.</div>'; return; }
@@ -634,7 +636,11 @@ function renderPreview() {
     // 인치 라벨 크기는 '개별 패널' 폭 기준(비디오월도 단독형과 동일 크기). 배열·장수 표기는 제거(이사 요청 2026-09-14).
     const perPanelW = Lw / (svSizeInfo.isVW ? Math.max(1, svSizeInfo.N) : 1);
     const pad = perPanelW * 0.03, fs = Math.max(9, perPanelW * 0.06);
-    svSizeHTML = `<div class="rs3SvSize" style="right:${pad}px;top:${pad}px;font-size:${fs}px">${svSizeInfo.inch}"</div>`;
+    // 비디오월 다판(N×M>1)이면 '개별"(전체")' 병기, 단독형·1판은 개별 인치만.
+    const label = (svSizeInfo.isVW && svSizeInfo.totInch != null && svSizeInfo.N * svSizeInfo.M > 1)
+      ? `${svSizeInfo.inch}"(${svSizeInfo.totInch}")`
+      : `${svSizeInfo.inch}"`;
+    svSizeHTML = `<div class="rs3SvSize" style="right:${pad}px;top:${pad}px;font-size:${fs}px">${label}</div>`;
   }
 
   stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${frameH}px;--fit:${effFit}">
@@ -916,8 +922,9 @@ const PROC_IMG_IDS = new Set([
 const procImgSrc = (id, side) => `img/processors/${id}-${side}.jpg`;
 
 // 프로세서 제품 이미지(앞/뒤) 뷰어 팝업. index.html을 건드리지 않게 동적 생성(포트 팝업과 동일 패턴).
-function openProcImgPopup(id) {
+function openProcImgPopup(id, side = 'front') {
   if (!PROC_IMG_IDS.has(id)) return;
+  if (side !== 'front' && side !== 'back') side = 'front';
   const p = PROCESSORS.find(x => x.id === id);
   const title = p ? `${p.manufacturer} · ${p.model}` : id;
   let el = document.querySelector('#procImgPop');
@@ -937,10 +944,10 @@ function openProcImgPopup(id) {
   el.innerHTML = `<div class="procImgCard" role="dialog" aria-modal="true" aria-label="${esc(title)} 제품 이미지">
       <div class="procImgHead">
         <div class="procImgTitle">${esc(title)}</div>
-        <div class="procImgTabs"><button type="button" class="tiny on" data-piside="front">앞면</button><button type="button" class="tiny" data-piside="back">뒷면</button></div>
+        <div class="procImgTabs"><button type="button" class="tiny${side === 'front' ? ' on' : ''}" data-piside="front">앞면</button><button type="button" class="tiny${side === 'back' ? ' on' : ''}" data-piside="back">뒷면</button></div>
         <button type="button" class="ppClose" data-piclose aria-label="닫기">✕</button>
       </div>
-      <div class="procImgBody"><img id="procImgImg" src="${procImgSrc(id, 'front')}" alt="${esc(title)} 제품 이미지" draggable="false"/></div>
+      <div class="procImgBody"><img id="procImgImg" src="${procImgSrc(id, side)}" alt="${esc(title)} 제품 이미지" draggable="false"/></div>
     </div>`;
   el.hidden = false;
 }
@@ -1007,13 +1014,19 @@ function openPortPopup(id) {
         el.querySelectorAll('[data-ppside]').forEach(b => b.classList.toggle('on', b === t));
         const im = el.querySelector('#ppImgImg');
         if (im) im.src = procImgSrc(el.dataset.pid, t.dataset.ppside);
+        return;
+      }
+      // 이미지를 누르면 큰 뷰어로 확대(현재 보고 있는 앞/뒤 면 유지, 이사 요청 2026-09-14).
+      if (e.target.closest('[data-ppzoom]')) {
+        const cur = el.querySelector('[data-ppside].on')?.dataset.ppside || 'front';
+        openProcImgPopup(el.dataset.pid, cur);
       }
     });
   }
   el.dataset.pid = id;
   const imgSecHTML = hasImg ? `<div class="ppImgSec">
       <div class="ppImgTabs"><button type="button" class="tiny on" data-ppside="front">앞면</button><button type="button" class="tiny" data-ppside="back">뒷면</button></div>
-      <div class="ppImgWrap"><img id="ppImgImg" src="${procImgSrc(id, 'front')}" alt="${esc(p.manufacturer)} ${esc(p.model)} 제품 이미지" draggable="false"/></div>
+      <div class="ppImgWrap" data-ppzoom role="button" tabindex="0" title="클릭하면 크게 보기"><img id="ppImgImg" src="${procImgSrc(id, 'front')}" alt="${esc(p.manufacturer)} ${esc(p.model)} 제품 이미지" draggable="false"/><span class="ppZoomHint" aria-hidden="true">⤢ 크게</span></div>
     </div>` : '';
   el.innerHTML = `<div class="portPopCard${hasImg ? ' ppWithImg' : ''}" role="dialog" aria-modal="true" aria-label="포트별 입출력 수량">
     <div class="ppHead">
