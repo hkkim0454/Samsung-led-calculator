@@ -795,8 +795,8 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .rs3SvSize .sub{display:block;font-size:.5em;font-weight:600;opacity:.92;margin-top:.15em}
 /* ↕ 손잡이: 디스플레이를 위아래로 끌어 하단 높이 조정. 화면상 크기 고정(1/fit 역보정). */
 .rs3HeightHandle{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:ns-resize;
-  width:calc(30px / var(--fit,1));height:calc(30px / var(--fit,1));border-radius:50%;
-  border:none;background:rgba(0,122,255,.92);color:#fff;font-size:calc(16px / var(--fit,1));font-weight:800;
+  width:calc(24px / var(--fit,1));height:calc(24px / var(--fit,1));border-radius:50%;
+  border:none;background:rgba(0,122,255,.92);color:#fff;font-size:calc(12.8px / var(--fit,1));font-weight:800;
   line-height:1;display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 8px rgba(10,20,60,.45);touch-action:none;user-select:none}
 .rs3HeightHandle:hover{background:var(--accent-2)}
