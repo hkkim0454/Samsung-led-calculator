@@ -1,13 +1,13 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=271';
-import { MODELS } from './models.js?v=271';
-import { PROCESSORS } from './processor-data.js?v=271';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=271';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=271';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=271';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=271';
-import { parseCasesText, normalizeDate } from './cases.js?v=271';
-import { SIGNAGE_MODELS } from './signage-data.js?v=271';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=272';
+import { MODELS } from './models.js?v=272';
+import { PROCESSORS } from './processor-data.js?v=272';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=272';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=272';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=272';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=272';
+import { parseCasesText, normalizeDate } from './cases.js?v=272';
+import { SIGNAGE_MODELS } from './signage-data.js?v=272';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -251,17 +251,42 @@ let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / '
 let pvImgPanY = 0.5;    // 세로 넘침 시 크롭 위치(0=위, 1=아래) — 가로 고정 모드.
 let pvImgPanX = 0.5;    // 가로 넘침 시 크롭 위치(0=좌, 1=우) — 세로 고정 모드.
 let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {mode, lw, lh, iw, ih, range} — 드래그 팬 계산용.
+let svCode = null;      // 03 미리보기에 표시할 사이니지 modelCode(있으면 LED 대신 사이니지 방을 그림). null=LED.
+let syncSignageCard = () => {};   // 10 사이니지 카드 재렌더(setupSignage에서 실제 함수로 대입).
 
 // 미리보기를 CSS 3D 1점 투시로 그린다(원근감 스펙 2026-09-12). 치수 값·계산은 engine 결과 그대로 쓰고
 //   위치만 3D 화면에 맞춰 투영한다. 벽 크기·모델·배열이 바뀌어도 동적으로 맞는다(고정 좌표 없음).
 function renderPreview() {
-  const m = models.find(x => x.id === selectedId);
   const stage = $('#stage');
-  $('#pvModelName').textContent = m ? m.name : '—';
-  if (!m) { stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
   const sW = spaceWmm(), sH = spaceHmm();
-  const r = computeConfig(m, sW, sH, opts());
-  if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
+  // 사이니지가 선택돼 있으면(svCode) LED 대신 3D 방 안에 사이니지를 그린다.
+  //   합성 r(캐비닛 배열과 같은 형태의 벽 정보)을 만들어 아래 기존 렌더를 그대로 재사용한다.
+  //   단독형=1×1, 비디오월=가로 N×세로 M(패널). 이미지 넣기·검은 테두리 등 LED 기능이 그대로 적용된다.
+  const svm = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
+  let m = null, r, svMode = false;
+  if (svm) {
+    svMode = true;
+    const isVW = svm.category === 'video_wall';
+    const N = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svCols')?.value) || 1))) : 1;
+    const M = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svRows')?.value) || 1))) : 1;
+    const pw = svm.physical.widthMm, ph = svm.physical.heightMm;
+    const nm = svm.model || ('삼성 ' + svm.display.screenSizeInch + '형');
+    $('#pvModelName').textContent = isVW ? `${nm} · 비디오월 ${N}×${M}` : `${nm} · 단독형`;
+    if (pw == null || ph == null) { stage.innerHTML = '<div class="previewEmpty">이 사이니지는 외형(mm) 데이터가 없어 미리보기를 표시할 수 없습니다.</div>'; return; }
+    const totalW = N * pw, totalH = M * ph;
+    r = {
+      fits: true, total: N * M, cols: N, rows: M,
+      actualW: totalW, actualH: totalH, marginW: Math.max(0, (sW - totalW) / 2),
+      resW: isVW ? 1920 * N : (svm.display.resolution.width || 0),
+      resH: isVW ? 1080 * M : (svm.display.resolution.height || 0),
+    };
+  } else {
+    m = models.find(x => x.id === selectedId);
+    $('#pvModelName').textContent = m ? m.name : '—';
+    if (!m) { stage.innerHTML = '<div class="previewEmpty">모델을 선택하세요</div>'; return; }
+    r = computeConfig(m, sW, sH, opts());
+    if (!r.fits) { stage.innerHTML = '<div class="previewEmpty">이 공간에는 캐비닛이 들어가지 않습니다.</div>'; return; }
+  }
 
   const mmL = v => fmt(Math.round(v)) + 'mm';
   const mL = v => fmt(Math.round(v) / 1000, v % 1000 === 0 ? 0 : 3) + ' m';   // m 표기(3.500 m)
@@ -469,7 +494,7 @@ function renderPreview() {
   //   가로선은 바닥 좌·우 모서리선과 만나고, 좌하단에서 L자로 코너가 맞물림(이사 요청).
   hDim(0, SWp, SHp, dWall, mL(sW), 'sub');
   vDim(0, 0, SHp, dWall, mL(sH), 'sub');
-  pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
+  pt(Lx + Lw / 2, Ly + Lh / 2, 0, svMode ? (r.total > 1 ? `${r.cols} × ${r.rows} = ${r.total} 장` : '단독형 1장') : `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
@@ -1443,7 +1468,7 @@ $('#modelList').addEventListener('click', e => {
   }
   // click anywhere else on the row -> select and calculate this model
   const row = e.target.closest('.modelRow[data-id]');
-  if (row) { selectedId = row.dataset.id; renderAll(); }
+  if (row) { selectedId = row.dataset.id; svCode = null; renderAll(); syncSignageCard(); }   // LED 모델 선택 시 03을 LED로 되돌림
 });
 $('#cmpBody').addEventListener('click', e => {
   const tr = e.target.closest('tr[data-id]'); if (!tr) return;
@@ -2143,7 +2168,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
 (function setupSignage() {
   const view = $('#svView'), summary = $('#svSummary'), arrCtl = $('#svArrayCtl'), picked = $('#svPicked');
   if (!view) return;
-  let svCode = null;   // 02 모델 라이브러리 팝업에서 고른 사이니지 modelCode
+  // svCode 는 모듈 전역(렌더프리뷰와 공유). 여기서 값만 읽고/바꾼다.
 
   const svLabel = (m) => (m.category === 'video_wall')
     ? `삼성 ${m.display.screenSizeInch}형 · 베젤 ${m.videoWall.bezelMm}mm · ${m.display.brightnessNit}nit`
@@ -2235,7 +2260,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
       el.addEventListener('click', e => {
         if (e.target === el || e.target.closest('[data-svclose]')) { el.hidden = true; return; }
         const it = e.target.closest('[data-svpick]');
-        if (it) { svCode = it.dataset.svpick; el.hidden = true; const c = $('#signageCard'); if (c) c.open = true; render(); c?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        if (it) { svCode = it.dataset.svpick; el.hidden = true; const c = $('#signageCard'); if (c) c.open = true; render(); renderPreview(); c?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       });
     }
     const list = SIGNAGE_MODELS.filter(m => m.category === category);
@@ -2256,7 +2281,8 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
 
   $('#svPickStandalone')?.addEventListener('click', () => openSvPick('standalone_signage'));
   $('#svPickVideoWall')?.addEventListener('click', () => openSvPick('video_wall'));
-  ['svCols', 'svRows'].forEach(id => $('#' + id)?.addEventListener('input', render));
+  ['svCols', 'svRows'].forEach(id => $('#' + id)?.addEventListener('input', () => { render(); renderPreview(); }));
   ['spaceW', 'spaceH'].forEach(id => $('#' + id)?.addEventListener('input', render));
+  syncSignageCard = render;   // 모듈 전역에 노출(LED 모델 선택 시 카드 갱신용)
   render();
 })();
