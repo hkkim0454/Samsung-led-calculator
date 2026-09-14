@@ -94,6 +94,9 @@ test('io/spec: QMC 소비전력 typicalW = 공식 On Mode 값(제공 7종)', () 
   assert.equal(byCode('LH65QMCEBGCXKR').power.typicalW, 187);
   assert.equal(byCode('LH75QMCEBGCXKR').power.typicalW, 214.5);
   assert.equal(byCode('LH85QMCEBGCXKR').power.typicalW, 330);
+  assert.equal(byCode('LH98QMCEBGCXKR').power.typicalW, 363);
+  assert.equal(byCode('LH98QMCEBGCXKR').features.soc, 'Tizen 7.0');
+  assert.equal(byCode('LH98QMCEBGCXKR').physical.bezelMm, 14.8);
 });
 test('spec: QM32C = FHD(1920x1080)·400nit·DP In 0(공식 No)', () => {
   const q = SIGNAGE_MODELS.find(m => m.modelCode === 'LH32QMCEBGCXKR');
