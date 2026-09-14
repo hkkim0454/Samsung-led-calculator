@@ -449,7 +449,8 @@ function renderPreview() {
   // 캐비닛 번호(2D 오버레이) — 열=맨 윗줄 칸, 행=맨 왼쪽 칸. 둘 다 칸의 '가운데'에 정렬(이사 요청).
   const dNum = Math.min(px(20), Dp * 0.02);
   let numHTML = '';
-  {
+  // 단독형 사이니지(단일 패널)는 '1' 같은 갯수 번호를 표시하지 않는다(이사 요청 2026-09-14). LED·비디오월은 유지.
+  if (!(svMode && svSizeInfo && !svSizeInfo.isVW)) {
     const c0 = proj(Lx + colWp * 0.5, Ly + rowHp * 0.5, dNum), c1 = proj(Lx + colWp * 1.5, Ly + rowHp * 0.5, dNum);
     const spCol = Math.abs(c1.x - c0.x), stepC = spCol >= 22 ? 1 : Math.max(1, Math.ceil(22 / Math.max(1, spCol)));
     for (let c = 0; c < r.cols; c++) {
@@ -674,7 +675,17 @@ function renderSignageReadout(box) {
     ? (d.screenSizeInch != null ? `${d.screenSizeInch}"` : '—')
     : (d.screenSizeCm != null ? `${d.screenSizeCm} cm` : '—');
   const resLabel = (d.resolution?.width != null) ? `${d.resolution.label || ''} ${fmt(d.resolution.width)}×${fmt(d.resolution.height)}`.trim() : '—';
-  const ioText = `HDMI In ${nz(io.hdmiIn)} · Out ${nz(io.hdmiOut)} / DP In ${nz(io.displayPortIn)} · Out ${nz(io.displayPortOut)} / USB ${nz(io.usb)} / RS232 In ${nz(io.rs232In)} · Out ${nz(io.rs232Out)} / RJ45 ${nz(io.rj45)}`;
+  // 입출력 단자: 커넥터별 칩으로 정리(정신없던 한 줄 나열 대신). In/Out 중 확인된 값만, 미확인 커넥터는 생략.
+  const ioPair = (inV, outV) => { const a = []; if (inV != null) a.push(`In ${inV}`); if (outV != null) a.push(`Out ${outV}`); return a.join(' · '); };
+  const ioChips = [];
+  if (io.hdmiIn != null || io.hdmiOut != null) ioChips.push(['HDMI', ioPair(io.hdmiIn, io.hdmiOut)]);
+  if (io.displayPortIn != null || io.displayPortOut != null) ioChips.push(['DisplayPort', ioPair(io.displayPortIn, io.displayPortOut)]);
+  if (io.usb != null) ioChips.push(['USB', String(io.usb)]);
+  if (io.rs232In != null || io.rs232Out != null) ioChips.push(['RS232', ioPair(io.rs232In, io.rs232Out)]);
+  if (io.rj45 != null) ioChips.push(['LAN(RJ45)', String(io.rj45)]);
+  const ioHTML = ioChips.length
+    ? `<div class="metric ioFull"><div class="k">입출력 단자</div><div class="ioRow">${ioChips.map(([k, v]) => `<span class="ioChip"><b>${k}</b>${v ? ' ' + esc(v) : ''}</span>`).join('')}</div></div>`
+    : `<div class="metric ioFull"><div class="k">입출력 단자</div><div class="v">—</div></div>`;
   const cells = [];
   if (isVW) {
     const totW = (p.widthMm != null) ? p.widthMm * N : null;
@@ -705,10 +716,9 @@ function renderSignageReadout(box) {
     { k: '명암비', v: nz(d.contrastRatio), u: '' },
     { k: '응답속도', v: nz(d.responseTimeMs), u: 'ms' },
     { k: '소비전력(typ/max)', v: `${nz(m.power?.typicalW)} / ${nz(m.power?.maxW)}`, u: 'W' },
-    { k: '입출력 단자', v: ioText, u: '' },
     { k: '모델코드', v: esc(m.modelCode), u: '' },
   );
-  box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('');
+  box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('') + ioHTML;
 }
 
 function renderReadout() {
@@ -822,12 +832,52 @@ function vpItemHTML(item) {
     <div class="vpHead">
       <span class="vpBadge">${item.label}</span>
       <span${nameAttr}>${esc(p.manufacturer)} · ${esc(p.model)}${fixed ? ' <span class="vpPortHint">포트▾</span>' : ''}</span>
+      ${PROC_IMG_IDS.has(p.id) ? `<button type="button" class="vpImgBtn" data-procimg="${esc(p.id)}" title="제품 앞/뒤 이미지 보기">이미지</button>` : ''}
       ${needsVer ? '<span class="vpVer" title="일부 사양이 공식 확인 전입니다">확인 필요 사양 포함</span>' : ''}
     </div>
     <ul class="vpChecksList">${checks}</ul>
   </div>`;
 }
 // 포트별 입출력 수량 팝업. index.html 마크업을 건드리지 않게 동적으로 생성.
+// 프로세서 제품 사진(앞/뒤)이 있는 모델 id. 파일: src/img/processors/<id>-front|back.jpg (이사 제공 이미지).
+const PROC_IMG_IDS = new Set([
+  'ns-h2', 'ns-h5', 'ns-h9', 'ns-h15', 'ns-h20',
+  'cl-universe-u6max', 'cl-universe-u9max', 'cl-x100pro-2u', 'cl-x100pro-4u', 'cl-x100pro-7u',
+  'aw-midra-pulse-4k', 'aw-midra-eikos-4k', 'aw-alta-zenith-100', 'aw-alta-zenith-200',
+  'aw-aquilon-rsalpha', 'aw-aquilon-rs1', 'aw-aquilon-rs2', 'aw-aquilon-rs3', 'aw-aquilon-rs4', 'aw-aquilon-cmini',
+]);
+const procImgSrc = (id, side) => `img/processors/${id}-${side}.jpg`;
+
+// 프로세서 제품 이미지(앞/뒤) 뷰어 팝업. index.html을 건드리지 않게 동적 생성(포트 팝업과 동일 패턴).
+function openProcImgPopup(id) {
+  if (!PROC_IMG_IDS.has(id)) return;
+  const p = PROCESSORS.find(x => x.id === id);
+  const title = p ? `${p.manufacturer} · ${p.model}` : id;
+  let el = document.querySelector('#procImgPop');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'procImgPop'; el.hidden = true; document.body.appendChild(el);
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.closest('[data-piclose]')) { el.hidden = true; return; }
+      const t = e.target.closest('[data-piside]');
+      if (t) {
+        el.querySelectorAll('[data-piside]').forEach(b => b.classList.toggle('on', b === t));
+        const im = el.querySelector('#procImgImg');
+        if (im) im.src = procImgSrc(el.dataset.pid, t.dataset.piside);
+      }
+    });
+  }
+  el.dataset.pid = id;
+  el.innerHTML = `<div class="procImgCard" role="dialog" aria-modal="true" aria-label="${esc(title)} 제품 이미지">
+      <div class="procImgHead">
+        <div class="procImgTitle">${esc(title)}</div>
+        <div class="procImgTabs"><button type="button" class="tiny on" data-piside="front">앞면</button><button type="button" class="tiny" data-piside="back">뒷면</button></div>
+        <button type="button" class="ppClose" data-piclose aria-label="닫기">✕</button>
+      </div>
+      <div class="procImgBody"><img id="procImgImg" src="${procImgSrc(id, 'front')}" alt="${esc(title)} 제품 이미지" draggable="false"/></div>
+    </div>`;
+  el.hidden = false;
+}
+
 function openPortPopup(id) {
   const p = PROCESSORS.find(x => x.id === id);
   if (!p) return;
@@ -1381,6 +1431,8 @@ $('#vpOut4k')?.addEventListener('input', () => { vpOut4kEdited = $('#vpOut4k').v
 $('#vpBuildProc')?.addEventListener('change', renderProcessors);
 // 포트 고정형 프로세서 이름 클릭/엔터 → 포트별 입출력 수량 팝업. Esc로 닫기.
 document.addEventListener('click', e => { const t = e.target.closest('[data-portproc]'); if (t) openPortPopup(t.dataset.portproc); });
+// 프로세서 카드 '이미지' 버튼 → 제품 앞/뒤 이미지 뷰어 팝업.
+document.addEventListener('click', e => { const t = e.target.closest('[data-procimg]'); if (t) openProcImgPopup(t.dataset.procimg); });
 // 공간 넓혀 확장(LED 배열 직접 지정 / 사이니지 비디오월 공용). 확인창 후 01 공간을 필요한 크기로 확정.
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-expand]'); if (!b) return;
@@ -1388,7 +1440,7 @@ document.addEventListener('click', e => {
   if (f && f.over) expandSpaceTo(f.needW, f.needH);
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { const el = document.querySelector('#portPop'); if (el && !el.hidden) el.hidden = true; }
+  if (e.key === 'Escape') { ['#portPop', '#procImgPop', '#svPickPop'].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) el.hidden = true; }); }
   else if ((e.key === 'Enter' || e.key === ' ') && e.target?.matches?.('[data-portproc]')) { e.preventDefault(); openPortPopup(e.target.dataset.portproc); }
 });
 setLedMax();   // 초기 max 속성 설정

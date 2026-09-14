@@ -419,7 +419,7 @@ tr.nofit td{color:var(--muted)}
 
 /* ---- Model library rows ---- */
 .modelList{display:flex;flex-direction:column;gap:9px}
-.modelRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:12px 14px;background:var(--field-fill);transition:border-color .15s, background .15s}
+.modelRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:8px 14px;background:var(--field-fill);transition:border-color .15s, background .15s}   /* 위아래 여백 30% 축소(12→8px, 이사 요청 2026-09-14) */
 .modelRow.sel{border-color:var(--accent);background:var(--accent-tint);box-shadow:0 0 0 3px var(--accent-tint)}
 .modelRow .mname{font-weight:700;font-size:14px;color:var(--ink)}
 .modelRow .mmeta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
@@ -608,6 +608,25 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppTitle{font-weight:700;font-size:16px;line-height:1.3}
 .ppClose{border:none;background:var(--field-fill);color:var(--ink-2);width:30px;height:30px;border-radius:999px;font-size:15px;cursor:pointer;flex:0 0 auto}
 .ppClose:hover{background:var(--line-2)}
+
+/* 프로세서 카드 '이미지' 버튼 + 앞/뒤 이미지 뷰어 팝업 */
+.vpImgBtn{border:1px solid var(--accent);background:var(--field-fill);color:var(--accent);font:inherit;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;cursor:pointer;flex:0 0 auto}
+.vpImgBtn:hover{background:var(--accent);color:#fff}
+#procImgPop{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(20,26,40,.55);backdrop-filter:saturate(140%) blur(4px);padding:16px}
+.procImgCard{width:min(860px,96vw);max-height:90vh;overflow:auto;background:var(--panel-solid);color:var(--ink);border-radius:var(--r-card);box-shadow:var(--shadow-pop);border:1px solid var(--line)}
+.procImgHead{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap}
+.procImgTitle{font-weight:700;font-size:15px;flex:1 1 auto;min-width:0}
+.procImgTabs{display:inline-flex;gap:6px;flex:0 0 auto}
+.procImgTabs .tiny{border:1px solid var(--line);background:var(--field-fill);color:var(--ink-2);cursor:pointer}
+.procImgTabs .tiny.on{background:var(--accent);color:#fff;border-color:transparent}
+.procImgBody{padding:0 16px 16px}
+.procImgBody img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff}
+
+/* 04 산출 스펙 입출력 단자: 커넥터별 칩(정신없던 한 줄 나열 정리, 이사 요청 2026-09-14) */
+.metric.ioFull{grid-column:1 / -1}
+.ioRow{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:6px}
+.ioChip{display:inline-flex;align-items:baseline;gap:5px;background:var(--field-fill);border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:12.5px;color:var(--ink)}
+.ioChip b{color:var(--accent);font-weight:700}
 /* 이미지 넣기 방식(가로/세로 고정) 선택 팝업 */
 /* 풀스크린(#pvZoom, z-index:1000)에서도 항상 맨 앞에 뜨도록 더 높은 z-index. */
 #imgModePop{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
@@ -771,7 +790,8 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .svSumGrid b{color:var(--ink)}
 
 /* 02 모델 라이브러리 → 사이니지 선택 진입 버튼 */
-.svPickRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+/* 사이니지 선택 줄: 위 라인필터·아래 모델 목록(IFR 등)과 넉넉히 띄운다(이사 요청 2026-09-14). */
+.svPickRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 18px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .svPickRowLbl{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px}
 /* 사이니지 선택 팝업 */
 #svPickPop{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
