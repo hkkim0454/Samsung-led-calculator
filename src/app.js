@@ -252,6 +252,7 @@ let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / '
 let pvImgPanY = 0.5;    // 세로 넘침 시 크롭 위치(0=위, 1=아래) — 가로 고정 모드.
 let pvImgPanX = 0.5;    // 가로 넘침 시 크롭 위치(0=좌, 1=우) — 세로 고정 모드.
 let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {mode, lw, lh, iw, ih, range} — 드래그 팬 계산용.
+let pvHeightDrag = null; // ↕ 손잡이 드래그용 {pxPerMm, maxBaseMM} — renderPreview가 매번 갱신.
 let svCode = null;      // 03 미리보기에 표시할 사이니지 modelCode(있으면 LED 대신 사이니지 방을 그림). null=LED.
 let syncSignageCard = () => {};   // 10 사이니지 카드 재렌더(setupSignage에서 실제 함수로 대입).
 
@@ -596,12 +597,19 @@ function renderPreview() {
     ledExtra = '<div class="rs3Glow"></div>';
   }
 
+  // ↕ 손잡이(디스플레이를 위아래로 드래그해 하단 높이 조정). 화면 픽셀→mm 환산값과 상한을 저장.
+  //   proj의 정면벽(d=0) 세로 배율 = 0.5, 화면 px = 캔버스 px × effFit → 화면 px/mm = 0.5 × S × effFit.
+  pvHeightDrag = { pxPerMm: 0.5 * S * effFit, maxBaseMM: Math.max(0, Math.round(sH - r.actualH)) };
+  const hcp = proj(Lx + Lw / 2, Ly + Lh / 2, 0);
+  const heightHandleHTML = `<button type="button" class="rs3HeightHandle" data-hhandle title="위아래로 끌어 하단 높이 조정" style="left:${hcp.x}px;top:${hcp.y}px">↕</button>`;
+
   // 사이니지 우상단 인치 라벨(흰색, 폰트 크기는 패널 가로에 비례). 비디오월은 배열·장수도 작게 함께 표기(제안).
   let svSizeHTML = '';
   if (svSizeInfo && svSizeInfo.inch != null) {
-    const pad = Lw * 0.03, fs = Math.max(9, Lw * 0.06);
-    const sub = svSizeInfo.isVW ? `<span class="sub">${svSizeInfo.N}×${svSizeInfo.M} · ${svSizeInfo.N * svSizeInfo.M}장</span>` : '';
-    svSizeHTML = `<div class="rs3SvSize" style="right:${pad}px;top:${pad}px;font-size:${fs}px">${svSizeInfo.inch}"${sub}</div>`;
+    // 인치 라벨 크기는 '개별 패널' 폭 기준(비디오월도 단독형과 동일 크기). 배열·장수 표기는 제거(이사 요청 2026-09-14).
+    const perPanelW = Lw / (svSizeInfo.isVW ? Math.max(1, svSizeInfo.N) : 1);
+    const pad = perPanelW * 0.03, fs = Math.max(9, perPanelW * 0.06);
+    svSizeHTML = `<div class="rs3SvSize" style="right:${pad}px;top:${pad}px;font-size:${fs}px">${svSizeInfo.inch}"</div>`;
   }
 
   stage.innerHTML = `<div class="rs3Frame ${cls}" style="height:${frameH}px;--fit:${effFit}">
@@ -632,6 +640,7 @@ function renderPreview() {
       <div class="rs3Overlay">
         ${dims.join('')}
         ${numHTML}
+        ${heightHandleHTML}
         <div class="rs3Dlbl person" style="left:${clx(personFoot.x)}px;top:${cly(personFoot.y + 14)}px;transform:translate(-50%,-50%)">키 170 cm</div>
       </div>
     </div>
@@ -1517,6 +1526,27 @@ $('#vpBuildProc')?.addEventListener('change', renderProcessors);
 document.addEventListener('click', e => { const t = e.target.closest('[data-portproc]'); if (t) openPortPopup(t.dataset.portproc); });
 // 프로세서 카드 '이미지' 버튼 → 제품 앞/뒤 이미지 뷰어 팝업.
 document.addEventListener('click', e => { const t = e.target.closest('[data-procimg]'); if (t) openProcImgPopup(t.dataset.procimg); });
+// ↕ 손잡이: 03 미리보기의 디스플레이를 위아래로 끌어 '디스플레이 하단 높이'를 조정(LED·단독형·비디오월 공통).
+(function setupHeightDrag() {
+  let dragging = false, startY = 0, startBase = 0, pxPerMm = 1;
+  document.addEventListener('pointerdown', e => {
+    const h = e.target.closest('[data-hhandle]'); if (!h || !pvHeightDrag) return;
+    dragging = true; startY = e.clientY; startBase = num($('#baseHeight')?.value) || 0;
+    pxPerMm = pvHeightDrag.pxPerMm || 1;
+    e.preventDefault(); try { h.setPointerCapture(e.pointerId); } catch {}
+  });
+  document.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const maxB = (pvHeightDrag?.maxBaseMM) || 0;   // 위로 끌면 하단 높이 증가(화면 y 감소)
+    let nb = startBase + (startY - e.clientY) / pxPerMm;
+    nb = Math.max(0, Math.min(maxB, Math.round(nb)));
+    const el = $('#baseHeight'); if (el) el.value = nb;
+    setLedMax(); renderPreview();
+  });
+  const end = () => { if (dragging) { dragging = false; renderAll(); } };
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
+})();
 // 공간 넓혀 확장(LED 배열 직접 지정 / 사이니지 비디오월 공용). 확인창 후 01 공간을 필요한 크기로 확정.
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-expand]'); if (!b) return;
