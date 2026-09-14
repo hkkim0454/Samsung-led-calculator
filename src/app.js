@@ -199,7 +199,8 @@ function opts() {
   const sboxSpares = sboxSparesOpt();
   const baseHeight = num($('#baseHeight')?.value);   // 바닥에서 LED 아래까지(mm)
   const common = { redundancy, cs4b, gbicFB, spareRate, sboxSpares, baseHeight };
-  if (mode === 'manual') return { mode: 'manual', cols: num($('#manCols').value), rows: num($('#manRows').value), ...common };
+  // 배열 직접 지정: 입력칸엔 요청값을 그대로 두되(확장 안내용), 계산·미리보기는 공간에 들어가는 최대치로 제한.
+  if (mode === 'manual') { const f = ledManualFit(); return { mode: 'manual', cols: f ? f.cols : num($('#manCols').value), rows: f ? f.rows : num($('#manRows').value), ...common }; }
   // 자동 채움: ② LED 설치 크기(비우면 벽면 = 세로는 하단 높이 위)에 캐비닛을 채운다.
   const lw = num($('#ledW')?.value) || spaceWmm();
   const lh = num($('#ledH')?.value) || Math.max(0, spaceHmm() - baseHeight);
@@ -254,6 +255,66 @@ let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {mode, lw, lh, iw, ih, ra
 let svCode = null;      // 03 미리보기에 표시할 사이니지 modelCode(있으면 LED 대신 사이니지 방을 그림). null=LED.
 let syncSignageCard = () => {};   // 10 사이니지 카드 재렌더(setupSignage에서 실제 함수로 대입).
 
+// 배열을 공간 밖으로 넓혀 확장할 때 확보할 좌우 여백(각 변, mm). 이사 요청 2026-09-14: 좌우 500~600mm 고정.
+const EXPAND_SIDE_MARGIN_MM = 500;
+
+// 사이니지 배치 계산(공용): 요청 장수(reqN×reqM)를 공간 안에 들어가는 최대치(N×M)로 자동 제한하고,
+//   요청대로 두려면 필요한 공간(needW×needH mm, 좌우 여백 고정·화면 하단 높이 유지)을 함께 돌려준다.
+//   renderPreview(3D 배치)와 사이니지 요약(안내·확장 버튼)이 같은 값을 쓰도록 한 곳에서 계산한다.
+function computeSvFit() {
+  const m = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
+  if (!m) return null;
+  const isVW = m.category === 'video_wall';
+  const pw = m.physical.widthMm, ph = m.physical.heightMm;
+  const bh = Math.max(0, num($('#baseHeight')?.value));
+  const reqN = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svCols')?.value) || 1))) : 1;
+  const reqM = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svRows')?.value) || 1))) : 1;
+  if (pw == null || ph == null) return { m, isVW, pw: null, ph: null, reqN, reqM, N: reqN, M: reqM, over: false };
+  const sW = spaceWmm(), sH = spaceHmm();
+  const maxN = Math.floor(sW / pw), maxM = Math.floor(Math.max(0, sH - bh) / ph);
+  const N = isVW ? Math.min(reqN, Math.max(1, maxN)) : 1;   // 최소 1장은 표시(패널이 공간보다 커도)
+  const M = isVW ? Math.min(reqM, Math.max(1, maxM)) : 1;
+  const over = isVW && (N < reqN || M < reqM || maxN < 1 || maxM < 1);   // 패널 1장도 안 들어가는 경우 포함
+  const needW = reqN * pw + 2 * EXPAND_SIDE_MARGIN_MM;      // 좌우 여백 고정
+  const needH = bh + reqM * ph;                            // 화면 하단 높이(bh)는 그대로 유지, 위로만 확장
+  return { m, isVW, pw, ph, reqN, reqM, N, M, maxN, maxM, over, needW, needH, bh };
+}
+
+// LED '배열 직접 지정' 계산(공용): 요청 열·행을 공간에 들어가는 최대치로 제한하고, 요청대로 두려면
+//   필요한 공간(needW×needH mm)을 함께 돌려준다. opts()·clampManualArray()·확장 안내가 공유.
+function ledManualFit() {
+  if (mode !== 'manual') return null;
+  const m = models.find(x => x.id === selectedId);
+  if (!m) return null;
+  const bh = Math.max(0, num($('#baseHeight')?.value));
+  const fit = computeConfig(m, spaceWmm(), spaceHmm(), { mode: 'fill', baseHeight: bh });
+  const maxC = fit.cols || 0, maxR = fit.rows || 0;
+  const reqC = Math.max(0, Math.floor(num($('#manCols')?.value) || 0));
+  const reqR = Math.max(0, Math.floor(num($('#manRows')?.value) || 0));
+  const cols = maxC > 0 ? Math.min(reqC, maxC) : reqC;
+  const rows = maxR > 0 ? Math.min(reqR, maxR) : reqR;
+  const over = (maxC > 0 && reqC > maxC) || (maxR > 0 && reqR > maxR);
+  const clr = frameClearanceMm(m.series);
+  const needW = reqC * m.cabW + 2 * Math.max(EXPAND_SIDE_MARGIN_MM, clr);   // 좌우 여백 고정(구조틀 여백보다 큼)
+  const needH = bh + reqR * m.cabH + 2 * clr;                               // 화면 하단 높이 유지, 위로만 확장(+구조틀 여백)
+  return { m, reqC, reqR, maxC, maxR, cols, rows, over, needW, needH, bh };
+}
+
+// 확장 버튼: 공간확정 여부를 물어(confirm) 승인하면 01 설치 공간(가로·세로)을 필요한 크기로 바꾼다.
+//   0.1 m 단위로 올림. 화면 하단 높이는 건드리지 않는다.
+function expandSpaceTo(needW, needH) {
+  const wM = Math.ceil(needW / 100) / 10;   // mm → m, 0.1 m 올림
+  const hM = Math.ceil(needH / 100) / 10;
+  const ok = window.confirm(`설치 공간을 가로 ${wM.toFixed(1)} m × 세로 ${hM.toFixed(1)} m 로 확정하고 배열을 확장할까요?\n(좌우 여백 각 ${EXPAND_SIDE_MARGIN_MM} mm 확보 · 화면 하단 높이는 그대로 유지)`);
+  if (!ok) return;
+  const wEl = $('#spaceW'), hEl = $('#spaceH');
+  if (wEl) wEl.value = wM.toFixed(1);
+  if (hEl) hEl.value = hM.toFixed(1);
+  setLedMax();
+  renderAll();
+  syncSignageCard();
+}
+
 // 미리보기를 CSS 3D 1점 투시로 그린다(원근감 스펙 2026-09-12). 치수 값·계산은 engine 결과 그대로 쓰고
 //   위치만 3D 화면에 맞춰 투영한다. 벽 크기·모델·배열이 바뀌어도 동적으로 맞는다(고정 좌표 없음).
 function renderPreview() {
@@ -262,14 +323,14 @@ function renderPreview() {
   // 사이니지가 선택돼 있으면(svCode) LED 대신 3D 방 안에 사이니지를 그린다.
   //   합성 r(캐비닛 배열과 같은 형태의 벽 정보)을 만들어 아래 기존 렌더를 그대로 재사용한다.
   //   단독형=1×1, 비디오월=가로 N×세로 M(패널). 이미지 넣기·검은 테두리 등 LED 기능이 그대로 적용된다.
-  const svm = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
+  const svf = svCode ? computeSvFit() : null;
+  const svm = svf ? svf.m : null;
   let m = null, r, svMode = false;
   if (svm) {
     svMode = true;
-    const isVW = svm.category === 'video_wall';
-    const N = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svCols')?.value) || 1))) : 1;
-    const M = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svRows')?.value) || 1))) : 1;
-    const pw = svm.physical.widthMm, ph = svm.physical.heightMm;
+    const isVW = svf.isVW;
+    const N = svf.N, M = svf.M;   // 공간에 들어가는 최대치로 제한된 장수(초과분은 잘림 — 이사 요청)
+    const pw = svf.pw, ph = svf.ph;
     const nm = svm.model || ('삼성 ' + svm.display.screenSizeInch + '형');
     $('#pvModelName').textContent = isVW ? `${nm} · 비디오월 ${N}×${M}` : `${nm} · 단독형`;
     if (pw == null || ph == null) { stage.innerHTML = '<div class="previewEmpty">이 사이니지는 외형(mm) 데이터가 없어 미리보기를 표시할 수 없습니다.</div>'; return; }
@@ -629,6 +690,12 @@ function renderReadout() {
   if (r.fits && !r.is169 && r.res169W > 0) nt.innerHTML += `<div class="notice info">16:9가 아닌 구성(슈퍼와이드 등)입니다. 16:9 콘텐츠 최대 해상도는 ${fmt(r.res169W)} × ${fmt(r.res169H)} px입니다.</div>`;
   if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
   if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(SBOX) 입력 용량 정보가 없어 SBOX 수량을 산출할 수 없습니다.</div>`;
+  // 배열 직접 지정에서 요청 배열이 공간을 넘으면: 최대치로 맞춰 표시하고, 공간을 넓혀 요청대로 확장하는 버튼을 제공.
+  const lf = ledManualFit();
+  if (lf && lf.over) {
+    nt.innerHTML += `<div class="notice warn fitExpand">요청 배열 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 현재 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
+      + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></div>`;
+  }
   const d = cabinetResolution(m);
   if (Math.abs(m.cabW / m.pitch - d.resW) > 1 || Math.abs(m.cabH / m.pitch - d.resH) > 1)
     nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
@@ -1212,11 +1279,12 @@ function clampBaseHeight() {
 //   최대 = 자동 채움(벽면−하단높이, 구조틀 여백 반영)의 열·행. 그 이하로 입력값을 제한하고 max도 맞춘다.
 function clampManualArray() {
   if (mode !== 'manual') return;
-  const m = models.find(x => x.id === selectedId); if (!m) return;
-  const fit = computeConfig(m, spaceWmm(), spaceHmm(), { mode: 'fill', baseHeight: num($('#baseHeight').value) });
+  const f = ledManualFit(); if (!f) return;
+  // 입력값은 요청 그대로 유지(확장 안내에 필요)하고, 스테퍼 상한(max)만 갱신한다.
+  //   미리보기·계산은 opts()에서 공간 최대치로 제한하므로 배열이 공간을 넘지 않는다.
   const cEl = $('#manCols'), rEl = $('#manRows');
-  if (cEl && fit.cols > 0) { cEl.max = fit.cols; if (num(cEl.value) > fit.cols) cEl.value = fit.cols; }
-  if (rEl && fit.rows > 0) { rEl.max = fit.rows; if (num(rEl.value) > fit.rows) rEl.value = fit.rows; }
+  if (cEl && f.maxC > 0) cEl.max = f.maxC;
+  if (rEl && f.maxR > 0) rEl.max = f.maxR;
 }
 // 벽면·하단 높이 편집: LED 입력칸의 max만 갱신하고 값은 보존(편집 중 LED 세로가 0으로 눌러붙지 않게).
 ['spaceW', 'spaceH', 'baseHeight'].forEach(id => $('#' + id)?.addEventListener('input', () => { setLedMax(); renderAll(); }));
@@ -1234,6 +1302,12 @@ $('#vpOut4k')?.addEventListener('input', () => { vpOut4kEdited = $('#vpOut4k').v
 $('#vpBuildProc')?.addEventListener('change', renderProcessors);
 // 포트 고정형 프로세서 이름 클릭/엔터 → 포트별 입출력 수량 팝업. Esc로 닫기.
 document.addEventListener('click', e => { const t = e.target.closest('[data-portproc]'); if (t) openPortPopup(t.dataset.portproc); });
+// 공간 넓혀 확장(LED 배열 직접 지정 / 사이니지 비디오월 공용). 확인창 후 01 공간을 필요한 크기로 확정.
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-expand]'); if (!b) return;
+  const f = b.dataset.expand === 'sv' ? computeSvFit() : ledManualFit();
+  if (f && f.over) expandSpaceTo(f.needW, f.needH);
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { const el = document.querySelector('#portPop'); if (el && !el.hidden) el.hidden = true; }
   else if ((e.key === 'Enter' || e.key === ' ') && e.target?.matches?.('[data-portproc]')) { e.preventDefault(); openPortPopup(e.target.dataset.portproc); }
@@ -2192,16 +2266,14 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
     $('#svRepick')?.addEventListener('click', () => openSvPick(m.category));
     $('#svClear')?.addEventListener('click', () => { svCode = null; render(); renderPreview(); });
     if (arrCtl) arrCtl.hidden = !isVW;
-    const N = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svCols').value) || 1))) : 1;
-    const M = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svRows').value) || 1))) : 1;
     // 요약(3D는 renderPreview가 그림). 단독형 외형 미확인이면 안내.
     if (m.physical.widthMm == null || m.physical.heightMm == null) {
       summary.innerHTML = `<span class="notice warn">외형(mm) 데이터가 없어 실제 크기 배치를 표시할 수 없습니다.</span>`;
       return;
     }
-    const spaceW = spaceWmm(), spaceH = spaceHmm();
+    const f = computeSvFit();                         // 공간에 맞춘 N×M(초과분 제한) + 확장 필요 공간
+    const N = f.N, M = f.M;
     const totalW = N * m.physical.widthMm, totalH = M * m.physical.heightMm;
-    const over = (spaceW > 0 && spaceH > 0 && (totalW > spaceW + 0.5 || totalH > spaceH + 0.5));
     const weightKg = (m.physical.weightKg != null) ? m.physical.weightKg * N * M : null;
     const resW = (m.display.resolution.width != null) ? m.display.resolution.width * (isVW ? N : 1) : null;
     const resH = (m.display.resolution.height != null) ? m.display.resolution.height * (isVW ? M : 1) : null;
@@ -2210,7 +2282,9 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
       + `<span>전체 <b>${fmt(totalW)}×${fmt(totalH)}</b>mm</span>`
       + `<span>해상도 <b>${resW != null ? fmt(resW) + '×' + fmt(resH) : '—'}</b></span>`
       + `<span>무게 <b>${weightKg != null ? fmt(weightKg, 1) + 'kg' : '—'}</b></span>`
-      + (over ? ` <span class="notice warn">공간(${fmt(spaceW)}×${fmt(spaceH)}mm) 초과</span>` : '');
+      + (f.over ? ` <span class="notice warn fitExpand">`
+        + ((N < f.reqN || M < f.reqM) ? `요청 <b>${f.reqN}×${f.reqM}</b> 은(는) 공간을 넘어 <b>${N}×${M}</b> 로 맞췄습니다. ` : `패널이 현재 공간보다 큽니다. `)
+        + `<button type="button" class="tiny primary" data-expand="sv">공간 넓혀 ${f.reqN}×${f.reqM} 로 확장</button></span>` : '');
   }
 
   // 02 모델 라이브러리 → 사이니지 선택 팝업(동적 생성). 종류별 모델 목록에서 고른다.

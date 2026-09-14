@@ -736,6 +736,10 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 /* LED 격자 OFF → 그냥 검정(픽셀 텍스처·이음새 제거) */
 .rs3Frame.noCellGrid .rs3Grid>i{background:#0a0c10!important}
 
+/* 공간 초과 시 '공간 넓혀 확장' 안내 — 문구와 버튼이 한 줄에 자연스럽게 붙고 좁으면 줄바꿈. */
+.notice.fitExpand{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.notice.fitExpand .tiny{margin:0}
+
 /* 사이니지(단독형·비디오월): LED 픽셀 매트릭스 대신 예전 LED 디자인의 '그라데이션 블록'으로(이사 요청 2026-09-14).
    단독형=한 판, 비디오월=베젤 간격 있는 N×M 블록. LCD 화면 느낌(매끈한 그라데이션)으로 보이게 한다. */
 .rs3Frame.svPanel .rs3Grid>i{
