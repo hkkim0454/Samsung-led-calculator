@@ -600,8 +600,9 @@ function renderPreview() {
   // ↕ 손잡이(디스플레이를 위아래로 드래그해 하단 높이 조정). 화면 픽셀→mm 환산값과 상한을 저장.
   //   proj의 정면벽(d=0) 세로 배율 = 0.5, 화면 px = 캔버스 px × effFit → 화면 px/mm = 0.5 × S × effFit.
   pvHeightDrag = { pxPerMm: 0.5 * S * effFit, maxBaseMM: Math.max(0, Math.round(sH - r.actualH)) };
-  const hcp = proj(Lx + Lw / 2, Ly + Lh / 2, 0);
-  const heightHandleHTML = `<button type="button" class="rs3HeightHandle" data-hhandle title="위아래로 끌어 하단 높이 조정" style="left:${hcp.x}px;top:${hcp.y}px">↕</button>`;
+  // ↕ 손잡이는 디스플레이 우측(우측 벽면 쪽) 세로 중앙에 배치(이사 요청 2026-09-14).
+  const hcp = proj(Math.min(SWp, Lx + Lw + px(300)), Ly + Lh / 2, 0);
+  const heightHandleHTML = `<button type="button" class="rs3HeightHandle" data-hhandle title="위아래로 끌어 하단 높이 조정" style="left:${clx(hcp.x)}px;top:${cly(hcp.y)}px">↕</button>`;
 
   // 사이니지 우상단 인치 라벨(흰색, 폰트 크기는 패널 가로에 비례). 비디오월은 배열·장수도 작게 함께 표기(제안).
   let svSizeHTML = '';
