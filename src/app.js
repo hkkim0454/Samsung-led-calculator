@@ -1281,7 +1281,44 @@ function renderBuild(req, ranked) {
   </div>`;
 }
 
+// 06 비교표 LED용 헤더(사이니지 표시 후 되돌릴 때 사용).
+const LED_CMP_HEAD = '<th>모델</th><th>Pitch</th><th>배열</th><th>대각 (")</th><th>LED 크기 (m)</th><th>SBOX(Gbic)</th><th>해상도 (px)</th><th>16:9 해상도 (px)</th><th>최대전력 (kW)</th><th>중량 (kg)</th><th>밝기 (nit)</th><th>여백 (mm)</th>';
+
+// 사이니지 선택 시 06 모델별 비교에 해당 종류(단독형/비디오월) 제품 리스트를 보여준다(이사 요청 2026-09-14).
+function renderCompareSignage(head) {
+  const sel = SIGNAGE_MODELS.find(m => m.modelCode === svCode);
+  const cat = sel ? sel.category : 'standalone_signage';
+  if (head) head.innerHTML = '<th>모델</th><th>화면</th><th>해상도</th><th>밝기 (nit)</th><th>명암비</th><th>크기 (mm)</th><th>무게 (kg)</th><th>소비전력 (W)</th><th>패널</th>';
+  const body = $('#cmpBody'); body.innerHTML = '';
+  const nz = v => v == null ? '—' : v;
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === cat)) {
+    const d = m.display, p = m.physical;
+    let inch = (m.category === 'video_wall') ? d.screenSizeInch
+      : (m.model && /(\d+)/.test(m.model) ? parseInt(m.model.match(/(\d+)/)[1], 10) : null);
+    const name = (m.category === 'video_wall') ? `삼성 ${nz(d.screenSizeInch)}형` : (m.model || m.modelCode);
+    const size = (p.widthMm != null) ? `${fmt(p.widthMm)}×${fmt(p.heightMm)}×${nz(p.depthMm)}` : '—';
+    const res = (d.resolution?.width != null) ? `${d.resolution.label || ''} ${fmt(d.resolution.width)}×${fmt(d.resolution.height)}`.trim() : '—';
+    const tr = document.createElement('tr');
+    tr.className = 'rowbtn' + (m.modelCode === svCode ? ' pick' : '');
+    tr.dataset.svpick = m.modelCode;
+    tr.innerHTML = `
+      <td class="name">${esc(name)} <span class="muted-note">${esc(m.modelCode)}</span></td>
+      <td>${inch != null ? inch + '"' : '—'}</td>
+      <td>${res}</td>
+      <td>${nz(d.brightnessNit)}</td>
+      <td>${nz(d.contrastRatio)}</td>
+      <td>${size}</td>
+      <td>${p.weightKg != null ? fmt(p.weightKg, 1) : '—'}</td>
+      <td>${nz(m.power?.typicalW)}</td>
+      <td>${nz(d.panelType)}</td>`;
+    body.appendChild(tr);
+  }
+}
+
 function renderCompare() {
+  const head = document.querySelector('#cmpTable thead tr');
+  if (svCode) { renderCompareSignage(head); return; }
+  if (head) head.innerHTML = LED_CMP_HEAD;
   const sW = spaceWmm(), sH = spaceHmm();
   const cs4b = $('#useCS4B')?.checked ?? false;
   const rows = visibleModels().map(m => ({ m, r: computeConfig(m, sW, sH, { mode: 'fill', cs4b }) }));
@@ -1433,12 +1470,21 @@ function clampLedInputs() {
 // 하단 높이는 'LED가 벽면 안에 들어오는 최대치'(= 벽 세로 − LED 세로)까지만 허용한다.
 //   그 이상 올리면 입력칸에서 그 최대치로 되돌린다 → 미리보기 LED가 가운데로 튀지 않고 최고 위치를 유지.
 function clampBaseHeight() {
-  const m = models.find(x => x.id === selectedId); const el = $('#baseHeight');
-  if (!m || !el) return;
+  const el = $('#baseHeight'); if (!el) return;
   const sH = spaceHmm();
-  const r = computeConfig(m, spaceWmm(), sH, opts());
-  if (!r.fits || !(r.actualH > 0)) { el.removeAttribute('max'); return; }
-  const maxBase = Math.max(0, Math.round(sH - r.actualH));
+  let actualH = 0;
+  if (svCode) {
+    // 사이니지: 하단 높이 상한은 사이니지 패널(총 세로) 기준(이사 확인 2026-09-14: LED 기준으로 잘못 제한되던 버그).
+    const f = computeSvFit();
+    if (!f || f.ph == null) { el.removeAttribute('max'); return; }
+    actualH = f.M * f.ph;
+  } else {
+    const m = models.find(x => x.id === selectedId); if (!m) return;
+    const r = computeConfig(m, spaceWmm(), sH, opts());
+    if (!r.fits || !(r.actualH > 0)) { el.removeAttribute('max'); return; }
+    actualH = r.actualH;
+  }
+  const maxBase = Math.max(0, Math.round(sH - actualH));
   el.max = maxBase;
   if (num(el.value) > maxBase) el.value = maxBase;
 }
@@ -1720,6 +1766,8 @@ $('#modelList').addEventListener('click', e => {
   if (row) { selectedId = row.dataset.id; svCode = null; renderAll(); syncSignageCard(); }   // LED 모델 선택 시 03을 LED로 되돌림
 });
 $('#cmpBody').addEventListener('click', e => {
+  const svtr = e.target.closest('tr[data-svpick]');
+  if (svtr) { svCode = svtr.dataset.svpick; renderAll(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   const tr = e.target.closest('tr[data-id]'); if (!tr) return;
   selectedId = tr.dataset.id; renderAll();
 });
