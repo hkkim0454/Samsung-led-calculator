@@ -755,6 +755,7 @@ function renderSignageReadout(box) {
 
 function renderReadout() {
   const box = $('#readout'), nt = $('#notices'); nt.innerHTML = '';
+  box.classList.toggle('svSpec', !!svCode);   // 사이니지 스펙만 글자 20% 축소(이사 요청 2026-09-14)
   if (svCode) { renderSignageReadout(box); const vs = $('#vSplitInfo'); if (vs) vs.hidden = true; return; }
   const m = models.find(x => x.id === selectedId);
   if (!m) { box.innerHTML = ''; const vs = $('#vSplitInfo'); if (vs) vs.hidden = true; return; }
