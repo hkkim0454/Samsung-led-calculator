@@ -1,13 +1,13 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=275';
-import { MODELS } from './models.js?v=275';
-import { PROCESSORS } from './processor-data.js?v=275';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=275';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=275';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=275';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=275';
-import { parseCasesText, normalizeDate } from './cases.js?v=275';
-import { SIGNAGE_MODELS } from './signage-data.js?v=275';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=276';
+import { MODELS } from './models.js?v=276';
+import { PROCESSORS } from './processor-data.js?v=276';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=276';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=276';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=276';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=276';
+import { parseCasesText, normalizeDate } from './cases.js?v=276';
+import { SIGNAGE_MODELS } from './signage-data.js?v=276';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -2171,86 +2171,45 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
 //   signage-data.js를 읽어 공간(가로·세로)에 실제 크기로 배치해 보여준다(표시 전용).
 //   비디오월은 가로 N × 세로 M 장으로 이어붙여 크기를 키운다. LED 계산·프로세서 로직과 무관.
 (function setupSignage() {
-  const view = $('#svView'), summary = $('#svSummary'), arrCtl = $('#svArrayCtl'), picked = $('#svPicked');
-  if (!view) return;
-  // svCode 는 모듈 전역(렌더프리뷰와 공유). 여기서 값만 읽고/바꾼다.
+  const bar = $('#svBar'), summary = $('#svSummary'), arrCtl = $('#svArrayCtl'), picked = $('#svPicked');
+  if (!bar) return;
+  // svCode 는 모듈 전역(렌더프리뷰와 공유). 실제 3D 배치는 renderPreview가 그린다(여기선 컨트롤바+요약만).
 
   const svLabel = (m) => (m.category === 'video_wall')
     ? `삼성 ${m.display.screenSizeInch}형 · 베젤 ${m.videoWall.bezelMm}mm · ${m.display.brightnessNit}nit`
     : `${m.model} · 화면 ${m.display.screenSizeCm}cm · ${m.display.resolution.label}`;
 
-  // 공간(회색 점선 프레임)과 벽을 같은 중심에 놓고, 둘을 모두 담도록 스케일해서 앞면(front) 축소도로 그린다.
-  function drawWall(N, M, pw, ph, m, spaceW, spaceH) {
-    const totalW = N * pw, totalH = M * ph;
-    const boundW = Math.max(spaceW || 0, totalW), boundH = Math.max(spaceH || 0, totalH);
-    if (!(boundW > 0) || !(boundH > 0)) { view.innerHTML = '<div class="previewEmpty">공간(가로·세로)을 입력하세요.</div>'; return; }
-    const VW = 900, VH = 460, pad = 26;
-    const scale = Math.min((VW - pad * 2) / boundW, (VH - pad * 2) / boundH);
-    const X = x => pad + x * scale, Y = y => pad + y * scale;
-    const cx = boundW / 2, cy = boundH / 2;
-    let svg = `<svg class="svSvg" viewBox="0 0 ${VW} ${VH}" width="100%" preserveAspectRatio="xMidYMid meet">`;
-    // 공간 프레임(있을 때)
-    if (spaceW > 0 && spaceH > 0) {
-      const fx = X(cx - spaceW / 2), fy = Y(cy - spaceH / 2), fw = spaceW * scale, fh = spaceH * scale;
-      svg += `<rect x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" fill="none" stroke="#9aa4b8" stroke-width="1.2" stroke-dasharray="6 5"/>`;
-      svg += `<text x="${(fx + 4).toFixed(1)}" y="${(fy - 6).toFixed(1)}" font-size="12" fill="#6b7178">공간 ${fmt(spaceW)}×${fmt(spaceH)}mm</text>`;
-    }
-    // 벽 패널 타일(중앙)
-    const wx = cx - totalW / 2, wy = cy - totalH / 2;
-    for (let j = 0; j < M; j++) for (let i = 0; i < N; i++) {
-      const px = X(wx + i * pw), py = Y(wy + j * ph), w = pw * scale, h = ph * scale;
-      svg += `<rect x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="#1b2330" stroke="#05060a" stroke-width="0.7"/>`;
-      svg += `<rect x="${(px + 1).toFixed(1)}" y="${(py + 1).toFixed(1)}" width="${Math.max(0, w - 2).toFixed(1)}" height="${Math.max(0, h - 2).toFixed(1)}" fill="#223049" opacity="0.9"/>`;
-    }
-    // 벽 전체 외곽선
-    svg += `<rect x="${X(wx).toFixed(1)}" y="${Y(wy).toFixed(1)}" width="${(totalW * scale).toFixed(1)}" height="${(totalH * scale).toFixed(1)}" fill="none" stroke="#2f7ff6" stroke-width="1.5"/>`;
-    svg += `</svg>`;
-    view.innerHTML = svg;
-
-    // 요약
-    const over = (spaceW > 0 && spaceH > 0 && (totalW > spaceW + 0.5 || totalH > spaceH + 0.5));
-    const weightKg = (m.physical.weightKg != null) ? m.physical.weightKg * N * M : null;
-    const resW = (m.display.resolution.width != null) ? m.display.resolution.width * N : null;
-    const resH = (m.display.resolution.height != null) ? m.display.resolution.height * M : null;
-    summary.innerHTML =
-      `<div class="svSumRow"><b>${esc(m.modelCode)}</b>${m.productGroup ? ' · ' + esc(m.productGroup) : ''}${m.videoWall.bezelMm != null ? ' · 베젤 ' + m.videoWall.bezelMm + 'mm' : ''}</div>`
-      + `<div class="svSumGrid">`
-      + `<span>배열 <b>${N}×${M}</b> = ${N * M}장</span>`
-      + `<span>전체 크기 <b>${fmt(totalW)}×${fmt(totalH)}</b> mm</span>`
-      + `<span>해상도 <b>${resW != null ? fmt(resW) + '×' + fmt(resH) : '—'}</b> px</span>`
-      + `<span>총 무게 <b>${weightKg != null ? fmt(weightKg, 1) + ' kg' : '—'}</b></span>`
-      + `</div>`
-      + (over ? `<div class="notice warn">전체 크기가 입력한 공간(${fmt(spaceW)}×${fmt(spaceH)}mm)보다 큽니다. 장수를 줄이거나 공간을 키우세요.</div>` : '');
-  }
-
+  // 03 미리보기 위 컨트롤바(선택 모델·장수·요약)를 갱신한다. 3D 벽 자체는 renderPreview()가 그린다.
   function render() {
     const m = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
-    if (!m) {
-      if (picked) picked.innerHTML = '왼쪽 <b>02 모델 라이브러리</b>에서 <b>단독형</b> 또는 <b>비디오월</b>을 선택하세요.';
-      if (arrCtl) arrCtl.hidden = true;
-      view.innerHTML = '<div class="previewEmpty">02 모델 라이브러리에서 사이니지를 선택하면 여기에 배치됩니다.</div>';
-      summary.innerHTML = '';
-      return;
-    }
+    if (!m) { bar.hidden = true; return; }   // LED 모드 — 바 숨김
+    bar.hidden = false;
     const isVW = m.category === 'video_wall';
-    if (picked) {
-      picked.innerHTML = `${isVW ? '비디오월' : '단독형'} · <b>${esc(m.modelCode)}</b> <span class="muted-note">${esc(svLabel(m))}</span> <button type="button" class="tiny ghost" id="svRepick">다시 선택</button>`;
-      $('#svRepick')?.addEventListener('click', () => openSvPick(m.category));
-    }
+    picked.innerHTML = `${isVW ? '비디오월' : '단독형'} · <b>${esc(m.modelCode)}</b> <span class="muted-note">${esc(svLabel(m))}</span>`
+      + ` <button type="button" class="tiny ghost" id="svRepick">다시 선택</button>`
+      + ` <button type="button" class="tiny ghost" id="svClear">LED로</button>`;
+    $('#svRepick')?.addEventListener('click', () => openSvPick(m.category));
+    $('#svClear')?.addEventListener('click', () => { svCode = null; render(); renderPreview(); });
     if (arrCtl) arrCtl.hidden = !isVW;
-    const spaceW = spaceWmm(), spaceH = spaceHmm();
-    if (!isVW) {
-      if (m.physical.widthMm == null || m.physical.heightMm == null) {
-        view.innerHTML = `<div class="notice warn">이 단독형 모델은 <b>외형(mm) 데이터가 아직 없어</b> 실제 크기 배치를 표시할 수 없습니다.</div>`;
-        summary.innerHTML = `<div class="svSumRow"><b>${esc(m.model)}</b> · 화면 ${m.display.screenSizeCm}cm · ${fmt(m.display.resolution.width)}×${fmt(m.display.resolution.height)} ${esc(m.display.resolution.label)}</div>`;
-        return;
-      }
-      drawWall(1, 1, m.physical.widthMm, m.physical.heightMm, m, spaceW, spaceH);
+    const N = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svCols').value) || 1))) : 1;
+    const M = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svRows').value) || 1))) : 1;
+    // 요약(3D는 renderPreview가 그림). 단독형 외형 미확인이면 안내.
+    if (m.physical.widthMm == null || m.physical.heightMm == null) {
+      summary.innerHTML = `<span class="notice warn">외형(mm) 데이터가 없어 실제 크기 배치를 표시할 수 없습니다.</span>`;
       return;
     }
-    const N = Math.max(1, Math.min(30, Math.floor(num($('#svCols').value) || 1)));
-    const M = Math.max(1, Math.min(30, Math.floor(num($('#svRows').value) || 1)));
-    drawWall(N, M, m.physical.widthMm, m.physical.heightMm, m, spaceW, spaceH);
+    const spaceW = spaceWmm(), spaceH = spaceHmm();
+    const totalW = N * m.physical.widthMm, totalH = M * m.physical.heightMm;
+    const over = (spaceW > 0 && spaceH > 0 && (totalW > spaceW + 0.5 || totalH > spaceH + 0.5));
+    const weightKg = (m.physical.weightKg != null) ? m.physical.weightKg * N * M : null;
+    const resW = (m.display.resolution.width != null) ? m.display.resolution.width * (isVW ? N : 1) : null;
+    const resH = (m.display.resolution.height != null) ? m.display.resolution.height * (isVW ? M : 1) : null;
+    summary.innerHTML =
+      `<span>${isVW ? `배열 <b>${N}×${M}</b> = ${N * M}장` : '단독형 1장'}</span>`
+      + `<span>전체 <b>${fmt(totalW)}×${fmt(totalH)}</b>mm</span>`
+      + `<span>해상도 <b>${resW != null ? fmt(resW) + '×' + fmt(resH) : '—'}</b></span>`
+      + `<span>무게 <b>${weightKg != null ? fmt(weightKg, 1) + 'kg' : '—'}</b></span>`
+      + (over ? ` <span class="notice warn">공간(${fmt(spaceW)}×${fmt(spaceH)}mm) 초과</span>` : '');
   }
 
   // 02 모델 라이브러리 → 사이니지 선택 팝업(동적 생성). 종류별 모델 목록에서 고른다.
@@ -2265,7 +2224,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
       el.addEventListener('click', e => {
         if (e.target === el || e.target.closest('[data-svclose]')) { el.hidden = true; return; }
         const it = e.target.closest('[data-svpick]');
-        if (it) { svCode = it.dataset.svpick; el.hidden = true; const c = $('#signageCard'); if (c) c.open = true; render(); renderPreview(); c?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        if (it) { svCode = it.dataset.svpick; el.hidden = true; render(); renderPreview(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       });
     }
     const list = SIGNAGE_MODELS.filter(m => m.category === category);
@@ -2288,6 +2247,6 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
   $('#svPickVideoWall')?.addEventListener('click', () => openSvPick('video_wall'));
   ['svCols', 'svRows'].forEach(id => $('#' + id)?.addEventListener('input', () => { render(); renderPreview(); }));
   ['spaceW', 'spaceH'].forEach(id => $('#' + id)?.addEventListener('input', render));
-  syncSignageCard = render;   // 모듈 전역에 노출(LED 모델 선택 시 카드 갱신용)
+  syncSignageCard = render;   // 모듈 전역에 노출(LED 모델 선택 시 바 갱신용)
   render();
 })();
