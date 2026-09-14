@@ -1470,12 +1470,21 @@ function clampLedInputs() {
 // 하단 높이는 'LED가 벽면 안에 들어오는 최대치'(= 벽 세로 − LED 세로)까지만 허용한다.
 //   그 이상 올리면 입력칸에서 그 최대치로 되돌린다 → 미리보기 LED가 가운데로 튀지 않고 최고 위치를 유지.
 function clampBaseHeight() {
-  const m = models.find(x => x.id === selectedId); const el = $('#baseHeight');
-  if (!m || !el) return;
+  const el = $('#baseHeight'); if (!el) return;
   const sH = spaceHmm();
-  const r = computeConfig(m, spaceWmm(), sH, opts());
-  if (!r.fits || !(r.actualH > 0)) { el.removeAttribute('max'); return; }
-  const maxBase = Math.max(0, Math.round(sH - r.actualH));
+  let actualH = 0;
+  if (svCode) {
+    // 사이니지: 하단 높이 상한은 사이니지 패널(총 세로) 기준(이사 확인 2026-09-14: LED 기준으로 잘못 제한되던 버그).
+    const f = computeSvFit();
+    if (!f || f.ph == null) { el.removeAttribute('max'); return; }
+    actualH = f.M * f.ph;
+  } else {
+    const m = models.find(x => x.id === selectedId); if (!m) return;
+    const r = computeConfig(m, spaceWmm(), sH, opts());
+    if (!r.fits || !(r.actualH > 0)) { el.removeAttribute('max'); return; }
+    actualH = r.actualH;
+  }
+  const maxBase = Math.max(0, Math.round(sH - actualH));
   el.max = maxBase;
   if (num(el.value) > maxBase) el.value = maxBase;
 }
