@@ -608,6 +608,20 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppTitle{font-weight:700;font-size:16px;line-height:1.3}
 .ppClose{border:none;background:var(--field-fill);color:var(--ink-2);width:30px;height:30px;border-radius:999px;font-size:15px;cursor:pointer;flex:0 0 auto}
 .ppClose:hover{background:var(--line-2)}
+/* 포트 팝업에 제품 이미지 함께 표시 — 넓은 화면=좌우 나란히 / 모바일=위아래로 쌓임(반응형) */
+.portPopCard.ppWithImg{width:min(760px,94vw)}
+.ppWithImg .ppBody{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+.ppPorts{display:grid;gap:14px;min-width:0}
+.ppImgSec{min-width:0}
+.ppImgTabs{display:flex;gap:6px;margin-bottom:8px}
+.ppImgTabs .tiny{border:1px solid var(--line);background:var(--field-fill);color:var(--ink-2);cursor:pointer}
+.ppImgTabs .tiny.on{background:var(--accent);color:#fff;border-color:transparent}
+.ppImgWrap img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
+@media(max-width:600px){
+  .portPopCard.ppWithImg{width:min(430px,94vw)}
+  .ppWithImg .ppBody{grid-template-columns:1fr}      /* 모바일: 위=이미지 · 아래=포트 표로 쌓기 */
+  .ppImgWrap img{max-height:200px;object-fit:contain}  /* 이미지 높이 제한 → 아래 포트 표 공간 확보 */
+}
 
 /* 프로세서 카드 '이미지' 버튼 + 앞/뒤 이미지 뷰어 팝업 */
 .vpImgBtn{border:1px solid var(--accent);background:var(--field-fill);color:var(--accent);font:inherit;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;cursor:pointer;flex:0 0 auto}
