@@ -245,7 +245,7 @@ function moveModel(id, dir) {
 }
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
-const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true };
+const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true, handle: true };
 let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
 let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산).
 let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / 'height'=세로 고정(세로 꽉·좌우 이동).
@@ -258,6 +258,8 @@ let syncSignageCard = () => {};   // 10 사이니지 카드 재렌더(setupSigna
 
 // 배열을 공간 밖으로 넓혀 확장할 때 확보할 좌우 여백(각 변, mm). 이사 요청 2026-09-14: 좌우 500~600mm 고정.
 const EXPAND_SIDE_MARGIN_MM = 500;
+const LED_EXPAND_BOTTOM_MM = 500;   // LED 배열 직접 지정 확장 시 하단(바닥~디스플레이) 여백 = 하단 높이(이사 요청 2026-09-14)
+const LED_EXPAND_TOP_MM = 100;      // 상단(디스플레이 위~공간 위) 여백
 
 // 사이니지 배치 계산(공용): 요청 장수(reqN×reqM)를 공간 안에 들어가는 최대치(N×M)로 자동 제한하고,
 //   요청대로 두려면 필요한 공간(needW×needH mm, 좌우 여백 고정·화면 하단 높이 유지)을 함께 돌려준다.
@@ -295,35 +297,42 @@ function ledManualFit() {
   const cols = maxC > 0 ? Math.min(reqC, maxC) : reqC;
   const rows = maxR > 0 ? Math.min(reqR, maxR) : reqR;
   const over = (maxC > 0 && reqC > maxC) || (maxR > 0 && reqR > maxR);
-  const clr = frameClearanceMm(m.series);
-  const needW = reqC * m.cabW + 2 * Math.max(EXPAND_SIDE_MARGIN_MM, clr);   // 좌우 여백 고정(구조틀 여백보다 큼)
-  const needH = bh + reqR * m.cabH + 2 * clr;                               // 화면 하단 높이 유지, 위로만 확장(+구조틀 여백)
-  return { m, reqC, reqR, maxC, maxR, cols, rows, over, needW, needH, bh };
+  // 확장 시 여백(이사 요청 2026-09-14): 좌우 각 500 · 하단 500 · 상단 100.
+  //   하단 여백은 '디스플레이 하단 높이'(newBase)로 설정하고, 세로 공간 = 하단 500 + 배열 + 상단 100.
+  //   미리보기는 LED를 하단 높이에 맞춰 배치(centered=가로만)하므로 이 값이 그대로 500/100 여백이 된다.
+  const needW = reqC * m.cabW + 2 * EXPAND_SIDE_MARGIN_MM;                  // 좌우 여백 각 500
+  const needH = LED_EXPAND_BOTTOM_MM + reqR * m.cabH + LED_EXPAND_TOP_MM;  // 하단 500 + 배열 + 상단 100
+  const newBase = LED_EXPAND_BOTTOM_MM;                                    // 디스플레이 하단 높이 = 500
+  return { m, reqC, reqR, maxC, maxR, cols, rows, over, needW, needH, bh, newBase };
 }
 
 // 확장 버튼: 공간확정 여부를 물어(confirm) 승인하면 01 설치 공간(가로·세로)을 필요한 크기로 바꾼다.
 //   0.1 m 단위로 올림. 화면 하단 높이는 건드리지 않는다.
 // 공간 확대 확인 — 세련된 모달 팝업(네이티브 confirm 대체, 이사 요청 2026-09-14). LED 배열 직접 지정·비디오월 공통.
-function expandSpaceTo(needW, needH) {
+function expandSpaceTo(needW, needH, opts = {}) {
   const wM = Math.ceil(needW / 100) / 10, hM = Math.ceil(needH / 100) / 10;   // mm → m, 0.1 m 올림
+  const baseMm = opts.baseHeightMm;   // 지정 시 '디스플레이 하단 높이'도 함께 설정(LED 배열 직접 지정)
+  const note = opts.note || `좌우 여백 각 ${EXPAND_SIDE_MARGIN_MM}mm 확보 · 화면 하단 높이 유지`;
   let el = document.querySelector('#expandPop');
   if (!el) {
     el = document.createElement('div'); el.id = 'expandPop'; el.hidden = true; document.body.appendChild(el);
     el.addEventListener('click', e => {
       if (e.target === el || e.target.closest('[data-xpclose]')) { el.hidden = true; return; }
       if (e.target.closest('[data-xpok]')) {
-        const wEl = $('#spaceW'), hEl = $('#spaceH');
+        const wEl = $('#spaceW'), hEl = $('#spaceH'), bEl = $('#baseHeight');
         if (wEl) wEl.value = el.dataset.w; if (hEl) hEl.value = el.dataset.h;
+        if (bEl && el.dataset.base !== '') bEl.value = el.dataset.base;   // 하단 높이 자동 설정(있을 때만)
         el.hidden = true; setLedMax(); renderAll(); syncSignageCard();
       }
     });
   }
   el.dataset.w = wM.toFixed(1); el.dataset.h = hM.toFixed(1);
+  el.dataset.base = (baseMm != null) ? String(Math.round(baseMm)) : '';
   el.innerHTML = `<div class="xpCard" role="dialog" aria-modal="true" aria-label="공간 확대">
       <div class="xpIcon" aria-hidden="true">⤢</div>
       <div class="xpTitle">설치 공간을 넓힐까요?</div>
       <div class="xpBody">요청하신 배열이 현재 공간을 넘어섭니다.<br>설치 공간을 <b>가로 ${wM.toFixed(1)} m × 세로 ${hM.toFixed(1)} m</b> 로 넓혀<br>배열을 그대로 배치합니다.</div>
-      <div class="xpNote">좌우 여백 각 ${EXPAND_SIDE_MARGIN_MM}mm 확보 · 화면 하단 높이 유지</div>
+      <div class="xpNote">${note}</div>
       <div class="xpBtns"><button type="button" class="xpBtn ghost" data-xpclose>취소</button><button type="button" class="xpBtn primary" data-xpok>공간 넓히고 확장</button></div>
     </div>`;
   el.hidden = false;
@@ -615,7 +624,9 @@ function renderPreview() {
   pvHeightDrag = { pxPerMm: 0.5 * S * effFit, maxBaseMM: Math.max(0, Math.round(sH - r.actualH)) };
   // ↕ 손잡이는 우측 벽면 끝(공간 오른쪽 가장자리) 디스플레이 세로 중앙에 배치(이사 요청 2026-09-14).
   const hcp = proj(SWp, Ly + Lh / 2, 0);
-  const heightHandleHTML = `<button type="button" class="rs3HeightHandle" data-hhandle title="위아래로 끌어 하단 높이 조정" style="left:${clx(hcp.x)}px;top:${cly(hcp.y)}px">↕</button>`;
+  const heightHandleHTML = pvShow.handle
+    ? `<button type="button" class="rs3HeightHandle" data-hhandle title="위아래로 끌어 하단 높이 조정" style="left:${clx(hcp.x)}px;top:${cly(hcp.y)}px">↕</button>`
+    : '';   // '↕ 이동' 토글 끄면 손잡이 숨김(캡처 시 깔끔 — 치수는 그대로, 이사 요청 2026-09-14)
 
   // 사이니지 우상단 인치 라벨(흰색, 폰트 크기는 패널 가로에 비례). 비디오월은 배열·장수도 작게 함께 표기(제안).
   let svSizeHTML = '';
@@ -1565,8 +1576,16 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-proc
 // 공간 넓혀 확장(LED 배열 직접 지정 / 사이니지 비디오월 공용). 확인창 후 01 공간을 필요한 크기로 확정.
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-expand]'); if (!b) return;
-  const f = b.dataset.expand === 'sv' ? computeSvFit() : ledManualFit();
-  if (f && f.over) expandSpaceTo(f.needW, f.needH);
+  if (b.dataset.expand === 'sv') {
+    const f = computeSvFit();
+    if (f && f.over) expandSpaceTo(f.needW, f.needH);   // 사이니지 비디오월: 기존 규칙(좌우 500·하단 높이 유지)
+  } else {
+    const f = ledManualFit();   // LED 배열 직접 지정: 좌우·하단 500 / 상단 100 + 하단 높이 500 자동
+    if (f && f.over) expandSpaceTo(f.needW, f.needH, {
+      baseHeightMm: f.newBase,
+      note: `좌우·하단 여백 ${EXPAND_SIDE_MARGIN_MM}mm · 상단 ${LED_EXPAND_TOP_MM}mm · 디스플레이 하단 높이 ${LED_EXPAND_BOTTOM_MM}mm 로 설정`,
+    });
+  }
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { ['#portPop', '#procImgPop', '#svPickPop', '#expandPop'].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) el.hidden = true; }); }
@@ -1626,6 +1645,7 @@ function syncPvToggles() {
   set('grid', pvShow.grid);
   set('dims', pvShow.dims);
   set('cellgrid', pvShow.cellgrid);   // LED 셀 격자(끄면 이음새 없이 매끈)
+  set('handle', pvShow.handle);       // ↕ 이동 손잡이(끄면 캡처 시 안 찍힘)
   set('eye', pvShow.eye && pvShow.person, !pvShow.person);   // 사람 꺼지면 눈높이선 버튼도 꺼짐 표시
   const ib = $('#pvImgBtn');
   if (ib) { ib.classList.toggle('on', !!pvImage); ib.textContent = pvImage ? '이미지 제거' : '이미지 넣기'; }
