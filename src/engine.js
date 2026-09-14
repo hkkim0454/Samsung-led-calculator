@@ -274,7 +274,7 @@ export function computeConfig(model, spaceW, spaceH, opts = {}) {
     resW, resH, pixels,
     res169W, res169H, is169, diag169In,
     weightKg, maxW, typW, heatMaxBTU, heatTypBTU,
-    sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy,
+    sbox, sboxSpares, sboxWithSpares, gbic, controller, redundancy, gbicFB,
     ig, power,
     deadW, deadH, baseHeight,
     marginW: deadW / 2, marginH: deadH / 2, // centered mount

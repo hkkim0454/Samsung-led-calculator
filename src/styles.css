@@ -687,6 +687,8 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 .fxCable{fill:none;stroke:#2b2f8f;stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
 .fxStart{fill:#2b2f8f}
 .fxRedundant{fill:#e2001a}
+.fxLblBg{fill:#fff;opacity:.82}
+.fxLbl{fill:#111;text-anchor:middle;font-weight:700;font-family:inherit;dominant-baseline:alphabetic}
 .pxLine{stroke:#2b2f8f;stroke-width:2.4;stroke-linecap:round}
 .pxEnd{fill:#2b2f8f}
 .pxChev{fill:none;stroke:#2b2f8f;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}

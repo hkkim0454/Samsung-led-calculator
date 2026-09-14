@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=264';
-import { MODELS } from './models.js?v=264';
-import { PROCESSORS } from './processor-data.js?v=264';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=264';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=264';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=264';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=264';
-import { parseCasesText, normalizeDate } from './cases.js?v=264';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=265';
+import { MODELS } from './models.js?v=265';
+import { PROCESSORS } from './processor-data.js?v=265';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=265';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=265';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=265';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=265';
+import { parseCasesText, normalizeDate } from './cases.js?v=265';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -799,20 +799,24 @@ function fxCellSize(cols, rows) {
 // P19 Data Flow(Front View): 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형(serpentine) 영상/통신 배선 + 시작점(파란 점).
 function dataFlowSVG(r) {
   const ig = r.ig; if (!ig || !ig.regions.length) return '';
-  // CS4B 계열(광지빅) + 이중화면 각 신호 그룹을 양끝에서 급전(Primary ● / Redundant ▬)하는 광 I/G 이중화로 표시.
+  // CS4B 계열(광지빅)에서 광 이중화(Gbic 포워드/백워드, gbicFB) 또는 SBOX 이중화면 각 신호 그룹을
+  //   양끝에서 급전(Primary ● / Redundant ▬)하는 광 I/G 이중화로 표시.
   //   (삼성 MM015F P23/25 Data Flow Diagram: 같은 데이터 체인을 Primary·Redundant 두 끝에서 급전.)
-  const dual = !!(r.redundancy && r.gbic != null);
+  const dual = !!(r.gbic != null && (r.gbicFB || r.redundancy));
   const cs = fxCellSize(r.cols, r.rows), W = r.cols * cs, H = r.rows * cs;
   const cx = c => c * cs + cs / 2, cy = k => k * cs + cs / 2;
   const io = Math.max(5, cs * 0.34);
-  let cells = '', cables = '', groups = '';
+  let cells = '', cables = '', groups = '', labels = '';
   for (let rr = 0; rr < r.rows; rr++) for (let c = 0; c < r.cols; c++) {
     cells += `<rect class="fxCell" x="${c * cs}" y="${rr * cs}" width="${cs}" height="${cs}"/>`
       + `<rect class="fxIo" x="${(c * cs + (cs - io) / 2).toFixed(1)}" y="${(rr * cs + (cs - io) / 2).toFixed(1)}" width="${io.toFixed(1)}" height="${io.toFixed(1)}"/>`;
   }
+  let sboxIdx = 0;
   for (const rg of ig.regions) {
     if (rg.colStart == null) continue;
+    sboxIdx++;
     const x0 = rg.colStart * cs, y0 = rg.rowStart * cs, w = (rg.colEnd - rg.colStart + 1) * cs, h = (rg.rowEnd - rg.rowStart + 1) * cs;
+    const regCols = rg.colEnd - rg.colStart + 1;
     const pts = [];
     for (let ri = rg.rowStart; ri <= rg.rowEnd; ri++) {
       const cc = []; for (let c = rg.colStart; c <= rg.colEnd; c++) cc.push(c);
@@ -830,8 +834,19 @@ function dataFlowSVG(r) {
       cables += `<rect class="fxRedundant" x="${(e[0] - off - sq / 2).toFixed(1)}" y="${(e[1] - off - sq / 2).toFixed(1)}" width="${sq.toFixed(1)}" height="${sq.toFixed(1)}"/>`;
     }
     groups += `<rect class="fxGroup" x="${x0 + 1}" y="${y0 + 1}" width="${w - 2}" height="${h - 2}"/>`;
+    // 영역(=S-Box 신호 그룹) 하단에 작은 라벨. #N = S-Box 번호 + 담당 캐비닛 열 범위(1-based).
+    //   좁은(1열) 영역엔 글자가 안 들어가므로 짧은 '#N'만, 넓으면 전체 라벨을 쓰고 영역 폭을 넘지 않게 맞춘다.
+    const fsz = Math.max(7, Math.min(13, cs * 0.42));
+    const colTxt = regCols > 1 ? `${rg.colStart + 1}~${rg.colEnd + 1}열` : `${rg.colStart + 1}열`;
+    const full = `S-Box #${sboxIdx} · ${colTxt}`, short = `#${sboxIdx}`;
+    const charW = fsz * 0.56, avail = w - 6;
+    const lbl = (full.length * charW + 8 <= avail) ? full : short;
+    const lx = x0 + w / 2, ly = y0 + h - Math.max(2, cs * 0.14);
+    const lw = Math.min(avail, lbl.length * charW + 8), lh = fsz + 4;
+    labels += `<rect class="fxLblBg" x="${(lx - lw / 2).toFixed(1)}" y="${(ly - lh + 2).toFixed(1)}" width="${lw.toFixed(1)}" height="${lh.toFixed(1)}" rx="2"/>`
+      + `<text class="fxLbl" x="${lx.toFixed(1)}" y="${(ly - 1).toFixed(1)}" font-size="${fsz.toFixed(1)}">${esc(lbl)}</text>`;
   }
-  return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${cables}${groups}</svg></div>`;
+  return `<div class="fxWrap"><svg class="fx" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${cells}${cables}${groups}${labels}</svg></div>`;
 }
 // P18 Power Flow(Rear View): 캐비닛 격자 + 열별 데이지체인(길이 perDaisy) — 상단 파란 사각(라우팅 종단),
 //   세로 인터커넥트 케이블, 캐비닛별 회색 I/O, 하단 파란 꺾쇠(∧, 주 전원 입력).
@@ -889,7 +904,7 @@ function renderDataFlow() {
   const proc = dfTopProcessorName(r);
   // CS4B 계열 컨트롤러(광지빅 사용)면 S-Box → 광지빅(GBIC) → LED 경로를 흐름에 표시.
   const gbicNode = (r.gbic != null)
-    ? `<span class="dfArrow">→</span><span class="dfNode gbic">광지빅(GBIC) ${fmt(r.gbic)} SET</span>`
+    ? `<span class="dfArrow">→</span><span class="dfNode gbic">광지빅(GBIC) ${fmt(r.gbic)} SET${r.gbicFB ? ' <em class="muted-note">+광 이중화</em>' : ''}</span>`
     : '';
   const ctrlLbl = r.controller ? ` <em class="muted-note">${esc(r.controller)}</em>` : '';
   const flow = `<div class="dfFlow">
@@ -899,7 +914,7 @@ function renderDataFlow() {
     <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
   </div>`;
   // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + S-Box 그룹(빨간 테두리) + 뱀형 배선.
-  const dual = !!(r.redundancy && r.gbic != null);
+  const dual = !!(r.gbic != null && (r.gbicFB || r.redundancy));
   const dualTitle = dual ? ' · 광 I/G 이중화 (Primary/Redundant)' : '';
   const dualNote = dual
     ? ` · <b>광 I/G 이중화</b>: 각 그룹을 <span style="color:#2b2f8f">Primary(●)</span>·<span style="color:#e2001a">Redundant(▬)</span> 양끝에서 급전 — 한쪽 광선로 장애 시 반대쪽에서 계속 표시`
