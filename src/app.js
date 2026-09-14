@@ -2438,7 +2438,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
     let body;
     if (category === 'standalone_signage') {
       const grp = fam => list.filter(m => m.family === fam).map(svRow).join('');
-      body = `<div class="svPickGrp">QMC</div>${grp('QMC')}<div class="svPickGrp">QHC</div>${grp('QHC')}`;
+      body = `<div class="svPickGrp">QHC</div>${grp('QHC')}<div class="svPickGrp">QMC</div>${grp('QMC')}`;
     } else {
       const grp = pg => list.filter(m => m.productGroup === pg).map(svRow).join('');
       body = `<div class="svPickGrp">VM · 500nit</div>${grp('VM_500nit')}<div class="svPickGrp">VH · 700nit</div>${grp('VH_700nit')}`;
