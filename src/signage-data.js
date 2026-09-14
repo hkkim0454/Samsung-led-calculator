@@ -306,6 +306,14 @@ for (const m of SIGNAGE_MODELS) {
   m.features.vxt = false;
 }
 
+// 단독형 13종(QMC 8 + QHC 43~75C): MagicINFO·VXT 둘 다 지원(오너 확인 2026-09-14).
+//   QH115FX는 별도(VXT 확인, MagicINFO는 오너 미확정 → 그대로 유지).
+for (const m of SIGNAGE_MODELS) {
+  if (m.category !== 'standalone_signage' || m.modelCode === 'LH115QHFEBGXKR') continue;
+  m.features.magicInfo = true;
+  m.features.vxt = true;
+}
+
 // 허용값(검증 기준).
 export const SIGNAGE_CATEGORIES = Object.freeze(['standalone_signage', 'video_wall']);
 export const STANDALONE_FAMILIES = Object.freeze(['QMC', 'QHC']);
