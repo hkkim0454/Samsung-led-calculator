@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=268';
-import { MODELS } from './models.js?v=268';
-import { PROCESSORS } from './processor-data.js?v=268';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=268';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=268';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=268';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=268';
-import { parseCasesText, normalizeDate } from './cases.js?v=268';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=269';
+import { MODELS } from './models.js?v=269';
+import { PROCESSORS } from './processor-data.js?v=269';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=269';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=269';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=269';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=269';
+import { parseCasesText, normalizeDate } from './cases.js?v=269';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -846,13 +846,23 @@ function dataFlowSVG(r, layout, labelPrefix) {
       cables += `<rect class="fxRedundant" x="${(e[0] - off - sq / 2).toFixed(1)}" y="${(e[1] - off - sq / 2).toFixed(1)}" width="${sq.toFixed(1)}" height="${sq.toFixed(1)}"/>`;
     }
     groups += `<rect class="fxGroup" x="${x0 + 1}" y="${y0 + 1}" width="${w - 2}" height="${h - 2}"/>`;
-    // 영역(=S-Box 신호 그룹) 하단에 작은 라벨. #N = S-Box 번호 + 담당 캐비닛 열 범위(1-based).
-    //   좁은(1열) 영역엔 글자가 안 들어가므로 짧은 '#N'만, 넓으면 전체 라벨을 쓰고 영역 폭을 넘지 않게 맞춘다.
+    // 영역 하단 라벨. GBIC 모드면 'SBOX#<s>-<p> · GBIC #<n> · 열범위'(s=S-Box 번호, p=출력포트).
+    //   CS4B 1 S-Box = 4포트(Primary 1·2 + Redundant 3·4). GBIC 1개 = 1920×2160 = S-Box 출력포트 1개.
+    //   좁은 영역엔 안 들어가므로 길이 순으로 줄여 영역 폭에 맞춘다.
     const fsz = Math.max(6, Math.min(10, cs * 0.32));
     const colTxt = regCols > 1 ? `${rg.colStart + 1}~${rg.colEnd + 1}열` : `${rg.colStart + 1}열`;
-    const full = `${labelPrefix} #${sboxIdx} · ${colTxt}`, short = `#${sboxIdx}`;
+    let cands;
+    if (labelPrefix === 'GBIC') {
+      const sboxColsTotal = Math.max(1, Math.ceil(r.resW / 3840));   // S-Box 4K(3840×2160) 격자
+      const sboxCol = Math.floor(rg.px0 / 3840), sboxRow = Math.floor(rg.py0 / 2160);
+      const sboxNo = sboxRow * sboxColsTotal + sboxCol + 1;
+      const port = Math.floor((rg.px0 - sboxCol * 3840) / 1920) + 1;   // S-Box 안에서의 출력 포트(1·2 Primary)
+      cands = [`SBOX#${sboxNo}-${port} · GBIC #${sboxIdx} · ${colTxt}`, `SBOX#${sboxNo}-${port} · GBIC #${sboxIdx}`, `SBOX#${sboxNo}-${port}`, `#${sboxIdx}`];
+    } else {
+      cands = [`${labelPrefix} #${sboxIdx} · ${colTxt}`, `${labelPrefix} #${sboxIdx}`, `#${sboxIdx}`];
+    }
     const charW = fsz * 0.56, avail = w - 6;
-    const lbl = (full.length * charW + 8 <= avail) ? full : short;
+    const lbl = cands.find(c => c.length * charW + 8 <= avail) || cands[cands.length - 1];
     const lx = x0 + w / 2, ly = y0 + h - Math.max(2, cs * 0.14);
     const lw = Math.min(avail, lbl.length * charW + 8), lh = fsz + 4;
     labels += `<rect class="fxLblBg" x="${(lx - lw / 2).toFixed(1)}" y="${(ly - lh + 2).toFixed(1)}" width="${lw.toFixed(1)}" height="${lh.toFixed(1)}" rx="2"/>`
@@ -935,6 +945,10 @@ function renderDataFlow() {
   const dualNote = dual
     ? ` · <b>광 I/G 이중화</b>: 각 그룹을 <span style="color:#2b2f8f">Primary(●)</span>·<span style="color:#e2001a">Redundant(▬)</span> 양끝에서 급전 — 한쪽 광선로 장애 시 반대쪽에서 계속 표시`
     : '';
+  // CS4B S-Box 출력 포트 안내: 1 S-Box = GBIC 2개(=출력 4포트), Primary 1·2 + Redundant 3·4.
+  const portNote = (useGbic && dual)
+    ? ` · <b>S-Box 출력 포트</b>: Primary 1·2 + Redundant 3·4 (라벨 <code>SBOX#s-p</code> = S-Box s의 p번 포트)`
+    : (useGbic ? ` · 라벨 <code>SBOX#s-p</code> = S-Box s의 p번 출력 포트(GBIC 1개=1920×2160)` : '');
   const titleUnit = useGbic ? `광지빅(GBIC) ${layout.regions.length} SET` : `S-Box ${ig.boxes}대`;
   const capNote = useGbic
     ? `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · GBIC 1개 = <b>${fmt(layout.capW)}×${fmt(layout.capH)}</b>px(CS4B 광지빅 단위) · 빨간 그룹 = GBIC 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`
@@ -943,7 +957,7 @@ function renderDataFlow() {
     + `<div class="fxTitle">Data Flow Diagram (Front View) — ${titleUnit}${dualTitle}</div>`
     + dataFlowSVG(r, layout, groupTerm)
     + dfLegendHTML(dual, groupTerm)
-    + `<div class="dfLegend">${capNote}${dualNote}</div>`;
+    + `<div class="dfLegend">${capNote}${dualNote}${portNote}</div>`;
 }
 
 // 09 전원 구성: 삼성 데이터시트 알고리즘(회로당=⌊V×A×0.8/Wcab⌋, 회로수=⌈총/회로당⌉). r.power만 사용.
