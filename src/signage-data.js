@@ -93,11 +93,13 @@ function baseSchema() {
     features: {
       hdr: null,
       speakerW: null,
-      soc: null,
+      soc: null,        // 운영체제 버전 문자열(예: 'Tizen 7.0'). 미확인=null.
       tizen: null,
       wifi: null,
       bluetooth: null,
       ir: null,
+      magicInfo: null,  // MagicINFO 지원 여부(true/false), 미확인=null
+      vxt: null,        // VXT(Visual eXperience Transformation) 지원 여부, 미확인=null
     },
 
     verification: {
@@ -169,11 +171,11 @@ export const SIGNAGE_MODELS = [
   // ── QMC (Standalone, 8종) ──
   standalone('QMC', 'QM32C', 'LH32QMCEBGCXKR', 80.1, 1920, 1080, 'FHD', 400, '4000:1', 8),
   standalone('QMC', 'QM43C', 'LH43QMCEBGCXKR', 108, 3840, 2160, 'UHD', 500, '4000:1', 8),
-  standalone('QMC', 'QM50C', 'LH50QMCEBGCXKR', 125, 3840, 2160, 'UHD', 500, '4000:1', 8),
+  standalone('QMC', 'QM50C', 'LH50QMCEBGCXKR', 125, 3840, 2160, 'UHD', 500, '4000:1', 10),
   standalone('QMC', 'QM55C', 'LH55QMCEBGCXKR', 138, 3840, 2160, 'UHD', 500, '4000:1', 8),
   standalone('QMC', 'QM65C', 'LH65QMCEBGCXKR', 163, 3840, 2160, 'UHD', 500, '4000:1', 8),
   standalone('QMC', 'QM75C', 'LH75QMCEBGCXKR', 189, 3840, 2160, 'UHD', 500, '4000:1', 8),
-  standalone('QMC', 'QM85C', 'LH85QMCEBGCXKR', 214, 3840, 2160, 'UHD', 500, '4000:1', 8),
+  standalone('QMC', 'QM85C', 'LH85QMCEBGCXKR', 214, 3840, 2160, 'UHD', 500, '4000:1', 10),
   standalone('QMC', 'QM98C', 'LH98QMCEBGCXKR', 247, 3840, 2160, 'UHD', 500, '5500:1', 8),
 
   // ── QHC (Standalone, 6종) ──
@@ -204,13 +206,14 @@ export const SIGNAGE_MODELS = [
 //   확인된 값만. 미확인은 null(추정 금지). powerMaxW·soc 는 데이터시트 미확인 → null 유지.
 //   [w, h, d, weightKg, vesaMm, typicalW, speakerW, hdr, tizen]  (w/h/d = mm, without stand)
 const STANDALONE_DATASHEET = {
-  LH32QMCEBGCXKR: { widthMm: 727.3, heightMm: 421.9, depthMm: 28.5, weightKg: 5.2, vesaMm: '100x100', typicalW: 29, speakerW: '10+10', hdr: null, tizen: true },
-  LH43QMCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 8.8, vesaMm: '200x200', typicalW: null, speakerW: null, hdr: null, tizen: true },
-  LH50QMCEBGCXKR: { widthMm: 1124.1, heightMm: 644.8, depthMm: 28.5, weightKg: 11.8, vesaMm: '200x200', typicalW: null, speakerW: null, hdr: null, tizen: true },
-  LH55QMCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 15.7, vesaMm: '200x200', typicalW: 102, speakerW: '10+10', hdr: null, tizen: true },
-  LH65QMCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 21.5, vesaMm: '400x300', typicalW: 135, speakerW: '10+10', hdr: null, tizen: true },
-  LH75QMCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 33.4, vesaMm: '400x400', typicalW: 151, speakerW: '10+10', hdr: null, tizen: true },
-  LH85QMCEBGCXKR: { widthMm: 1904.3, heightMm: 1085.3, depthMm: 28.5, weightKg: 41.9, vesaMm: '600x400', typicalW: 237, speakerW: '10+10', hdr: null, tizen: true },
+  // QMC: 소비전력 typicalW = 삼성 공식 KR '소비전력(On Mode)'. QM98C는 미제공 → 기존 값 유지.
+  LH32QMCEBGCXKR: { widthMm: 727.3, heightMm: 421.9, depthMm: 28.5, weightKg: 5.2, vesaMm: '100x100', typicalW: 55, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH43QMCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 8.8, vesaMm: '200x200', typicalW: 121, sleepW: 0.5, speakerW: null, hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH50QMCEBGCXKR: { widthMm: 1124.1, heightMm: 644.8, depthMm: 28.5, weightKg: 11.8, vesaMm: '200x200', typicalW: 132, sleepW: 0.5, speakerW: null, hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH55QMCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 15.7, vesaMm: '200x200', typicalW: 154, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH65QMCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 21.5, vesaMm: '400x300', typicalW: 187, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH75QMCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 33.4, vesaMm: '400x400', typicalW: 214.5, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 13.4, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
+  LH85QMCEBGCXKR: { widthMm: 1904.3, heightMm: 1085.3, depthMm: 28.5, weightKg: 41.9, vesaMm: '600x400', typicalW: 330, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 13.9, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
   LH98QMCEBGCXKR: { widthMm: 2193.2, heightMm: 1248.8, depthMm: 48.1, weightKg: 56.3, vesaMm: '600x400', typicalW: 197, speakerW: '10+10', hdr: null, tizen: true },
   // QHC: 소비전력 typicalW = 삼성 공식 KR 페이지 '소비전력(On Mode)'로 교체(이사 승인 2026-09-14). 핵심 항목 추가.
   LH43QHCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 9.3, vesaMm: '200x200', typicalW: 132, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
@@ -218,7 +221,7 @@ const STANDALONE_DATASHEET = {
   LH55QHCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 16.9, vesaMm: '200x200', typicalW: 187, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
   LH65QHCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 22.7, vesaMm: '400x300', typicalW: 203.5, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
   LH75QHCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 34.6, vesaMm: '400x400', typicalW: 275, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 13.4, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
-  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 836, speakerW: 60, hdr: true, tizen: true, ratedUsage: '24/7' },
+  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 836, speakerW: 60, hdr: true, tizen: true, ratedUsage: '24/7', vxt: true },
 };
 for (const m of SIGNAGE_MODELS) {
   const d = STANDALONE_DATASHEET[m.modelCode];
@@ -240,6 +243,8 @@ for (const m of SIGNAGE_MODELS) {
   if (d.wifi != null) m.features.wifi = d.wifi;
   if (d.bluetooth != null) m.features.bluetooth = d.bluetooth;
   if (d.ir != null) m.features.ir = d.ir;
+  if (d.magicInfo != null) m.features.magicInfo = d.magicInfo;
+  if (d.vxt != null) m.features.vxt = d.vxt;
   if (d.ratedUsage != null) m.operation.ratedUsage = d.ratedUsage;
   // KR SKU(BXKR) 교차검증 완료(2026-09-14): 물리 스펙은 지역 공통(동일 패널)이며 독립 출처와 정확 일치
   //   (QM55C 15.7kg / QM98C 48.1mm·56.3kg / QH115FX 2565.2×1467.6×34.1mm·83.7kg·VESA1000×600).
