@@ -209,6 +209,25 @@ test('Aquilon Cmini / RS alpha / RS5 present with verified values', () => {
   assert.equal(getProcessor('aw-aquilon-rs5').inputs.maxIndependent4k, 32);
 });
 
+test('Aquilon C MAX present with official values (2026-09-14); 정격전력 미상 vs 최대 1500W 구분', () => {
+  const cmax = getProcessor('aw-aquilon-cmax');
+  assert.ok(cmax, 'aw-aquilon-cmax 없음');
+  assert.equal(cmax.model, 'Aquilon C MAX');
+  assert.equal(cmax.configurationType, 'customizable');
+  assert.equal(cmax.inputs.maxIndependent4k, 32);
+  assert.deepEqual(
+    { a: cmax.outputs.maxActiveOutputs, p: cmax.outputs.maxIndependent4kPgm, m: cmax.layers.mixing4k, s: cmax.layers.split4k },
+    { a: 24, p: 16, m: 16, s: 32 }
+  );
+  assert.equal(cmax.verification.status, 'official');
+  // 카드별 커넥터 수는 장비 고정 포트 아님 → 출력카드 최대수는 단일수치 미명시(null)
+  assert.strictEqual(cmax.slots.maxOutputBoards, null);
+  // 지침6: 정격전력 미상, 최대 1500W는 노트에 명시(추정으로 채우지 않음)
+  assert.match(cmax.verification.notes, /정격전력=미상/);
+  assert.match(cmax.verification.notes, /1,500W/);
+  assert.match(cmax.verification.notes, /HDCP 1\.4·2\.2/);
+});
+
 // ── Wide Canvas (SoT §15, 지침 5): Eikos Edge-Blending 지원 / Pulse 미지원 ────────
 test('Wide Canvas single_wide 2-output: Eikos PASS, Pulse unsupported (Edge-Blending 없음 -> false)', () => {
   const req = processorRequirements({ resW: 7680, resH: 2160 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2, application: 'exec' });
