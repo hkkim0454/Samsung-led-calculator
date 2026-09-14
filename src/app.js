@@ -716,13 +716,27 @@ function renderSignageReadout(box) {
       { k: 'VESA', v: nz(p.vesaMm), u: '' },
     );
   }
+  // 소비전력: typical=공식 On Mode. maxW 있으면 표기, 없으면 Sleep 전력 병기.
+  const pw = m.power || {};
+  const powerVal = (pw.maxW != null)
+    ? `${nz(pw.typicalW)} / ${pw.maxW}`
+    : (pw.sleepW != null ? `${nz(pw.typicalW)} / ${pw.sleepW}` : `${nz(pw.typicalW)}`);
+  const powerUnit = (pw.maxW != null) ? 'W (On/최대)' : (pw.sleepW != null ? 'W (On/Sleep)' : 'W (On)');
   cells.push(
     { k: '밝기', v: nz(d.brightnessNit), u: 'nit' },
     { k: '명암비', v: nz(d.contrastRatio), u: '' },
     { k: '응답속도', v: nz(d.responseTimeMs), u: 'ms' },
-    { k: '소비전력(typ/max)', v: `${nz(m.power?.typicalW)} / ${nz(m.power?.maxW)}`, u: 'W' },
-    { k: '모델코드', v: esc(m.modelCode), u: '' },
+    { k: '소비전력', v: powerVal, u: powerUnit },
   );
+  // 핵심 추가 항목 — 확인된 값만 표시(없으면 칸 생략).
+  const wireless = [m.features?.wifi ? 'Wi-Fi' : null, m.features?.bluetooth ? 'BT' : null, m.features?.ir ? 'IR' : null].filter(Boolean).join(' · ');
+  const addIf = (k, v, u) => { if (v != null && v !== '') cells.push({ k, v, u: u || '' }); };
+  addIf('패널', d.panelType, '');
+  addIf('베젤', p.bezelMm, 'mm');
+  addIf('SoC/OS', m.features?.soc, '');
+  addIf('사용시간', m.operation?.ratedUsage, '');
+  addIf('무선/제어', wireless, '');
+  cells.push({ k: '모델코드', v: esc(m.modelCode), u: '' });
   box.innerHTML = cells.map(c => `<div class="metric${c.hero ? ' hero' : ''}"><div class="k">${c.k}</div><div class="v">${c.v}<span class="u">${c.u || ''}</span></div></div>`).join('') + ioHTML;
 }
 
