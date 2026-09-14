@@ -1,13 +1,13 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=272';
-import { MODELS } from './models.js?v=272';
-import { PROCESSORS } from './processor-data.js?v=272';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=272';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=272';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=272';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=272';
-import { parseCasesText, normalizeDate } from './cases.js?v=272';
-import { SIGNAGE_MODELS } from './signage-data.js?v=272';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=273';
+import { MODELS } from './models.js?v=273';
+import { PROCESSORS } from './processor-data.js?v=273';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=273';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=273';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=273';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=273';
+import { parseCasesText, normalizeDate } from './cases.js?v=273';
+import { SIGNAGE_MODELS } from './signage-data.js?v=273';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -962,10 +962,11 @@ function renderDataFlow() {
     <span class="dfNode led">LED ${r.cols}×${r.rows}</span>
   </div>`;
   // 삼성 Data Flow Diagram(Front View) 스타일: 캐비닛 격자 + 신호 그룹(빨간 테두리) + 뱀형 배선.
-  // CS4B 계열은 신호 그룹을 GBIC(1920×2160) 단위로 나눈다(그 외는 S-Box 4K 단위).
+  //   신호 그룹 단위: CS4B 광지빅=GBIC(1920×2160), 광 미사용(비-CS4B)=IG FHD(1920×1080), 그 외=S-Box 4K.
   const useGbic = !!(r.igGbic && r.igGbic.regions.length);
-  const layout = useGbic ? r.igGbic : ig;
-  const groupTerm = useGbic ? 'GBIC' : 'S-Box';
+  const useFhd = !useGbic && !!(r.igFhd && r.igFhd.regions.length);
+  const layout = useGbic ? r.igGbic : (useFhd ? r.igFhd : ig);
+  const groupTerm = useGbic ? 'GBIC' : (useFhd ? 'IG' : 'S-Box');
   const dual = !!(r.gbic != null && (r.gbicFB || r.redundancy));
   const dualTitle = dual ? ' · 광 I/G 이중화 (Primary/Redundant)' : '';
   const dualNote = dual
@@ -975,10 +976,14 @@ function renderDataFlow() {
   const portNote = (useGbic && dual)
     ? ` · <b>S-Box 출력 포트</b>: Primary 1·2 + Redundant 3·4 (라벨 <code>SBOX#s-p</code> = S-Box s의 p번 포트)`
     : (useGbic ? ` · 라벨 <code>SBOX#s-p</code> = S-Box s의 p번 출력 포트(GBIC 1개=1920×2160)` : '');
-  const titleUnit = useGbic ? `광지빅(GBIC) ${layout.regions.length} SET` : `S-Box ${ig.boxes}대`;
+  const titleUnit = useGbic ? `광지빅(GBIC) ${layout.regions.length} SET`
+    : useFhd ? `신호 입력 그룹(IG) ${layout.regions.length}개 · 1920×1080`
+      : `S-Box ${ig.boxes}대`;
   const capNote = useGbic
     ? `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · GBIC 1개 = <b>${fmt(layout.capW)}×${fmt(layout.capH)}</b>px(CS4B 광지빅 단위) · 빨간 그룹 = GBIC 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`
-    : `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`;
+    : useFhd
+      ? `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · IG 1개 = <b>${fmt(layout.capW)}×${fmt(layout.capH)}</b>px(광 미사용 컨트롤러 신호 단위) · 빨간 그룹 = IG 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`
+      : `전체 <b>${fmt(r.resW)}×${fmt(r.resH)}</b>px · S-Box 1대 = 최대 <b>${fmt(ig.capW)}×${fmt(ig.capH)}</b>px(${esc(ig.controller || '컨트롤러')}) · 빨간 그룹 = S-Box 담당 캐비닛, 파란 선 = 영상·통신 배선 경로`;
   host.innerHTML = flow
     + `<div class="fxTitle">Data Flow Diagram (Front View) — ${titleUnit}${dualTitle}</div>`
     + dataFlowSVG(r, layout, groupTerm)
