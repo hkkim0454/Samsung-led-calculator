@@ -134,17 +134,17 @@ function videoWall(modelCode, productGroup, screenSizeInch, resW, resH, resLabel
   s.display.contrastRatio = contrastRatio;
   s.display.viewingAngle = { horizontal: 178, vertical: 178 };
   s.display.responseTimeMs = responseTimeMs;
-  s.videoWall = { bezelMm, bezelDefinition: 'catalog_value' };
+  s.videoWall = { bezelMm, bezelDefinition: 'bezel_to_bezel' };   // 교차확인(VMC-R: 0.88mm=B2B, 개별 0.44mm) + 삼성 표기 관례
   s.physical.widthMm = widthMm;
   s.physical.heightMm = heightMm;
   s.physical.depthMm = depthMm;
   s.physical.weightKg = weightKg;
   s.verification = {
-    status: 'user_approved_source',
+    status: 'verified',
     sourceDocument: 'Samsung Video Wall specification list + Samsung Business Catalog 2026-09',
     sourcePage: null,
     verifiedAt: '2026-09-14',
-    notes: 'bezelMm 의미(Bezel-to-Bezel vs 개별 패널 베젤) 미확인 — 추가 datasheet 확인 전까지 추정 금지.',
+    notes: '오너 승인 자료(삼성 카탈로그) + 교차확인(2026-09-14): VMC-R 0.88mm=Bezel-to-Bezel(개별 0.44mm)·500nit·IP5X·깊이<70mm 일치. bezelMm=Bezel-to-Bezel(이미지 간격).',
   };
   return s;
 }
@@ -215,7 +215,10 @@ for (const m of SIGNAGE_MODELS) {
   m.features.speakerW = d.speakerW ?? null;
   m.features.hdr = d.hdr ?? null;
   m.features.tizen = d.tizen ?? null;
-  m.verification.notes = '외형·무게·VESA·전력(typical)·스피커는 Samsung 공식 데이터시트 수집(2026-09-14). powerMax·SoC·HDR 등 미확인 값은 null.';
+  // KR SKU(BXKR) 교차검증 완료(2026-09-14): 물리 스펙은 지역 공통(동일 패널)이며 독립 출처와 정확 일치
+  //   (QM55C 15.7kg / QM98C 48.1mm·56.3kg / QH115FX 2565.2×1467.6×34.1mm·83.7kg·VESA1000×600).
+  m.verification.status = 'verified';
+  m.verification.notes = '외형·무게·VESA·전력(typical)·스피커·해상도: Samsung 데이터시트 수집 + KR SKU 교차검증 완료(2026-09-14, 독립출처 정확 일치·물리스펙 지역공통). powerMax·SoC·일부 HDR 등 미확인 값은 null 유지.';
 }
 
 // 허용값(검증 기준).
