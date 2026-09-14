@@ -174,6 +174,24 @@ export const PROCESSORS = [
     verification: { status: 'partial_official', sourceUrl: 'https://www.analogway.com/products/', sourceDocument: 'SoT §8 (Aquilon C mini)', sourceVersion: '2026-09-13', notes: 'customizable. 8×4K IN / 12×4K Active / 4×4K PGM / 4×4K 믹싱. 확장성·이중화(LivePremier). Zenith 200과 단순 상하비교 금지.' },
   }),
 
+  // ── Analog Way · Aquilon C MAX (customizable / LivePremier) ───────────────
+  // 공식 자료(2026-09-14, signage-specs.md): 교체형 입력/출력카드 기반 최대 구성.
+  //   지침 5: 카드별 커넥터 수는 장비 전체 고정 포트 수가 아님(입력카드 2·4·6·8 → 8·16·24·32×4K).
+  //   지침 6: 정격전력은 미상(null). 확인된 1,500W는 전 슬롯 SDVoE 최대 구성에서의 '최대 소비전력'.
+  proc({
+    id: 'aw-aquilon-cmax',
+    manufacturer: AW, family: 'Aquilon', model: 'Aquilon C MAX', lifecycle: 'active', configurationType: 'customizable',
+    slots: { maxInputBoards: 8, maxOutputBoards: null },   // 입력카드 2·4·6·8개(→8·16·24·32×4K). 출력카드 수는 공식 단일수치 미명시→null
+    inputs: { total: 32, maxIndependent4k: 32 },   // 최대 32×4K60(또는 16×5K60 / 64×Dual·2K60 — 대체 구성)
+    outputs: { maxActiveOutputs: 24, maxIndependent4kOutputs: 24, maxIndependent4kPgm: 16 },   // Active 24×4K / PGM 16×4K. 전용 멀티뷰어 2 별도
+    layers: { model: 'mixing_split', mixing4k: 16, split4k: 32 },   // 믹싱 16×4K(True A/B) / 분할 32×4K
+    aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
+    control: { tcp: true, restApi: true, amxCompatible: true, crestronCompatible: true },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/aquilon-cmax', sourceDocument: 'Analog Way Aquilon C MAX 공식 제품페이지 + Technical Datasheet (signage-specs.md, 이사 제공)', sourceVersion: '2026-09-14', notes: 'customizable(6RU). IN 최대 32×4K60(대체: 16×5K60 / 64×Dual·2K60). Active 24×4K60 + 전용 멀티뷰어 2(HDMI2.0 또는 별도 DP1.2). PGM 최대 16×4K60. 믹싱 16×4K / 분할 32×4K(Split시 2배). HDCP 1.4·2.2. 정격전력=미상(null), 최대 소비전력 1,500W(전 슬롯 SDVoE 최대 구성). 크기 439.8×264×700mm(랙이어 제외)/482.4×264×701mm(랙이어 포함), 무게 45kg(포장 64kg). 카드별 커넥터 수는 장비 고정 포트 아님. 데이터시트: https://s3.eu-west-3.amazonaws.com/aw.store01/Site%2BInternet/Series/LivePremier/Products/Aquilon%2BCmax/Technical%2BDatasheet/Aquilon-Cmax-datasheet-en.pdf' },
+  }),
+
   // ── NovaStar · H Series ───────────────────────────────────────────────────
   // 지침 3: physical slot ≠ max board count. 출력카드 1장 = 독립 4K 출력 1(+LOOP, LOOP는 독립출력 아님).
   //   per_output_card 레이어(카드당 16×2K/8×DL/4×4K). H20은 SoT 라인업 밖 → needs_verification(지침 6).

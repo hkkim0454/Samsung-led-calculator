@@ -142,12 +142,22 @@ test('spec: 비디오월 4종(VMBU46/55·VMCR·VHCR) 하드웨어 상세 반영'
     assert.ok(Array.isArray(m.sourceUrls) && m.sourceUrls.length >= 1);
   }
 });
-test('spec: 비디오월 VMHE/VHHE 상세 미상은 null 유지(추정 금지)', () => {
+test('spec: 비디오월 VMHE/VHHE 공식 확인값 반영(2026-09-14) + 미상은 null 유지', () => {
+  const on = { LH55VMHEBGBXKR: 222, LH55VHHEBGBXKR: 250 };
   for (const c of ['LH55VMHEBGBXKR', 'LH55VHHEBGBXKR']) {
     const m = SIGNAGE_MODELS.find(x => x.modelCode === c);
-    assert.equal(m.display.panelType, null, `${c} panel null`);
-    assert.equal(m.power.typicalW, null, `${c} power null`);
-    assert.equal(m.io.dviIn, null);
+    // 공식 확인값
+    assert.equal(m.display.panelType, 'IPS', `${c} panel IPS`);
+    assert.equal(m.physical.vesaMm, '600x400', `${c} VESA`);
+    assert.equal(m.power.typicalW, on[c], `${c} On 전력`);
+    assert.equal(m.power.sleepW, 0.5, `${c} Sleep`);
+    assert.equal(m.features.ir, true, `${c} IR`);
+    assert.equal(m.operation.ratedUsage, '24/7', `${c} 사용시간`);
+    assert.equal(m.io.dviIn, 1, `${c} DVI In`);
+    assert.ok(Array.isArray(m.sourceUrls) && m.sourceUrls.length >= 2, `${c} 출처 2개 이상`);
+    // 미상 → null 유지(추정 금지)
+    assert.strictEqual(m.power.maxW, null, `${c} Max 전력 null(미상)`);
+    assert.strictEqual(m.videoWall.individualBezelMm, null, `${c} 개별베젤 null(미상)`);
     // 크기·무게·베젤은 회사 공식 목록 확인값이라 유지(1.74mm, 19.5kg)
     assert.equal(m.videoWall.bezelMm, 1.74);
     assert.equal(m.physical.weightKg, 19.5);
