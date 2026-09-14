@@ -339,7 +339,14 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Frame.noGrid .rs3GridLayer{display:none}
 .rs3Frame.noEye .rs3Eye,.rs3Frame.noEye .rs3EyeLbl{display:none}
 .rs3Frame.noPerson .rs3Person,.rs3Frame.noPerson .rs3Dlbl.person,.rs3Frame.noPerson .rs3Eye,.rs3Frame.noPerson .rs3EyeLbl{display:none}
-.rs3Frame.noDims .rs3Overlay{display:none}   /* 치수 오버레이(치수선·라벨·캐비닛 번호)만 숨김. 신호(FHD/UHD) 태그는 배선정보라 유지(v2 3-1) */
+/* 치수(dims) 토글: 치수선·치수 라벨·사람 라벨만 제어. 캐비닛 카운트·패널 번호는 '패널 격자'가 제어(이사 요청 2026-09-14). */
+.rs3Frame.noDims .rs3Dln,
+.rs3Frame.noDims .rs3Dlbl.key,
+.rs3Frame.noDims .rs3Dlbl.sub,
+.rs3Frame.noDims .rs3Dlbl.person{display:none}
+/* 패널 격자(cellgrid) 토글: 중앙 캐비닛 구성(N×M=합계)·좌측/상단 패널 번호 표시 제어. */
+.rs3Frame.noCellGrid .rs3Dlbl.count,
+.rs3Frame.noCellGrid .rs3Num{display:none}
 /* 인쇄·캡처 시 글로우 애니메이션으로 밝기가 달라지지 않게 정지(v2 3-2). */
 @media print{ .rs3Glow,.rs3FloorGlow{animation:none!important} }
 @media (prefers-reduced-motion:reduce){ .rs3Glow{animation:none} }
@@ -616,7 +623,9 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppImgTabs{display:flex;gap:6px;margin-bottom:8px}
 .ppImgTabs .tiny{border:1px solid var(--line);background:var(--field-fill);color:var(--ink-2);cursor:pointer}
 .ppImgTabs .tiny.on{background:var(--accent);color:#fff;border-color:transparent}
+.ppImgWrap{position:relative;cursor:zoom-in}
 .ppImgWrap img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
+.ppZoomHint{position:absolute;right:8px;bottom:8px;background:rgba(20,26,40,.72);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;pointer-events:none}
 @media(max-width:600px){
   .portPopCard.ppWithImg{width:min(430px,94vw)}
   .ppWithImg .ppBody{grid-template-columns:1fr}      /* 모바일: 위=이미지 · 아래=포트 표로 쌓기 */
@@ -810,11 +819,12 @@ body.pvZoomOpen .pvZoomBtn{display:none}   /* 이미 크게 보기 상태면 버
 /* ↕ 손잡이: 디스플레이를 위아래로 끌어 하단 높이 조정. 화면상 크기 고정(1/fit 역보정). */
 .rs3HeightHandle{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:ns-resize;
   width:calc(24px / var(--fit,1));height:calc(24px / var(--fit,1));border-radius:50%;
-  border:none;background:rgba(0,122,255,.92);color:#fff;font-size:calc(12.8px / var(--fit,1));font-weight:800;
+  border:none;padding:0;flex:0 0 auto;box-sizing:border-box;   /* padding:0 — 전역 button 패딩(9/16px) 제거로 정원(타원 방지) */
+  background:rgba(0,122,255,.92);color:#fff;font-size:calc(12.8px / var(--fit,1));font-weight:800;
   line-height:1;display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 8px rgba(10,20,60,.45);touch-action:none;user-select:none}
 .rs3HeightHandle:hover{background:var(--accent-2)}
-.rs3Frame.noDims .rs3HeightHandle{display:none}
+/* ↕ 손잡이 표시는 전용 토글(pvShow.handle)로만 제어 — 치수 토글과 무관(이사 요청 2026-09-14). */
 
 /* 02 사이니지 선택 버튼: 실제 선택된 종류를 강조(색상). */
 .svPickRow .tiny.on{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 4px 12px -6px var(--accent)}
