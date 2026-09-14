@@ -184,6 +184,40 @@ export const SIGNAGE_MODELS = [
   videoWall('LH55VHCRBGBXKR', 'VH_700nit', 55, 1920, 1080, 'FHD', 700, '1100:1', 8, 0.88, 1211.0, 681.7, 69.9, 16.8),
 ];
 
+// ── Standalone 외형·무게·VESA·전력·스피커 (Samsung 공식 데이터시트 수집, 2026-09-14) ──────
+//   확인된 값만. 미확인은 null(추정 금지). powerMaxW·soc 는 데이터시트 미확인 → null 유지.
+//   [w, h, d, weightKg, vesaMm, typicalW, speakerW, hdr, tizen]  (w/h/d = mm, without stand)
+const STANDALONE_DATASHEET = {
+  LH32QMCEBGCXKR: { widthMm: 727.3, heightMm: 421.9, depthMm: 28.5, weightKg: 5.2, vesaMm: '100x100', typicalW: 29, speakerW: '10+10', hdr: null, tizen: true },
+  LH43QMCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 8.8, vesaMm: '200x200', typicalW: null, speakerW: null, hdr: null, tizen: true },
+  LH50QMCEBGCXKR: { widthMm: 1124.1, heightMm: 644.8, depthMm: 28.5, weightKg: 11.8, vesaMm: '200x200', typicalW: null, speakerW: null, hdr: null, tizen: true },
+  LH55QMCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 15.7, vesaMm: '200x200', typicalW: 102, speakerW: '10+10', hdr: null, tizen: true },
+  LH65QMCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 21.5, vesaMm: '400x300', typicalW: 135, speakerW: '10+10', hdr: null, tizen: true },
+  LH75QMCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 33.4, vesaMm: '400x400', typicalW: 151, speakerW: '10+10', hdr: null, tizen: true },
+  LH85QMCEBGCXKR: { widthMm: 1904.3, heightMm: 1085.3, depthMm: 28.5, weightKg: 41.9, vesaMm: '600x400', typicalW: 237, speakerW: '10+10', hdr: null, tizen: true },
+  LH98QMCEBGCXKR: { widthMm: 2193.2, heightMm: 1248.8, depthMm: 48.1, weightKg: 56.3, vesaMm: '600x400', typicalW: 197, speakerW: '10+10', hdr: null, tizen: true },
+  LH43QHCEBGCXKR: { widthMm: 969.5, heightMm: 557.8, depthMm: 28.5, weightKg: 9.3, vesaMm: '200x200', typicalW: 84, speakerW: '10+10', hdr: null, tizen: true },
+  LH50QHCEBGCXKR: { widthMm: 1124.1, heightMm: 644.8, depthMm: 28.5, weightKg: 12.4, vesaMm: '200x200', typicalW: 108, speakerW: '10+10', hdr: null, tizen: true },
+  LH55QHCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 16.9, vesaMm: '200x200', typicalW: 109, speakerW: '10+10', hdr: null, tizen: true },
+  LH65QHCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 22.7, vesaMm: '400x300', typicalW: 148, speakerW: '10+10', hdr: null, tizen: true },
+  LH75QHCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 34.6, vesaMm: '400x400', typicalW: 185, speakerW: '10+10', hdr: null, tizen: true },
+  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 359, speakerW: 60, hdr: true, tizen: true },
+};
+for (const m of SIGNAGE_MODELS) {
+  const d = STANDALONE_DATASHEET[m.modelCode];
+  if (!d) continue;
+  m.physical.widthMm = d.widthMm;
+  m.physical.heightMm = d.heightMm;
+  m.physical.depthMm = d.depthMm;
+  m.physical.weightKg = d.weightKg;
+  m.physical.vesaMm = d.vesaMm ?? null;
+  m.power.typicalW = d.typicalW ?? null;   // powerMaxW 는 미확인 → null 유지
+  m.features.speakerW = d.speakerW ?? null;
+  m.features.hdr = d.hdr ?? null;
+  m.features.tizen = d.tizen ?? null;
+  m.verification.notes = '외형·무게·VESA·전력(typical)·스피커는 Samsung 공식 데이터시트 수집(2026-09-14). powerMax·SoC·HDR 등 미확인 값은 null.';
+}
+
 // 허용값(검증 기준).
 export const SIGNAGE_CATEGORIES = Object.freeze(['standalone_signage', 'video_wall']);
 export const STANDALONE_FAMILIES = Object.freeze(['QMC', 'QHC']);
@@ -236,8 +270,8 @@ export function validateSignageLibrary(models = SIGNAGE_MODELS) {
   // 8·9·10. 값 타입(단위) — 값이 있으면 숫자여야 함. 없으면 null 허용(추정 금지).
   const numOrNull = (v) => v == null || typeof v === 'number';
   for (const m of models) {
-    for (const [k, v] of Object.entries(m.physical)) {
-      if (!numOrNull(v)) errors.push(`physical.${k} 숫자 아님: ${v} (${m.modelCode})`);   // mm / kg
+    for (const k of ['widthMm', 'heightMm', 'depthMm', 'weightKg']) {   // mm / kg (vesaMm 은 "600x400" 형식 문자열 허용)
+      if (!numOrNull(m.physical[k])) errors.push(`physical.${k} 숫자 아님: ${m.physical[k]} (${m.modelCode})`);
     }
     if (!numOrNull(m.display.brightnessNit)) errors.push(`brightnessNit 숫자 아님: ${m.display.brightnessNit} (${m.modelCode})`);   // nit
     if (!numOrNull(m.videoWall.bezelMm)) errors.push(`videoWall.bezelMm 숫자 아님 (${m.modelCode})`);

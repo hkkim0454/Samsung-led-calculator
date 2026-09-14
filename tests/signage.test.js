@@ -63,14 +63,29 @@ test('signage: 확인 안 된 값은 null (추정 금지) — video wall model/f
   }
 });
 
-test('signage: null 이 false/0 으로 바뀌지 않았는지 (미확인 io/power/features 는 null 유지)', () => {
+test('signage: 미확인 값은 null 유지 (io 전체 · powerMax · features.soc)', () => {
   for (const m of SIGNAGE_MODELS) {
     for (const v of Object.values(m.io)) assert.equal(v, null, `io 미확인은 null 유지: ${m.modelCode}`);
-    assert.equal(m.power.typicalW, null);
-    assert.equal(m.power.maxW, null);
-    for (const v of Object.values(m.features)) assert.equal(v, null, `features 미확인은 null 유지: ${m.modelCode}`);
-    assert.equal(m.physical.vesaMm, null);
+    assert.equal(m.power.maxW, null, `powerMax 미확인은 null 유지: ${m.modelCode}`);
+    assert.equal(m.features.soc, null, `features.soc 미확인은 null 유지: ${m.modelCode}`);
   }
+});
+
+test('signage: standalone 14종 외형(mm)·무게 데이터시트 반영 (배치 가능)', () => {
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'standalone_signage')) {
+    assert.equal(typeof m.physical.widthMm, 'number', `widthMm 필요: ${m.modelCode}`);
+    assert.equal(typeof m.physical.heightMm, 'number', `heightMm 필요: ${m.modelCode}`);
+    assert.equal(typeof m.physical.weightKg, 'number', `weightKg 필요: ${m.modelCode}`);
+    // 외형 세로/가로 비율은 16:9 근처(외형이라 베젤 때문에 약간 작음) — 명백한 오류값 차단.
+    const ratio = m.physical.widthMm / m.physical.heightMm;
+    assert.ok(ratio > 1.6 && ratio < 1.85, `이상한 종횡비 ${ratio.toFixed(3)} (${m.modelCode})`);
+  }
+  const qm55 = SIGNAGE_MODELS.find(m => m.modelCode === 'LH55QMCEBGCXKR');
+  assert.equal(qm55.physical.widthMm, 1237.9);
+  assert.equal(qm55.physical.heightMm, 708.8);
+  assert.equal(qm55.physical.weightKg, 15.7);
+  assert.equal(qm55.physical.vesaMm, '200x200');
+  assert.equal(qm55.features.tizen, true);
 });
 
 test('signage: video wall 6종 physical(mm/kg)·bezel 값 존재, display FHD', () => {
