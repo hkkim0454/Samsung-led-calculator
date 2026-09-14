@@ -85,6 +85,29 @@ test('io/spec: QHC 소비전력 typicalW = 공식 On Mode 값', () => {
   assert.equal(byCode('LH75QHCEBGCXKR').power.typicalW, 275);
   assert.equal(byCode('LH115QHFEBGXKR').power.typicalW, 836);
 });
+test('io/spec: QMC 소비전력 typicalW = 공식 On Mode 값(제공 7종)', () => {
+  const byCode = c => SIGNAGE_MODELS.find(m => m.modelCode === c);
+  assert.equal(byCode('LH32QMCEBGCXKR').power.typicalW, 55);
+  assert.equal(byCode('LH43QMCEBGCXKR').power.typicalW, 121);
+  assert.equal(byCode('LH50QMCEBGCXKR').power.typicalW, 132);
+  assert.equal(byCode('LH55QMCEBGCXKR').power.typicalW, 154);
+  assert.equal(byCode('LH65QMCEBGCXKR').power.typicalW, 187);
+  assert.equal(byCode('LH75QMCEBGCXKR').power.typicalW, 214.5);
+  assert.equal(byCode('LH85QMCEBGCXKR').power.typicalW, 330);
+});
+test('spec: QM32C = FHD(1920x1080)·400nit·DP In 0(공식 No)', () => {
+  const q = SIGNAGE_MODELS.find(m => m.modelCode === 'LH32QMCEBGCXKR');
+  assert.equal(q.display.resolution.label, 'FHD');
+  assert.equal(q.display.resolution.width, 1920);
+  assert.equal(q.display.resolution.height, 1080);
+  assert.equal(q.display.brightnessNit, 400);
+  assert.equal(q.io.displayPortIn, 0);
+  assert.equal(q.features.soc, 'Tizen 7.0');
+});
+test('spec: QMC 응답속도 QM50C·QM85C = 10ms', () => {
+  assert.equal(SIGNAGE_MODELS.find(m => m.modelCode === 'LH50QMCEBGCXKR').display.responseTimeMs, 10);
+  assert.equal(SIGNAGE_MODELS.find(m => m.modelCode === 'LH85QMCEBGCXKR').display.responseTimeMs, 10);
+});
 test('spec: QHC 핵심 추가 항목(패널·SoC·베젤·Sleep·사용시간)', () => {
   const q75 = SIGNAGE_MODELS.find(m => m.modelCode === 'LH75QHCEBGCXKR');
   assert.equal(q75.display.panelType, 'VA');

@@ -734,6 +734,9 @@ function renderSignageReadout(box) {
   addIf('패널', d.panelType, '');
   addIf('베젤', p.bezelMm, 'mm');
   addIf('SoC/OS', m.features?.soc, '');
+  // 콘텐츠 플랫폼: MagicINFO/VXT 지원(둘 다면 둘 다 표기). 확인된 것만.
+  const platform = [m.features?.magicInfo ? 'MagicINFO' : null, m.features?.vxt ? 'VXT' : null].filter(Boolean).join(' · ');
+  addIf('콘텐츠 플랫폼', platform, '');
   addIf('사용시간', m.operation?.ratedUsage, '');
   addIf('무선/제어', wireless, '');
   cells.push({ k: '모델코드', v: esc(m.modelCode), u: '' });
