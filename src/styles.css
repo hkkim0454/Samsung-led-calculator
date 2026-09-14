@@ -334,6 +334,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Dlbl.key{background:#14161a;color:#fff;font-size:calc(11.5px / var(--fit,1));font-weight:600;padding:2px 6px;border-radius:6px}
 .rs3Dlbl.sub{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(10px / var(--fit,1));font-weight:600;padding:1px 5px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
 .rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:calc(12.1px / var(--fit,1));font-weight:700;padding:2px 8px;border-radius:999px}   /* 캐비넷 수 표기 1.5배(이사 요청 2026-09-13) */
+.rs3Dlbl.count.bl{transform:translate(0,-100%)}   /* 왼쪽 하단 앵커(좌하단 모서리 기준, 이사 요청 2026-09-14) */
 .rs3Dlbl.person{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(7px / var(--fit,1));font-weight:600;padding:1px 5px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
 .rs3Dlbl.vlbl{transform:translate(-50%,-50%) rotate(-90deg)}
 .rs3Frame.noGrid .rs3GridLayer{display:none}

@@ -587,8 +587,12 @@ function renderPreview() {
   //   가로선은 바닥 좌·우 모서리선과 만나고, 좌하단에서 L자로 코너가 맞물림(이사 요청).
   hDim(0, SWp, SHp, dWall, mL(sW), 'sub');
   vDim(0, 0, SHp, dWall, mL(sH), 'sub');
-  // 캐비닛 수 중앙 라벨은 LED만. 사이니지는 중앙 '장' 표기 대신 우상단 인치 라벨(아래 svSizeHTML)로 표시(이사 요청 2026-09-14).
-  if (!svMode) pt(Lx + Lw / 2, Ly + Lh / 2, 0, `${r.cols} × ${r.rows} = ${r.total} 캐비닛`, 'count');
+  // 캐비닛 수 라벨은 LED만. 사이니지는 중앙 '장' 표기 대신 우상단 인치 라벨(아래 svSizeHTML)로 표시(이사 요청 2026-09-14).
+  //   위치: 중앙 → '왼쪽 하단' 안쪽(넓은 벽에서 중앙이 화면을 가리지 않게, 이사 요청 2026-09-14). 좌하단 앵커.
+  if (!svMode) {
+    const bx = clx(Lx + px(120)), by = cly(Ly + Lh - px(120));
+    dims.push(`<div class="rs3Dlbl count bl" style="left:${bx}px;top:${by}px">${r.cols} × ${r.rows} = ${r.total} 캐비닛</div>`);
+  }
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
