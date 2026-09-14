@@ -302,7 +302,7 @@ for (const m of SIGNAGE_MODELS) {
 // 비디오월: 자체 OS 없음 → MagicINFO·VXT 미지원(외장 셋탑박스 필요). 오너 확인(2026-09-14).
 for (const m of SIGNAGE_MODELS) {
   if (m.category !== 'video_wall') continue;
-  m.features.soc = '없음(외장 셋탑박스 필요)';
+  m.features.soc = 'X (외장셋탑필요)';
   m.features.magicInfo = false;
   m.features.vxt = false;
 }

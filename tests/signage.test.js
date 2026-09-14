@@ -128,7 +128,7 @@ test('spec: 비디오월 6종 OS 없음 · MagicINFO/VXT 미지원(false)', () =
   for (const m of SIGNAGE_MODELS.filter(x => x.category === 'video_wall')) {
     assert.equal(m.features.magicInfo, false, `${m.modelCode} magicInfo false 아님`);
     assert.equal(m.features.vxt, false, `${m.modelCode} vxt false 아님`);
-    assert.ok(typeof m.features.soc === 'string' && m.features.soc.includes('없음'), `${m.modelCode} soc 없음 표기 아님`);
+    assert.ok(typeof m.features.soc === 'string' && m.features.soc.includes('외장'), `${m.modelCode} soc 외장셋탑 표기 아님`);
   }
 });
 test('spec: QMC 응답속도 QM50C·QM85C = 10ms', () => {
