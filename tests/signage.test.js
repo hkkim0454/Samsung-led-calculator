@@ -95,7 +95,7 @@ test('signage: video wall 6종 physical(mm/kg)·bezel 값 존재, display FHD', 
     assert.equal(typeof m.physical.depthMm, 'number');
     assert.equal(typeof m.physical.weightKg, 'number');
     assert.equal(typeof m.videoWall.bezelMm, 'number');
-    assert.equal(m.videoWall.bezelDefinition, 'catalog_value');
+    assert.equal(m.videoWall.bezelDefinition, 'bezel_to_bezel');
     assert.equal(m.display.resolution.label, 'FHD');
     assert.equal(m.display.resolution.width, 1920);
     assert.equal(m.display.resolution.height, 1080);
@@ -109,7 +109,7 @@ test('signage: 대표 표본 값 확인 (QM55C / QH115FX / LH46VMBU)', () => {
   assert.equal(qm55.display.screenSizeCm, 138);
   assert.equal(qm55.display.resolution.label, 'UHD');
   assert.equal(qm55.display.brightnessNit, 500);
-  assert.equal(qm55.verification.status, 'official_catalog');
+  assert.equal(qm55.verification.status, 'verified');
 
   const qh115 = byCode('LH115QHFEBGXKR');
   assert.equal(qh115.family, 'QHC');
@@ -125,5 +125,5 @@ test('signage: 대표 표본 값 확인 (QM55C / QH115FX / LH46VMBU)', () => {
   assert.equal(vmb46.physical.widthMm, 1022);
   assert.equal(vmb46.physical.weightKg, 15.7);
   assert.equal(vmb46.display.contrastRatio, '1200:1');
-  assert.equal(vmb46.verification.status, 'user_approved_source');
+  assert.equal(vmb46.verification.status, 'verified');
 });
