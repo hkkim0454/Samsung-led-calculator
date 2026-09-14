@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, igLayout, powerConfig, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
+import { computeConfig, computeQuote, computeIndirect, fitCabinets, cabinetResolution, bom, sboxCount, gbicSets, igLayout, gbicLayout, powerConfig, fit169, bdmFarViewerM, frameClearanceMm } from '../src/engine.js';
 import { MODELS } from '../src/models.js';
 
 const MP012F = MODELS.find(m => m.id === 'MP012F');
@@ -54,6 +54,25 @@ test('igLayout: integrated controller -> boxes 0', () => {
   const ig = igLayout({ ...MP012F, integratedController: true }, 4480, 2160, 7, 6);
   assert.equal(ig.integrated, true);
   assert.equal(ig.boxes, 0);
+});
+// CS4B GBIC 신호 영역: 1920×2160 단위(≠ S-Box 3840×2160). MM015F(cab 384×216) 10×10=3840×2160.
+const MM015F = MODELS.find(m => m.id === 'MM015F');
+test('gbicLayout: MM015F 10x10 (3840x2160) -> 2 GBIC regions (1920px 폭 단위)', () => {
+  const g = gbicLayout(MM015F, 3840, 2160, 10, 10);
+  assert.equal(g.regCols, 2);
+  assert.equal(g.regRows, 1);
+  assert.equal(g.regions.length, 2);
+  assert.equal(g.regions[0].colStart, 0); assert.equal(g.regions[0].colEnd, 4);   // 1~5열
+  assert.equal(g.regions[1].colStart, 5); assert.equal(g.regions[1].colEnd, 9);   // 6~10열
+  // 같은 벽을 S-Box(4K)로 나누면 1개뿐 — GBIC(1920)로는 2개여야 함.
+  assert.equal(igLayout(MM015F, 3840, 2160, 10, 10).boxes, 1);
+  assert.equal(g.regions.length, gbicSets(3840, 2160));   // GBIC SET 수와 영역 수 일치(이중화 전)
+});
+test('gbicLayout: MP012F 4480x2160 -> 3 GBIC regions across (ceil 4480/1920)', () => {
+  const g = gbicLayout(MP012F, 4480, 2160, 7, 6);
+  assert.equal(g.regCols, 3);
+  assert.equal(g.regRows, 1);
+  assert.equal(g.regions.length, 3);
 });
 test('computeConfig exposes ig layout consistent with sbox', () => {
   const r = computeConfig(MP012F, 6000, 3400, { mode: 'manual', cols: 7, rows: 6 });
