@@ -2062,9 +2062,12 @@ function handleSharedLink() {
 // 구성 초기화: 확인 팝업 후 화면 입력을 기본값으로 되돌린다(저장된 구성 목록·가격표는 그대로).
 function resetConfig() {
   if (!confirm('구성을 초기화할까요?\n현재 화면의 입력값(공간·배열·옵션)이 기본값으로 되돌아갑니다.\n저장된 구성 목록은 지워지지 않습니다.')) return;
+  svCode = null;            // 사이니지 모드 해제(선택 시 초기화가 안 먹던 문제 수정, 2026-09-14)
+  const sc = $('#svCols'), sr = $('#svRows'); if (sc) sc.value = 1; if (sr) sr.value = 1;
   selectedId = pickDefaultId(models);
   applyConfig({});          // 모든 입력을 normalizeConfig 기본값(8×3.4m 등)으로
   setCurrentConfig(null);   // 상단 '현재 구성' 배지 해제
+  syncSignageCard();        // 사이니지 컨트롤바 숨김 반영
 }
 $('#btnConfigReset')?.addEventListener('click', resetConfig);
 $('#btnConfigSave')?.addEventListener('click', saveCurrentConfig);
