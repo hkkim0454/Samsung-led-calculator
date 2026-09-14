@@ -287,9 +287,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
   .rs3GridLn{border-top-color:rgba(160,174,205,.6)}
   .rs3Ao{background:linear-gradient(to bottom,rgba(0,0,0,.4),transparent)}
 }
-/* LED 벽: 바로 붙는 검은 테두리(베젤) + 그 뒤로 퍼지는 파란 네온 글로우(유지). */
-.rs3Led{position:absolute;transform:translateZ(10px);border-radius:2px;background:#14161a;
-  box-shadow:0 0 0 2.5px #050608, 0 0 20px 5px rgba(47,127,246,.5), 0 0 48px 13px rgba(47,127,246,.26)}
+/* LED 벽. 검은 테두리(베젤)+파란 네온은 renderPreview의 인라인 box-shadow(ledGlow)에서 적용. */
+.rs3Led{position:absolute;transform:translateZ(10px);border-radius:2px;background:#14161a}
 .rs3Grid{position:absolute;inset:0;display:grid;box-sizing:border-box}
 /* LED 캐비닛 셀: 평평한(그라데이션 제거) 매트 검정 + 촘촘한 LED 픽셀 매트릭스 + 얇은 모듈 심.
    비디오월(광택·그라데이션) 느낌을 없애고 실제 LED 모듈처럼 균일하게 보이도록. */
@@ -609,6 +608,22 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .ppTitle{font-weight:700;font-size:16px;line-height:1.3}
 .ppClose{border:none;background:var(--field-fill);color:var(--ink-2);width:30px;height:30px;border-radius:999px;font-size:15px;cursor:pointer;flex:0 0 auto}
 .ppClose:hover{background:var(--line-2)}
+/* 이미지 넣기 방식(가로/세로 고정) 선택 팝업 */
+#imgModePop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  background:rgba(20,26,40,.45);backdrop-filter:saturate(140%) blur(4px);padding:16px}
+.imgModeCard{width:min(420px,94vw);background:var(--panel-solid);color:var(--ink);border-radius:var(--r-card);box-shadow:var(--shadow-pop);border:1px solid var(--line)}
+.imgModeHead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:16px 18px 6px}
+.imgModeTitle{font-weight:700;font-size:16px}
+.imgModeBody{padding:8px 18px 18px;display:grid;gap:10px}
+.imgModeOpt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-inner);background:var(--field-fill);color:var(--ink);cursor:pointer}
+.imgModeOpt:hover{border-color:var(--accent,#2f7ff6);background:var(--line-2)}
+.imgModeIco{flex:0 0 auto;width:46px;height:46px;display:flex;align-items:center;justify-content:center;background:#0c0e13;border-radius:8px}
+.imgModeBox{display:block;background:#2f7ff6;border-radius:2px}
+.imgModeBox.wide{width:34px;height:20px}
+.imgModeBox.tall{width:20px;height:34px}
+.imgModeTxt{display:flex;flex-direction:column;gap:2px}
+.imgModeTxt b{font-size:14px}
+.imgModeTxt span{font-size:12px;color:var(--ink-2)}
 .ppBody{padding:4px 18px 8px;display:grid;gap:14px}
 .ppSecTitle{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
 .ppTable{width:100%;border-collapse:collapse;font-size:14px}

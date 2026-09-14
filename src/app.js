@@ -1,12 +1,12 @@
 // app.js — UI controller. Pure calculation lives in engine.js; data in models.js.
-import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=266';
-import { MODELS } from './models.js?v=266';
-import { PROCESSORS } from './processor-data.js?v=266';
-import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=266';
-import { rankProcessors, validateBuild } from './processor-validator.js?v=266';
-import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=266';
-import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=266';
-import { parseCasesText, normalizeDate } from './cases.js?v=266';
+import { computeConfig, computeQuote, cabinetResolution, DEFAULTS, spareRateForSeries, frameClearanceMm } from './engine.js?v=267';
+import { MODELS } from './models.js?v=267';
+import { PROCESSORS } from './processor-data.js?v=267';
+import { processorRequirements, inputsCapacity, outputCapacity, outputCapacity2k } from './processor-limits.js?v=267';
+import { rankProcessors, validateBuild } from './processor-validator.js?v=267';
+import { normalizeConfig, makeRecord, normalizeRecords, exportBundle, parseImport, mergeRecords } from './config.js?v=267';
+import { listShared, uploadShared, deleteShared, listCases, addCases, deleteCase, updateCase } from './share-remote.js?v=267';
+import { parseCasesText, normalizeDate } from './cases.js?v=267';
 
 // 가격표 출처(우선순위): ① 이 브라우저 저장값(localStorage, '가격표 불러오기'로 저장) →
 //   ② prices.local.js(사내 로컬 실행 시). 가격은 저장소·공개웹에 없으며, 브라우저에만 저장된다.
@@ -245,9 +245,11 @@ function moveModel(id, dir) {
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
 const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true };
 let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
-let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산). 가로는 항상 꽉 채우고 세로는 팬.
-let pvImgPanY = 0.5;    // 세로 넘침 시 크롭 위치(0=위, 1=아래).
-let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {lw, lh, ih, overflow} — 드래그 팬 계산용.
+let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산).
+let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / 'height'=세로 고정(세로 꽉·좌우 이동).
+let pvImgPanY = 0.5;    // 세로 넘침 시 크롭 위치(0=위, 1=아래) — 가로 고정 모드.
+let pvImgPanX = 0.5;    // 가로 넘침 시 크롭 위치(0=좌, 1=우) — 세로 고정 모드.
+let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {mode, lw, lh, iw, ih, range} — 드래그 팬 계산용.
 
 // 미리보기를 CSS 3D 1점 투시로 그린다(원근감 스펙 2026-09-12). 치수 값·계산은 engine 결과 그대로 쓰고
 //   위치만 3D 화면에 맞춰 투영한다. 벽 크기·모델·배열이 바뀌어도 동적으로 맞는다(고정 좌표 없음).
@@ -472,18 +474,27 @@ function renderPreview() {
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
   const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', pvShow.cellgrid ? '' : 'noCellGrid'].filter(Boolean).join(' ');
   // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
-  const ledGlow = `box-shadow:0 0 0 2px #2f7ff6,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
-  // LED 화면 내용: 이미지가 있으면 가로 꽉 채우고 세로는 pvImgPanY로 위아래 이동(넘침=크롭/모자람=검정 슬라이드).
+  // 검은 테두리(베젤) + 그 뒤로 퍼지는 파란 네온 글로우(유지). ※ 인라인이라 CSS보다 우선.
+  const ledGlow = `box-shadow:0 0 0 2px #050608,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
+  // LED 화면 내용: 이미지가 있으면 (가로 고정)가로 꽉·상하 이동 / (세로 고정)세로 꽉·좌우 이동. 넘침=크롭/모자람=검정.
   //   LED 격자 ON이면 이미지 위에 캐비닛 격자선 오버레이. 이미지 없으면 파란 글로우.
   let ledExtra;
   if (pvImage) {
     const asp = pvImgAspect || (Lw / Lh);
-    const ih = Lw / asp, range = ih - Lh;                 // range>0: 세로 넘침(크롭), <0: 모자람(검정)
-    const top = (range > 0) ? (-range * pvImgPanY) : ((Lh - ih) * pvImgPanY);
-    pvLedGeom = { lw: Lw, lh: Lh, ih, range };
+    let iw, ih, left, top, range;
+    if (pvImgMode === 'height') {
+      // 세로 고정: 세로를 꽉 채우고 가로는 좌우로 이동(pvImgPanX).
+      ih = Lh; iw = Lh * asp; range = iw - Lw;             // range>0: 가로 넘침(크롭), <0: 모자람(검정)
+      left = (range > 0) ? (-range * pvImgPanX) : ((Lw - iw) * pvImgPanX); top = 0;
+    } else {
+      // 가로 고정: 가로를 꽉 채우고 세로는 위아래로 이동(pvImgPanY).
+      iw = Lw; ih = Lw / asp; range = ih - Lh;             // range>0: 세로 넘침(크롭), <0: 모자람(검정)
+      left = 0; top = (range > 0) ? (-range * pvImgPanY) : ((Lh - ih) * pvImgPanY);
+    }
+    pvLedGeom = { mode: pvImgMode, lw: Lw, lh: Lh, iw, ih, range };
     const ov = pvShow.cellgrid
       ? `<div class="rs3LedGridOv" style="background-size:${(Lw / r.cols).toFixed(2)}px ${(Lh / r.rows).toFixed(2)}px"></div>` : '';
-    ledExtra = `<img class="rs3LedImg" src="${pvImage}" draggable="false" style="width:${Lw}px;height:${ih.toFixed(1)}px;left:0;top:${top.toFixed(1)}px"/>${ov}`;
+    ledExtra = `<img class="rs3LedImg" src="${pvImage}" draggable="false" style="width:${iw.toFixed(1)}px;height:${ih.toFixed(1)}px;left:${left.toFixed(1)}px;top:${top.toFixed(1)}px"/>${ov}`;
   } else {
     pvLedGeom = null;
     ledExtra = '<div class="rs3Glow"></div>';
@@ -836,7 +847,7 @@ function dataFlowSVG(r) {
     groups += `<rect class="fxGroup" x="${x0 + 1}" y="${y0 + 1}" width="${w - 2}" height="${h - 2}"/>`;
     // 영역(=S-Box 신호 그룹) 하단에 작은 라벨. #N = S-Box 번호 + 담당 캐비닛 열 범위(1-based).
     //   좁은(1열) 영역엔 글자가 안 들어가므로 짧은 '#N'만, 넓으면 전체 라벨을 쓰고 영역 폭을 넘지 않게 맞춘다.
-    const fsz = Math.max(7, Math.min(13, cs * 0.42));
+    const fsz = Math.max(6, Math.min(10, cs * 0.32));
     const colTxt = regCols > 1 ? `${rg.colStart + 1}~${rg.colEnd + 1}열` : `${rg.colStart + 1}열`;
     const full = `S-Box #${sboxIdx} · ${colTxt}`, short = `#${sboxIdx}`;
     const charW = fsz * 0.56, avail = w - 6;
@@ -1238,11 +1249,41 @@ $('#pvToggles')?.addEventListener('click', e => {
   syncPvToggles();
   renderPreview();
 });
-// LED 화면 이미지 넣기/제거: 이미지가 있으면 클릭 시 제거, 없으면 파일 선택.
+// LED 화면 이미지 넣기/제거: 이미지가 있으면 클릭 시 제거, 없으면 방식 선택 팝업 → 파일 선택.
 $('#pvImgBtn')?.addEventListener('click', () => {
   if (pvImage) { pvImage = null; syncPvToggles(); renderPreview(); }
-  else { $('#pvImgFile')?.click(); }
+  else openImgModePopup();
 });
+// 이미지 넣기 방식(가로 고정 / 세로 고정) 선택 팝업. index.html 마크업을 건드리지 않게 동적 생성.
+function openImgModePopup() {
+  let el = document.querySelector('#imgModePop');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'imgModePop';
+    el.hidden = true;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.closest('[data-imgclose]')) { el.hidden = true; return; }
+      const b = e.target.closest('[data-imgmode]');
+      if (b) { pvImgMode = b.dataset.imgmode; el.hidden = true; $('#pvImgFile')?.click(); }
+    });
+  }
+  el.innerHTML = `<div class="imgModeCard" role="dialog" aria-modal="true" aria-label="이미지 넣기 방식 선택">
+    <div class="imgModeHead"><div class="imgModeTitle">이미지 넣기 방식</div>
+      <button type="button" class="ppClose" data-imgclose aria-label="닫기">✕</button></div>
+    <div class="imgModeBody">
+      <button type="button" class="imgModeOpt" data-imgmode="width">
+        <div class="imgModeIco"><span class="imgModeBox wide"></span></div>
+        <div class="imgModeTxt"><b>가로 고정 올리기</b><span>가로를 꽉 채우고 위·아래로 이동</span></div>
+      </button>
+      <button type="button" class="imgModeOpt" data-imgmode="height">
+        <div class="imgModeIco"><span class="imgModeBox tall"></span></div>
+        <div class="imgModeTxt"><b>세로 고정 올리기</b><span>세로를 꽉 채우고 좌·우로 이동</span></div>
+      </button>
+    </div>
+  </div>`;
+  el.hidden = false;
+}
 $('#pvImgFile')?.addEventListener('change', e => {
   const f = e.target.files?.[0]; if (!f) return;
   const rd = new FileReader();
@@ -1250,16 +1291,17 @@ $('#pvImgFile')?.addEventListener('change', e => {
     const im = new Image();
     im.onload = () => {
       pvImgAspect = (im.naturalWidth > 0 && im.naturalHeight > 0) ? im.naturalWidth / im.naturalHeight : null;
-      pvImage = rd.result; pvImgPanY = 0.5; pvShow.cellgrid = false;   // 이미지 넣으면 격자 기본 OFF
+      pvImage = rd.result; pvImgPanY = 0.5; pvImgPanX = 0.5; pvShow.cellgrid = false;   // 이미지 넣으면 격자 기본 OFF
       syncPvToggles(); renderPreview();
     };
-    im.onerror = () => { pvImgAspect = null; pvImage = rd.result; pvImgPanY = 0.5; pvShow.cellgrid = false; syncPvToggles(); renderPreview(); };
+    im.onerror = () => { pvImgAspect = null; pvImage = rd.result; pvImgPanY = 0.5; pvImgPanX = 0.5; pvShow.cellgrid = false; syncPvToggles(); renderPreview(); };
     im.src = rd.result;
   };
   rd.readAsDataURL(f);
   e.target.value = '';   // 같은 파일 다시 선택 가능하게 초기화
 });
-// 이미지 세로 위치(팬) 드래그 — #stage에 위임(재렌더돼도 유지). LED 로컬↔화면 px는 rect로 환산.
+// 이미지 위치(팬) 드래그 — #stage에 위임(재렌더돼도 유지). LED 로컬↔화면 px는 rect로 환산.
+//   가로 고정=세로(상하) 드래그, 세로 고정=가로(좌우) 드래그. 넘침(range>0)=크롭, 모자람(<0)=검정 슬라이드.
 (function pvImagePan() {
   const stage = $('#stage'); if (!stage) return;
   let d = null;
@@ -1268,22 +1310,30 @@ $('#pvImgFile')?.addEventListener('change', e => {
     const g = pvLedGeom; if (Math.abs(g.range) < 1) return;   // 넘침/모자람 없으면 이동 불필요
     const led = img.closest('.rs3Led'); const rect = led.getBoundingClientRect();
     const overflow = g.range > 0;
-    const min = overflow ? -g.range : 0, max = overflow ? 0 : (g.lh - g.ih);
-    const startTop = overflow ? (-g.range * pvImgPanY) : ((g.lh - g.ih) * pvImgPanY);
-    d = { y: e.clientY, top: startTop, scale: g.lh / rect.height, min, max, img, cur: startTop };
+    const horiz = g.mode === 'height';
+    // 세로 고정=가로 위치(left) 조정, 가로 고정=세로 위치(top) 조정.
+    const minmaxLo = overflow ? -g.range : 0;
+    const minmaxHi = overflow ? 0 : (horiz ? (g.lw - g.iw) : (g.lh - g.ih));
+    const start = overflow
+      ? (-g.range * (horiz ? pvImgPanX : pvImgPanY))
+      : ((horiz ? (g.lw - g.iw) : (g.lh - g.ih)) * (horiz ? pvImgPanX : pvImgPanY));
+    const scale = horiz ? (g.lw / rect.width) : (g.lh / rect.height);
+    d = { horiz, x: e.clientX, y: e.clientY, base: start, scale, min: minmaxLo, max: minmaxHi, img, cur: start };
     try { img.setPointerCapture(e.pointerId); } catch {}
     e.preventDefault();
   });
   stage.addEventListener('pointermove', e => {
     if (!d) return;
-    let top = d.top + (e.clientY - d.y) * d.scale;
-    top = Math.max(d.min, Math.min(d.max, top));
-    d.cur = top; d.img.style.top = top.toFixed(1) + 'px';
+    const delta = (d.horiz ? (e.clientX - d.x) : (e.clientY - d.y)) * d.scale;
+    let v = Math.max(d.min, Math.min(d.max, d.base + delta));
+    d.cur = v; d.img.style[d.horiz ? 'left' : 'top'] = v.toFixed(1) + 'px';
   });
   const end = () => {
     if (!d || !pvLedGeom) { d = null; return; }
-    const g = pvLedGeom, span = (g.range > 0) ? g.range : (g.lh - g.ih);
-    pvImgPanY = span ? Math.max(0, Math.min(1, (g.range > 0 ? -d.cur / g.range : d.cur / (g.lh - g.ih)))) : 0.5;
+    const g = pvLedGeom, horiz = d.horiz;
+    const span = (g.range > 0) ? g.range : (horiz ? (g.lw - g.iw) : (g.lh - g.ih));
+    const frac = span ? Math.max(0, Math.min(1, (g.range > 0 ? -d.cur / g.range : d.cur / span))) : 0.5;
+    if (horiz) pvImgPanX = frac; else pvImgPanY = frac;
     d = null;
   };
   stage.addEventListener('pointerup', end);
