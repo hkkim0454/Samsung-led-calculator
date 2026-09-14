@@ -992,25 +992,43 @@ function openPortPopup(id) {
   // 커넥터를 보여줄 때만 독립 입력 최대를 참고로 덧붙임(카드형은 이미 위에 표시됨).
   const showIndepNote = connRows.length && (p.inputs.maxIndependent4k != null || p.inputs.maxIndependent2k != null);
   const needsVer = p.verification?.status !== 'official';
+  const hasImg = PROC_IMG_IDS.has(id);   // 제품 이미지가 있으면 포트 팝업에 함께 표시(이사 요청 2026-09-14)
   let el = document.querySelector('#portPop');
   if (!el) {
     el = document.createElement('div');
     el.id = 'portPop';
     el.hidden = true;
     document.body.appendChild(el);
-    el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-portclose]')) el.hidden = true; });
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.closest('[data-portclose]')) { el.hidden = true; return; }
+      // 팝업 안 제품 이미지 앞/뒤 전환(data-ppside).
+      const t = e.target.closest('[data-ppside]');
+      if (t) {
+        el.querySelectorAll('[data-ppside]').forEach(b => b.classList.toggle('on', b === t));
+        const im = el.querySelector('#ppImgImg');
+        if (im) im.src = procImgSrc(el.dataset.pid, t.dataset.ppside);
+      }
+    });
   }
-  el.innerHTML = `<div class="portPopCard" role="dialog" aria-modal="true" aria-label="포트별 입출력 수량">
+  el.dataset.pid = id;
+  const imgSecHTML = hasImg ? `<div class="ppImgSec">
+      <div class="ppImgTabs"><button type="button" class="tiny on" data-ppside="front">앞면</button><button type="button" class="tiny" data-ppside="back">뒷면</button></div>
+      <div class="ppImgWrap"><img id="ppImgImg" src="${procImgSrc(id, 'front')}" alt="${esc(p.manufacturer)} ${esc(p.model)} 제품 이미지" draggable="false"/></div>
+    </div>` : '';
+  el.innerHTML = `<div class="portPopCard${hasImg ? ' ppWithImg' : ''}" role="dialog" aria-modal="true" aria-label="포트별 입출력 수량">
     <div class="ppHead">
       <div class="ppTitle">${esc(p.manufacturer)} · ${esc(p.model)}</div>
       <button type="button" class="ppClose" data-portclose aria-label="닫기">✕</button>
     </div>
     <div class="ppBody">
-      <div class="ppSec"><div class="ppSecTitle">${inTitle}</div><table class="ppTable">${inHTML}</table>
-        ${showIndepNote
-          ? `<div class="ppNote">독립 입력 최대 · 4K ${p.inputs.maxIndependent4k ?? '—'} / 2K ${p.inputs.maxIndependent2k ?? '—'}</div>` : ''}
+      ${imgSecHTML}
+      <div class="ppPorts">
+        <div class="ppSec"><div class="ppSecTitle">${inTitle}</div><table class="ppTable">${inHTML}</table>
+          ${showIndepNote
+            ? `<div class="ppNote">독립 입력 최대 · 4K ${p.inputs.maxIndependent4k ?? '—'} / 2K ${p.inputs.maxIndependent2k ?? '—'}</div>` : ''}
+        </div>
+        <div class="ppSec"><div class="ppSecTitle">${outTitle}</div><table class="ppTable">${outHTML}</table></div>
       </div>
-      <div class="ppSec"><div class="ppSecTitle">${outTitle}</div><table class="ppTable">${outHTML}</table></div>
     </div>
     ${needsVer ? '<div class="ppVer">※ 일부 값은 공식 확인 전이라 “—(확인 필요)”로 표시됩니다.</div>' : ''}
   </div>`;
