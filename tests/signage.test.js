@@ -112,6 +112,11 @@ test('spec: QH115FX OS = Tizen 8.0 / VXT 지원', () => {
   assert.equal(q.features.soc, 'Tizen 8.0');
   assert.equal(q.features.vxt, true);
   assert.equal(q.features.ir, true);   // 매뉴얼 IR 단자 확인
+  assert.equal(q.display.panelType, 'VA');
+  assert.equal(q.physical.bezelMm, 3);
+  assert.equal(q.power.sleepW, 0.5);
+  assert.equal(q.features.wifi, true);
+  assert.equal(q.features.bluetooth, true);
 });
 test('spec: 단독형 13종(QH115FX 제외) MagicINFO·VXT 둘 다 지원', () => {
   for (const m of SIGNAGE_MODELS.filter(x => x.category === 'standalone_signage' && x.modelCode !== 'LH115QHFEBGXKR')) {

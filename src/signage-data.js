@@ -221,7 +221,8 @@ const STANDALONE_DATASHEET = {
   LH55QHCEBGCXKR: { widthMm: 1237.9, heightMm: 708.8, depthMm: 28.5, weightKg: 16.9, vesaMm: '200x200', typicalW: 187, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
   LH65QHCEBGCXKR: { widthMm: 1456.8, heightMm: 831.9, depthMm: 28.5, weightKg: 22.7, vesaMm: '400x300', typicalW: 203.5, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 11.5, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
   LH75QHCEBGCXKR: { widthMm: 1682.3, heightMm: 960.4, depthMm: 28.5, weightKg: 34.6, vesaMm: '400x400', typicalW: 275, sleepW: 0.5, speakerW: '10+10', hdr: null, tizen: true, panelType: 'VA', bezelMm: 13.4, soc: 'Tizen 7.0', wifi: true, bluetooth: true, ir: true, ratedUsage: '24/7' },
-  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 836, speakerW: 60, hdr: true, tizen: true, ratedUsage: '24/7', vxt: true, soc: 'Tizen 8.0', ir: true },  // IR: 매뉴얼(BN81-26720E-02) 단자 명시. 패널/베젤/Sleep/WiFi/BT는 매뉴얼 미기재 → null 유지.
+  // QH115FX: IR=매뉴얼(BN81-26720E-02). 패널 VA·베젤 3mm(bezel-less)·Sleep 0.5W·WiFi·BT는 삼성 공식(HK/AU/MY)·유통 스펙 교차확인(2026-09-14).
+  LH115QHFEBGXKR: { widthMm: 2565.2, heightMm: 1467.6, depthMm: 34.1, weightKg: 83.7, vesaMm: '1000x600', typicalW: 836, sleepW: 0.5, speakerW: 60, hdr: true, tizen: true, ratedUsage: '24/7', vxt: true, soc: 'Tizen 8.0', ir: true, panelType: 'VA', bezelMm: 3, wifi: true, bluetooth: true },
 };
 for (const m of SIGNAGE_MODELS) {
   const d = STANDALONE_DATASHEET[m.modelCode];
