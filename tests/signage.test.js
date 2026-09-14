@@ -107,6 +107,18 @@ test('spec: QM32C = FHD(1920x1080)·400nit·DP In 0(공식 No)', () => {
   assert.equal(q.io.displayPortIn, 0);
   assert.equal(q.features.soc, 'Tizen 7.0');
 });
+test('spec: QH115FX OS = Tizen 8.0 / VXT 지원', () => {
+  const q = SIGNAGE_MODELS.find(m => m.modelCode === 'LH115QHFEBGXKR');
+  assert.equal(q.features.soc, 'Tizen 8.0');
+  assert.equal(q.features.vxt, true);
+});
+test('spec: 비디오월 6종 OS 없음 · MagicINFO/VXT 미지원(false)', () => {
+  for (const m of SIGNAGE_MODELS.filter(x => x.category === 'video_wall')) {
+    assert.equal(m.features.magicInfo, false, `${m.modelCode} magicInfo false 아님`);
+    assert.equal(m.features.vxt, false, `${m.modelCode} vxt false 아님`);
+    assert.ok(typeof m.features.soc === 'string' && m.features.soc.includes('없음'), `${m.modelCode} soc 없음 표기 아님`);
+  }
+});
 test('spec: QMC 응답속도 QM50C·QM85C = 10ms', () => {
   assert.equal(SIGNAGE_MODELS.find(m => m.modelCode === 'LH50QMCEBGCXKR').display.responseTimeMs, 10);
   assert.equal(SIGNAGE_MODELS.find(m => m.modelCode === 'LH85QMCEBGCXKR').display.responseTimeMs, 10);
