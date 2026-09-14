@@ -303,17 +303,30 @@ function ledManualFit() {
 
 // 확장 버튼: 공간확정 여부를 물어(confirm) 승인하면 01 설치 공간(가로·세로)을 필요한 크기로 바꾼다.
 //   0.1 m 단위로 올림. 화면 하단 높이는 건드리지 않는다.
+// 공간 확대 확인 — 세련된 모달 팝업(네이티브 confirm 대체, 이사 요청 2026-09-14). LED 배열 직접 지정·비디오월 공통.
 function expandSpaceTo(needW, needH) {
-  const wM = Math.ceil(needW / 100) / 10;   // mm → m, 0.1 m 올림
-  const hM = Math.ceil(needH / 100) / 10;
-  const ok = window.confirm(`설치 공간을 가로 ${wM.toFixed(1)} m × 세로 ${hM.toFixed(1)} m 로 확정하고 배열을 확장할까요?\n(좌우 여백 각 ${EXPAND_SIDE_MARGIN_MM} mm 확보 · 화면 하단 높이는 그대로 유지)`);
-  if (!ok) return;
-  const wEl = $('#spaceW'), hEl = $('#spaceH');
-  if (wEl) wEl.value = wM.toFixed(1);
-  if (hEl) hEl.value = hM.toFixed(1);
-  setLedMax();
-  renderAll();
-  syncSignageCard();
+  const wM = Math.ceil(needW / 100) / 10, hM = Math.ceil(needH / 100) / 10;   // mm → m, 0.1 m 올림
+  let el = document.querySelector('#expandPop');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'expandPop'; el.hidden = true; document.body.appendChild(el);
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.closest('[data-xpclose]')) { el.hidden = true; return; }
+      if (e.target.closest('[data-xpok]')) {
+        const wEl = $('#spaceW'), hEl = $('#spaceH');
+        if (wEl) wEl.value = el.dataset.w; if (hEl) hEl.value = el.dataset.h;
+        el.hidden = true; setLedMax(); renderAll(); syncSignageCard();
+      }
+    });
+  }
+  el.dataset.w = wM.toFixed(1); el.dataset.h = hM.toFixed(1);
+  el.innerHTML = `<div class="xpCard" role="dialog" aria-modal="true" aria-label="공간 확대">
+      <div class="xpIcon" aria-hidden="true">⤢</div>
+      <div class="xpTitle">설치 공간을 넓힐까요?</div>
+      <div class="xpBody">요청하신 배열이 현재 공간을 넘어섭니다.<br>설치 공간을 <b>가로 ${wM.toFixed(1)} m × 세로 ${hM.toFixed(1)} m</b> 로 넓혀<br>배열을 그대로 배치합니다.</div>
+      <div class="xpNote">좌우 여백 각 ${EXPAND_SIDE_MARGIN_MM}mm 확보 · 화면 하단 높이 유지</div>
+      <div class="xpBtns"><button type="button" class="xpBtn ghost" data-xpclose>취소</button><button type="button" class="xpBtn primary" data-xpok>공간 넓히고 확장</button></div>
+    </div>`;
+  el.hidden = false;
 }
 
 // 미리보기를 CSS 3D 1점 투시로 그린다(원근감 스펙 2026-09-12). 치수 값·계산은 engine 결과 그대로 쓰고
@@ -1449,9 +1462,10 @@ function syncSignageMode() {
   $('#ledBox')?.classList.toggle('svDisabled', on);
   $('#ledSizeLabel')?.classList.toggle('svDisabled', on);
   ['ledW', 'ledH'].forEach(id => { const e = $('#' + id); if (e) e.disabled = on; });
-  // 사이니지 선택 시 LED 전용 05(비디오 프로세서)·08(데이터 흐름) 카드 비활성화(이사 요청 2026-09-14).
-  $('#vpCard')?.classList.toggle('svDisabled', on);
-  $('#dfpwCard')?.classList.toggle('svDisabled', on);
+  // 사이니지 선택 시 LED 전용 05(비디오 프로세서)·08(데이터 흐름) 카드 비활성화 + 자동 접힘(이사 요청 2026-09-14).
+  const vp = $('#vpCard'), df = $('#dfpwCard');
+  if (vp) { vp.classList.toggle('svDisabled', on); if (on) vp.open = false; }
+  if (df) { df.classList.toggle('svDisabled', on); if (on) df.open = false; }
 }
 function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); saveLastSession(); }
 
@@ -1555,7 +1569,7 @@ document.addEventListener('click', e => {
   if (f && f.over) expandSpaceTo(f.needW, f.needH);
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { ['#portPop', '#procImgPop', '#svPickPop'].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) el.hidden = true; }); }
+  if (e.key === 'Escape') { ['#portPop', '#procImgPop', '#svPickPop', '#expandPop'].forEach(sel => { const el = document.querySelector(sel); if (el && !el.hidden) el.hidden = true; }); }
   else if ((e.key === 'Enter' || e.key === ' ') && e.target?.matches?.('[data-portproc]')) { e.preventDefault(); openPortPopup(e.target.dataset.portproc); }
 });
 setLedMax();   // 초기 max 속성 설정

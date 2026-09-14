@@ -622,6 +622,21 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .procImgBody{padding:0 16px 16px}
 .procImgBody img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff}
 
+/* 공간 확대 확인 모달(세련된 팝업) */
+#expandPop{position:fixed;inset:0;z-index:2100;display:flex;align-items:center;justify-content:center;background:rgba(20,26,40,.5);backdrop-filter:saturate(140%) blur(5px);padding:16px}
+.xpCard{width:min(400px,94vw);background:var(--panel-solid);color:var(--ink);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-pop);padding:26px 24px 20px;text-align:center}
+.xpIcon{width:56px;height:56px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;background:linear-gradient(155deg,var(--accent),var(--accent-2));box-shadow:0 8px 20px -8px var(--accent)}
+.xpTitle{font-size:18px;font-weight:800;letter-spacing:-.01em}
+.xpBody{margin-top:10px;font-size:14px;line-height:1.55;color:var(--ink-2)}
+.xpBody b{color:var(--accent);font-weight:700}
+.xpNote{margin-top:12px;font-size:12px;color:var(--muted);background:var(--field-fill);border-radius:10px;padding:8px 10px}
+.xpBtns{display:flex;gap:10px;margin-top:20px}
+.xpBtn{flex:1;font:inherit;font-size:14px;font-weight:700;padding:11px 12px;border-radius:12px;cursor:pointer;border:1px solid var(--line)}
+.xpBtn.ghost{background:var(--field-fill);color:var(--ink-2)}
+.xpBtn.ghost:hover{background:var(--line-2)}
+.xpBtn.primary{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px var(--accent)}
+.xpBtn.primary:hover{background:var(--accent-2)}
+
 /* 04 산출 스펙 입출력 단자: 커넥터별 칩(정신없던 한 줄 나열 정리, 이사 요청 2026-09-14) */
 .metric.ioFull{grid-column:1 / -1}
 .ioRow{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:6px}
