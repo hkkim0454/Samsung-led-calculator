@@ -948,7 +948,17 @@ function cardChannelPhrase(p, cp) {
     return `카드당 4K — 입력 ${cp.inPerCard ?? '미상'} · 출력 ${cp.outPerCard ?? '미상'}채널`;
   return null;
 }
-// 고정형(카드 없는 Midra·Zenith 등) 입출력 수량 문구. 실제 입력/출력 수만 간단히 보여준다.
+// 고정형 입력 커넥터 종류·수량 문구(요청 2026-09-15). 데이터에 있는 커넥터만, 없으면 null(미상).
+const CONNECTOR_LABELS = [
+  ['hdmi20', 'HDMI 2.0'], ['dp12', 'DP 1.2'], ['hdmi14', 'HDMI 1.4'],
+  ['sdi12g', '12G-SDI'], ['sdi3g', '3G-SDI'], ['comboHdmi14Sdi3g', 'HDMI1.4/3G-SDI 겸용'],
+];
+function inputConnectorPhrase(p) {
+  const i = p.inputs || {};
+  const parts = CONNECTOR_LABELS.filter(([k]) => i[k] != null && i[k] > 0).map(([k, label]) => `${label} ×${i[k]}`);
+  return parts.length ? parts.join(' · ') : null;
+}
+// 고정형(슬롯 아님) 입출력 수량 문구. 실제 입력/출력 수만 간단히 보여준다.
 function fixedIoPhrase(p) {
   const i = p.inputs || {}, o = p.outputs || {};
   const inCount = i.total ?? i.maxIndependent4k ?? null;
@@ -956,7 +966,7 @@ function fixedIoPhrase(p) {
   const outCount = o.maxActiveOutputs ?? o.maxIndependent4kOutputs ?? null;
   const outPgm = o.maxIndependent4kPgm ?? null;
   const inTxt = inCount != null
-    ? `입력 <b>${inCount}</b>개${(in4k != null && in4k !== inCount) ? ` <span class="muted-note">(독립 4K ${in4k})</span>` : ''}`
+    ? `입력 총 <b>${inCount}</b>개${(in4k != null && in4k !== inCount) ? ` <span class="muted-note">(독립 4K ${in4k})</span>` : ''}`
     : '입력 <b>미상</b>';
   const outTxt = outCount != null
     ? `출력 <b>${outCount}</b>개${(outPgm != null) ? ` <span class="muted-note">(4K PGM ${outPgm})</span>` : ''}`
@@ -964,13 +974,21 @@ function fixedIoPhrase(p) {
   return `${inTxt} · ${outTxt}`;
 }
 // 슬롯·카드 구성 블록(요청 2026-09-15). 계산은 engine/limits(cardPlan)에서만 하고 여기선 표시만 한다.
-//   고정형 = 입력 N개·출력 M개(실수량). 슬롯형 = 최대 몇 채널 구성 가능 + 필요 카드·남는 슬롯.
+//   고정형(preconfigured) = 입력 커넥터 구성 + 입출력 수량. 슬롯형(customizable) = 구성 가능 채널 + 필요 카드·남는 슬롯.
 function vpCardPlanHTML(item) {
   const cp = item.cardPlan;
   if (!cp) return '';
-  if (!cp.cardBased) {
+  // 형태 판정: preconfigured=고정형(커넥터 표시), customizable=슬롯형(카드 구성). configurationType 없으면 cardPlan로 보조.
+  const isSlot = item.proc.configurationType === 'customizable'
+    || (item.proc.configurationType == null && cp.cardBased);
+  if (!isSlot) {
+    const conn = inputConnectorPhrase(item.proc);
+    const connLine = conn
+      ? `<span class="vpSlotChan">입력 커넥터: ${esc(conn)}</span>`
+      : '<span class="vpSlotChan muted-note">입력 커넥터: 미상 (데이터시트 값 필요)</span>';
     return `<div class="vpSlot fixed"><span class="vpSlotHd">고정형</span><span class="vpSlotBody">
-      <span class="vpSlotChan">${fixedIoPhrase(item.proc)}</span></span></div>`;
+      ${connLine}
+      <span class="vpSlotRow">${fixedIoPhrase(item.proc)}</span></span></div>`;
   }
   const phrase = cardChannelPhrase(item.proc, cp);
   // 최대 구성 가능 채널(슬롯에 카드를 꽂아 낼 수 있는 최대 4K 채널 수).
