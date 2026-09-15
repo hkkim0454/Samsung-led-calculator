@@ -199,10 +199,9 @@ export const PROCESSORS = [
     { model: 'H2',           slug: 'h2',   inCards: 4,  outCards: 2,  maxLayers: 32,  status: 'official' },
     { model: 'H5',           slug: 'h5',   inCards: 10, outCards: 3,  maxLayers: 48,  status: 'official' },
     { model: 'H9',           slug: 'h9',   inCards: 15, outCards: 5,  maxLayers: 80,  status: 'official' },
-    { model: 'H9 Enhanced',  slug: 'h9e',  inCards: 15, outCards: 10, maxLayers: 160, status: 'official' },
     { model: 'H15',          slug: 'h15',  inCards: 30, outCards: 10, maxLayers: 160, status: 'official' },
-    { model: 'H15 Enhanced', slug: 'h15e', inCards: 30, outCards: 16, maxLayers: 160, status: 'official' },
     { model: 'H20',          slug: 'h20',  inCards: 40, outCards: 20, maxLayers: 320, status: 'needs_verification' },  // SoT 라인업 밖
+    // H9 Enhanced / H15 Enhanced 삭제(이사 요청 2026-09-15 — 이미지 없음·목록에서 제외).
   ].map(m => proc({
     id: 'ns-' + m.slug,
     manufacturer: NS, family: 'H', model: 'H Series ' + m.model, lifecycle: 'active', configurationType: 'customizable',
