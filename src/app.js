@@ -1616,12 +1616,11 @@ function clampBaseHeight() {
 //   최대 = 자동 채움(벽면−하단높이, 구조틀 여백 반영)의 열·행. 그 이하로 입력값을 제한하고 max도 맞춘다.
 function clampManualArray() {
   if (mode !== 'manual') return;
-  const f = ledManualFit(); if (!f) return;
-  // 입력값은 요청 그대로 유지(확장 안내에 필요)하고, 스테퍼 상한(max)만 갱신한다.
-  //   미리보기·계산은 opts()에서 공간 최대치로 제한하므로 배열이 공간을 넘지 않는다.
+  // 스테퍼(▲) 상한을 걸지 않는다 — 공간보다 크게 올릴 수 있어야 '공간 넓혀 확장' 안내가 뜬다(이사 요청 2026-09-15).
+  //   미리보기·계산은 opts()에서 공간 최대치로 제한하므로 배열 자체는 공간을 넘지 않고, 초과분은 확장 안내로 처리.
   const cEl = $('#manCols'), rEl = $('#manRows');
-  if (cEl && f.maxC > 0) cEl.max = f.maxC;
-  if (rEl && f.maxR > 0) rEl.max = f.maxR;
+  if (cEl) cEl.removeAttribute('max');
+  if (rEl) rEl.removeAttribute('max');
 }
 // 벽면·하단 높이 편집: LED 입력칸의 max만 갱신하고 값은 보존(편집 중 LED 세로가 0으로 눌러붙지 않게).
 ['spaceW', 'spaceH', 'baseHeight'].forEach(id => $('#' + id)?.addEventListener('input', () => { setLedMax(); renderAll(); }));
