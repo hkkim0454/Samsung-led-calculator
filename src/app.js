@@ -980,6 +980,24 @@ function openProcImgPopup(id, side = 'front') {
         if (im) im.src = procImgSrc(el.dataset.pid, t.dataset.piside);
       }
     });
+    // 원형 돋보기(확대 렌즈) — 이미지 위에서 커서를 따라 해당 부분을 확대해 보여준다(이사 요청 2026-09-15).
+    const LOUPE = 190, ZOOM = 2.6;
+    const moveLoupe = e => {
+      const img = el.querySelector('#procImgImg'), loupe = el.querySelector('#procLoupe');
+      if (!img || !loupe || !img.complete || !img.naturalWidth) return;
+      const r = img.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { loupe.hidden = true; return; }
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      loupe.hidden = false;
+      loupe.style.left = (x - LOUPE / 2) + 'px';
+      loupe.style.top = (y - LOUPE / 2) + 'px';
+      loupe.style.backgroundImage = `url("${img.src}")`;
+      loupe.style.backgroundSize = (r.width * ZOOM) + 'px ' + (r.height * ZOOM) + 'px';
+      loupe.style.backgroundPosition = `${LOUPE / 2 - x * ZOOM}px ${LOUPE / 2 - y * ZOOM}px`;
+    };
+    const hideLoupe = () => { const l = el.querySelector('#procLoupe'); if (l) l.hidden = true; };
+    el.addEventListener('pointermove', moveLoupe);
+    ['pointerleave', 'pointerup', 'pointercancel'].forEach(ev => el.addEventListener(ev, hideLoupe));
   }
   el.dataset.pid = id;
   el.innerHTML = `<div class="procImgCard" role="dialog" aria-modal="true" aria-label="${esc(title)} 제품 이미지">
@@ -988,7 +1006,7 @@ function openProcImgPopup(id, side = 'front') {
         <div class="procImgTabs"><button type="button" class="tiny${side === 'front' ? ' on' : ''}" data-piside="front">앞면</button><button type="button" class="tiny${side === 'back' ? ' on' : ''}" data-piside="back">뒷면</button></div>
         <button type="button" class="ppClose" data-piclose aria-label="닫기">✕</button>
       </div>
-      <div class="procImgBody"><img id="procImgImg" src="${procImgSrc(id, side)}" alt="${esc(title)} 제품 이미지" draggable="false"/></div>
+      <div class="procImgBody"><div class="procImgZoom" id="procImgZoom" title="마우스를 올리면 원형 돋보기로 확대됩니다"><img id="procImgImg" src="${procImgSrc(id, side)}" alt="${esc(title)} 제품 이미지" draggable="false"/><div class="procLoupe" id="procLoupe" hidden></div></div></div>
     </div>`;
   el.hidden = false;
 }
