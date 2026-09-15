@@ -622,8 +622,8 @@ function renderPreview() {
   // 캐비닛 수 라벨은 LED만. 사이니지는 중앙 '장' 표기 대신 우상단 인치 라벨(아래 svSizeHTML)로 표시(이사 요청 2026-09-14).
   //   위치: 중앙 → '왼쪽 하단' 안쪽(넓은 벽에서 중앙이 화면을 가리지 않게, 이사 요청 2026-09-14). 좌하단 앵커.
   if (!svMode) {
-    const bx = clx(Lx + px(120)), by = cly(Ly + Lh - px(120));
-    dims.push(`<div class="rs3Dlbl count bl" style="left:${bx}px;top:${by}px">${r.cols} × ${r.rows} = ${r.total} 캐비닛</div>`);
+    const bx = clx(Lx + Lw - px(120)), by = cly(Ly + Lh - px(120));   // 우측 하단 안쪽(사람과 겹치지 않게, 이사 요청 2026-09-15)
+    dims.push(`<div class="rs3Dlbl count br" style="left:${bx}px;top:${by}px">${r.cols} × ${r.rows} = ${r.total} 캐비닛</div>`);
   }
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
