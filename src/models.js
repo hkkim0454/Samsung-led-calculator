@@ -100,6 +100,15 @@ export const MODELS = [
     weight: 10.8, maxPower: 180, typicalPower: 60, maxInputW: 3840, maxInputH: 2160,
     sbox: 'SBB-SNOWJMU', cabinetPart: 'LH040IEACLS', dataStatus: 'verified' },
 
+  // ---- IEA-E series (IEA 후속, cabinet 960 x 540) — 기본 컨트롤러 SBB-CS4FPGS(CS4F, 동선 전송). ----
+  //   삼성 IEA-E 사양시트(2026-09-10, "Before finalizing spec"=잠정). IEA 대비 평균전력↑(127W)·명암비/HDR10+ 개선.
+  //   밝기 Peak는 확정 전(-)→null, 상시(Max) 600nit. Visual Refresh N/A. 확정 시 dataStatus 'verified'로 갱신.
+  { id: 'IE015AE', name: 'IE015A-E', category: 'Indoor', series: 'IEE',
+    pitch: 1.5, cabW: 960, cabH: 540, depth: 79.5, resW: 640, resH: 360,
+    brightnessPeak: null, brightnessReduced: 600, refreshHz: 3840, ovd_m: 5.2,
+    weight: 11.8, maxPower: 190, typicalPower: 127, maxInputW: 3840, maxInputH: 2160,
+    sbox: 'SBB-CS4FPGS', cabinetPart: 'LH015IEAELS', dataStatus: 'derived' }, // IEA-E 잠정 사양(spec 확정 전). CS4F 동선 컨트롤러
+
   // ---- MM series (MMF, cabinet 600 x 337.5) ----
   // MM009F/012F/015F CONFIRMED via Samsung configurator export (2026-07-24) — 밝기 최대 600 nit.
   //   무게 5.1kg/캐비닛 공통. 최대전력/평균전력(W/캐비닛): 009F 94.6/37, 012F 92.8/41.5, 015F 94.6/37.

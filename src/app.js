@@ -56,9 +56,9 @@ function ensureIndirectDefaults() {
 }
 
 // Sales lines shown by default. Marketing name (label) -> internal series code.
-const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IFM: 'IFR-M', IE: 'IEA' };
-// 기본 노출 라인 + 기본 표시 순서 (IFR → IFR-M → IEA → MMF → MPF).
-const SALES_LINES = ['IF', 'IFM', 'IE', 'MM', 'MP'];
+const LINE_NAMES = { MP: 'MPF', MM: 'MMF', IF: 'IFR', IFM: 'IFR-M', IE: 'IEA', IEE: 'IEA-E' };
+// 기본 노출 라인 + 기본 표시 순서 (IFR → IFR-M → IEA → IEA-E → MMF → MPF).
+const SALES_LINES = ['IF', 'IFM', 'IE', 'IEE', 'MM', 'MP'];
 
 // 기본 모델 목록: 라인을 SALES_LINES 순서로 배치한다. 같은 라인 내부(피치 순)와
 // 사용자 커스텀 정렬(▲▼)·JSON 불러오기 순서는 stable sort 로 그대로 보존된다.
