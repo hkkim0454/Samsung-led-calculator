@@ -936,17 +936,16 @@ function procHasFixedPorts(p) {
     // 카드(슬롯)형 제품(NovaStar H 등): 입출력 커넥터 값이 없어도 슬롯 수로 용량을 유도해 팝업을 띄운다.
     || s.maxInputBoards != null || s.maxOutputBoards != null;
 }
-// 제품군별 '카드당 4K 채널' 표시 문구(이사 지정 2026-09-15). 수치는 데이터(proc.cards)에서 오고, 문구만 여기서 고른다.
-function cardChannelPhrase(p, cp) {
+// 제품군별 '카드당 4K 채널' 표시 문구(이사 지정 2026-09-15). 수치는 데이터(proc.cards)에서 오고 문구만 고른다.
+//   side: 'in'|'out'. 채널 수 미상이면 '미상'(1채널 가정 금지).
+function cardChannelPhrase(p, perCard, side) {
   const fam = p.family, mfr = p.manufacturer;
-  if (mfr === 'Analog Way' && fam === 'Aquilon') return '카드당 독립 4K 최대 4채널';
+  if (mfr === 'Analog Way' && fam === 'Aquilon') return side === 'in' ? '카드당 독립 4K 최대 4채널' : '카드당 4K 최대 4채널';
   if (mfr === 'Colorlight' && fam === 'Universe') return 'HDMI 카드당 4K 최대 2채널';
   if (mfr === 'Colorlight' && fam === 'X100 Pro') return '4K 카드당 1채널';
   if (mfr === 'NovaStar' && fam === 'H') return '4K 카드당 1채널';
-  // 표에 없는 제품군: 데이터가 있으면 일반 문구, 없으면 미상.
-  if (cp.inPerCard != null || cp.outPerCard != null)
-    return `카드당 4K — 입력 ${cp.inPerCard ?? '미상'} · 출력 ${cp.outPerCard ?? '미상'}채널`;
-  return null;
+  if (perCard != null) return `카드당 4K ${perCard}채널`;   // 표 밖 제품: 데이터 있으면 일반 문구
+  return '카드당 채널 미상';                                 // 없으면 미상(추정 금지)
 }
 // 고정형 입력 커넥터 종류·수량 문구(요청 2026-09-15). 데이터에 있는 커넥터만, 없으면 null(미상).
 const CONNECTOR_LABELS = [
@@ -973,46 +972,89 @@ function fixedIoPhrase(p) {
     : '출력 <b>미상</b>';
   return `${inTxt} · ${outTxt}`;
 }
-// 슬롯·카드 구성 블록(요청 2026-09-15). 계산은 engine/limits(cardPlan)에서만 하고 여기선 표시만 한다.
-//   고정형(preconfigured) = 입력 커넥터 구성 + 입출력 수량. 슬롯형(customizable) = 구성 가능 채널 + 필요 카드·남는 슬롯.
-function vpCardPlanHTML(item) {
-  const cp = item.cardPlan;
-  if (!cp) return '';
-  // 형태 판정: preconfigured=고정형(커넥터 표시), customizable=슬롯형(카드 구성). configurationType 없으면 cardPlan로 보조.
-  const isSlot = item.proc.configurationType === 'customizable'
-    || (item.proc.configurationType == null && cp.cardBased);
-  if (!isSlot) {
-    const conn = inputConnectorPhrase(item.proc);
-    const connLine = conn
-      ? `<span class="vpSlotChan">입력 커넥터: ${esc(conn)}</span>`
-      : '<span class="vpSlotChan muted-note">입력 커넥터: 미상 (데이터시트 값 필요)</span>';
-    return `<div class="vpSlot fixed"><span class="vpSlotHd">고정형</span><span class="vpSlotBody">
-      ${connLine}
-      <span class="vpSlotRow">${fixedIoPhrase(item.proc)}</span></span></div>`;
+// 슬롯 사용 상태 시각화. reqCards(사용 카드)·slots(전체 슬롯). 넘치면 부족(빨강). 색+텍스트 함께 제공.
+function slotVizHTML(reqCards, slots) {
+  if (slots == null || reqCards == null) return '';
+  const cap = Math.max(slots, reqCards, 0);
+  let blocks = '';
+  for (let i = 0; i < cap; i++) {
+    const cls = (i < slots) ? (i < reqCards ? 'used' : 'free') : 'short';   // 물리슬롯 내: 사용/여유, 초과분: 부족
+    blocks += `<span class="slotBlk ${cls}"></span>`;
   }
-  const phrase = cardChannelPhrase(item.proc, cp);
-  // 최대 구성 가능 채널(슬롯에 카드를 꽂아 낼 수 있는 최대 4K 채널 수).
-  const cap = (n) => (n != null) ? `<b>${n}</b>채널` : '<b>미상</b>';
-  const capLine = `<span class="vpSlotCap">최대 4K 입력 ${cap(cp.maxIn4k)} · 출력 ${cap(cp.maxOut4k)} 구성 가능</span>`;
-  // 한 유형(입력/출력)의 "필요 N장 / 전체 슬롯 M → 남음" 한 줄.
-  const line = (label, need, reqCards, slots, rem) => {
-    let cards;
-    if (!(need > 0)) cards = '요구 없음';
-    else cards = (reqCards != null) ? `필요 <b>${reqCards}</b>장` : '필요 <b>미상</b>';
-    const slotTxt = (slots != null) ? `전체 슬롯 ${slots}` : '전체 슬롯 미상';
-    const remTxt = (rem == null) ? '' : (rem >= 0 ? ` → 남음 <b>${rem}</b>` : ` → <b class="vpShort">부족 ${-rem}</b>`);
-    return `<span class="vpSlotRow"><i>${label}</i> ${cards} · ${slotTxt}${remTxt}</span>`;
-  };
-  const chan = phrase ? `<span class="vpSlotChan">${esc(phrase)}</span>` : '<span class="vpSlotChan muted-note">카드당 채널 미상</span>';
-  return `<div class="vpSlot"><span class="vpSlotHd">슬롯형</span><span class="vpSlotBody">${chan}
-    ${capLine}
-    ${line('입력', cp.needIn, cp.reqInCards, cp.inSlots, cp.remInSlots)}
-    ${line('출력', cp.needOut, cp.reqOutCards, cp.outSlots, cp.remOutSlots)}</span></div>`;
+  const used = Math.min(reqCards, slots), free = Math.max(0, slots - reqCards), short = Math.max(0, reqCards - slots);
+  const legend = `사용 ${used}` + (short > 0 ? ` · <b class="vpShort">부족 ${short}</b>` : ` · 여유 ${free}`);
+  return `<div class="vpSlotViz" aria-hidden="true">${blocks}</div><div class="vpSlotLegend">${legend}</div>`;
+}
+// 슬롯형 카드의 한쪽(입력/출력) 영역. 계산값은 cardPlan에서 오고 여기선 표시만.
+function slotSideHTML(side, p, need, reqCards, slots, perCard) {
+  const kLabel = side === 'in' ? '입력' : '출력';
+  const reqTxt = !(need > 0) ? '필요 <b>0</b>장 <span class="muted-note">(요구 없음)</span>'
+    : (reqCards != null ? `필요 <b>${reqCards}</b>장` : '필요 <b>미상</b>');
+  const slotTxt = (slots != null) ? `전체 <b>${slots}</b>슬롯` : '전체 슬롯 <b>미상</b>';
+  const chan = cardChannelPhrase(p, perCard, side);
+  let remTxt;
+  if (slots == null || reqCards == null) remTxt = `남는 ${kLabel} 슬롯 <span class="muted-note">미상</span>`;
+  else { const rem = slots - reqCards; remTxt = rem >= 0 ? `남는 ${kLabel} 슬롯 <b>${rem}</b>개` : `<b class="vpShort">${kLabel} 슬롯 ${-rem}개 부족</b>`; }
+  return `<div class="vpCardCol">
+    <h5 class="vpColHd">${kLabel} 카드</h5>
+    <div class="vpColLine">${reqTxt} / ${slotTxt}</div>
+    <div class="vpColChan">${esc(chan)}</div>
+    <div class="vpColRem">${remTxt}</div>
+    ${slotVizHTML(reqCards, slots)}
+  </div>`;
+}
+// 슬롯형(customizable) 제품 카드 본문 — 입력/출력 2열 + 슬롯 시각화 + 상태 칩.
+function vpSlotCardHTML(item) {
+  const p = item.proc, cp = item.cardPlan;
+  const inS = slotSideHTML('in', p, cp.needIn, cp.reqInCards, cp.inSlots, cp.inPerCard);
+  const outS = slotSideHTML('out', p, cp.needOut, cp.reqOutCards, cp.outSlots, cp.outPerCard);
+  const inRem = (cp.inSlots != null && cp.reqInCards != null) ? cp.inSlots - cp.reqInCards : null;
+  const outRem = (cp.outSlots != null && cp.reqOutCards != null) ? cp.outSlots - cp.reqOutCards : null;
+  const short = (inRem != null && inRem < 0) || (outRem != null && outRem < 0);
+  const remChip = (label, rem) => rem == null ? `<span class="vpChip unk">${label} 미상</span>`
+    : (rem >= 0 ? `<span class="vpChip ok">${label} 여유 ${rem}</span>` : `<span class="vpChip no">${label} ${-rem} 부족</span>`);
+  const statusChip = short ? '<span class="vpChip no">슬롯 부족</span>' : '<span class="vpChip ok">구성 가능</span>';
+  return `<div class="vpCards">
+    <div class="vpCardGrid">${inS}${outS}</div>
+    <div class="vpChips">${statusChip}${remChip('입력', inRem)}${remChip('출력', outRem)}</div>
+  </div>`;
+}
+// 고정형(preconfigured) 제품 카드 본문 — 입력 커넥터 구성 + 입출력 수량.
+function vpFixedCardHTML(item) {
+  const conn = inputConnectorPhrase(item.proc);
+  const connLine = conn
+    ? `<span class="vpSlotChan">입력 커넥터: ${esc(conn)}</span>`
+    : '<span class="vpSlotChan muted-note">입력 커넥터: 미상 (데이터시트 값 필요)</span>';
+  return `<div class="vpSlot fixed"><span class="vpSlotHd">고정형</span><span class="vpSlotBody">
+    ${connLine}
+    <span class="vpSlotRow">${fixedIoPhrase(item.proc)}</span></span></div>`;
+}
+// 상세 사양(접기) — 물리 입력/Active 출력/PGM·스크린/믹싱·분할 레이어/윈도우를 서로 구분. Active≠PGM≠레이어.
+function vpDetailHTML(item) {
+  const p = item.proc, i = p.inputs || {}, o = p.outputs || {}, L = p.layers || {};
+  const v = (x) => (x != null ? x : '<span class="muted-note">미상</span>');
+  const specs = [
+    ['물리 4K 입력 채널', i.maxIndependent4k],
+    ['물리 4K Active 출력', o.maxActiveOutputs],
+    ['4K PGM / 스크린', o.maxIndependent4kPgm],
+    ['믹싱 레이어', L.mixing4k],
+    ['분할 레이어', L.split4k],
+    ['총 윈도우', L.maxWindows],
+  ];
+  const specList = specs.map(([n, val]) => `<li class="vSpec"><span class="cn">${n}</span><span class="cv">${v(val)}</span></li>`).join('');
+  const checks = item.checks?.length ? item.checks.map(vpCheckHTML).join('') : '';
+  return `<details class="vpDetail"><summary>상세 사양 보기</summary>
+    <ul class="vpSpecList">${specList}</ul>
+    ${checks ? `<div class="vpDetailSub">요구 대비 판정</div><ul class="vpChecksList">${checks}</ul>` : ''}
+  </details>`;
 }
 function vpItemHTML(item) {
   const p = item.proc;
   const needsVer = p.verification?.status !== 'official';
-  const checks = item.checks.length ? item.checks.map(vpCheckHTML).join('') : '<li class="vc unk"><span class="cn muted-note">검사할 요구 조건이 없습니다</span></li>';
+  const cp = item.cardPlan;
+  // 형태: preconfigured=고정형(커넥터), customizable=슬롯형(카드 구성). 없으면 cardPlan로 보조.
+  const isSlot = p.configurationType === 'customizable' || (p.configurationType == null && cp?.cardBased);
+  const bodyMain = !cp ? '' : (isSlot ? vpSlotCardHTML(item) : vpFixedCardHTML(item));
   // 포트 고정형 제품은 이름을 누르면 포트별 입출력 수량 팝업(이사 요청).
   const fixed = procHasFixedPorts(p);
   const nameAttr = fixed ? ` class="vpName vpNameClickable" data-portproc="${esc(p.id)}" role="button" tabindex="0" title="포트별 입출력 수량 보기"` : ' class="vpName"';
@@ -1023,8 +1065,8 @@ function vpItemHTML(item) {
       ${PROC_IMG_IDS.has(p.id) ? `<button type="button" class="vpImgBtn" data-procimg="${esc(p.id)}" title="제품 앞/뒤 이미지 보기">이미지</button>` : ''}
       ${needsVer ? '<span class="vpVer" title="일부 사양이 공식 확인 전입니다">확인 필요 사양 포함</span>' : ''}
     </div>
-    ${vpCardPlanHTML(item)}
-    <ul class="vpChecksList">${checks}</ul>
+    ${bodyMain}
+    ${vpDetailHTML(item)}
   </div>`;
 }
 // 포트별 입출력 수량 팝업. index.html 마크업을 건드리지 않게 동적으로 생성.
