@@ -343,8 +343,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Frame.noDims .rs3Dln,
 .rs3Frame.noDims .rs3Dlbl.key,
 .rs3Frame.noDims .rs3Dlbl.sub,
-.rs3Frame.noDims .rs3Dlbl.person{display:none}
-/* 전체 캐비닛 수(count)는 치수 토글과 무관하게 항상 우측하단에 표기(이사 요청 2026-09-15). */
+.rs3Frame.noDims .rs3Dlbl.count,
+.rs3Frame.noDims .rs3Dlbl.person{display:none}   /* 캐비닛 수(count)는 치수 토글과 연동 — 치수 끄면 함께 숨김(이사 요청 2026-09-15) */
 /* 패널 격자(cellgrid) 토글: 좌측/상단 패널 번호 표시 제어. */
 .rs3Frame.noCellGrid .rs3Num{display:none}
 /* 인쇄·캡처 시 글로우 애니메이션으로 밝기가 달라지지 않게 정지(v2 3-2). */
