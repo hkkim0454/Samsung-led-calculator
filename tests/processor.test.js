@@ -563,6 +563,14 @@ test('cardPlan: 필요 카드 수 = ceil(요구 / 카드당 채널)', () => {
   assert.equal(cu.reqOutCards, 3);  // ceil(6/2)
   assert.equal(cu.remOutSlots, 2);  // 5-3
 });
+test('cardPlan: 최대 구성 가능 4K 채널(maxIn4k/maxOut4k)', () => {
+  const req = { independent4kInputs: 6, required4kOutputs: 5 };
+  const cp = (id) => cardPlan(PROCESSORS.find(p => p.id === id), req);
+  assert.deepEqual([cp('aw-aquilon-c').maxIn4k, cp('aw-aquilon-c').maxOut4k], [16, 16]);   // 공식 독립4K
+  assert.deepEqual([cp('cl-x100pro-7u').maxIn4k, cp('cl-x100pro-7u').maxOut4k], [8, 8]);
+  assert.deepEqual([cp('cl-universe-u6max').maxIn4k, cp('cl-universe-u6max').maxOut4k], [20, 10]);
+  assert.deepEqual([cp('ns-h5').maxIn4k, cp('ns-h5').maxOut4k], [10, 3]);   // 슬롯수×카드당채널(입력 empty→유도)
+});
 test('cardPlan: 슬롯 수 미상이면 남는 슬롯도 미상(null), 요구 0이면 카드 0', () => {
   const c = PROCESSORS.find(p => p.id === 'aw-aquilon-c');   // 4/4, 슬롯 데이터 없음
   const cp = cardPlan(c, { independent4kInputs: 6, required4kOutputs: 5 });

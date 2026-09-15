@@ -948,12 +948,34 @@ function cardChannelPhrase(p, cp) {
     return `카드당 4K — 입력 ${cp.inPerCard ?? '미상'} · 출력 ${cp.outPerCard ?? '미상'}채널`;
   return null;
 }
+// 고정형(카드 없는 Midra·Zenith 등) 입출력 수량 문구. 실제 입력/출력 수만 간단히 보여준다.
+function fixedIoPhrase(p) {
+  const i = p.inputs || {}, o = p.outputs || {};
+  const inCount = i.total ?? i.maxIndependent4k ?? null;
+  const in4k = i.maxIndependent4k ?? null;
+  const outCount = o.maxActiveOutputs ?? o.maxIndependent4kOutputs ?? null;
+  const outPgm = o.maxIndependent4kPgm ?? null;
+  const inTxt = inCount != null
+    ? `입력 <b>${inCount}</b>개${(in4k != null && in4k !== inCount) ? ` <span class="muted-note">(독립 4K ${in4k})</span>` : ''}`
+    : '입력 <b>미상</b>';
+  const outTxt = outCount != null
+    ? `출력 <b>${outCount}</b>개${(outPgm != null) ? ` <span class="muted-note">(4K PGM ${outPgm})</span>` : ''}`
+    : '출력 <b>미상</b>';
+  return `${inTxt} · ${outTxt}`;
+}
 // 슬롯·카드 구성 블록(요청 2026-09-15). 계산은 engine/limits(cardPlan)에서만 하고 여기선 표시만 한다.
+//   고정형 = 입력 N개·출력 M개(실수량). 슬롯형 = 최대 몇 채널 구성 가능 + 필요 카드·남는 슬롯.
 function vpCardPlanHTML(item) {
   const cp = item.cardPlan;
   if (!cp) return '';
-  if (!cp.cardBased) return `<div class="vpSlot fixed"><span class="vpSlotHd">슬롯·카드</span><span class="vpSlotBody">고정 입출력 (카드 없음)</span></div>`;
+  if (!cp.cardBased) {
+    return `<div class="vpSlot fixed"><span class="vpSlotHd">고정형</span><span class="vpSlotBody">
+      <span class="vpSlotChan">${fixedIoPhrase(item.proc)}</span></span></div>`;
+  }
   const phrase = cardChannelPhrase(item.proc, cp);
+  // 최대 구성 가능 채널(슬롯에 카드를 꽂아 낼 수 있는 최대 4K 채널 수).
+  const cap = (n) => (n != null) ? `<b>${n}</b>채널` : '<b>미상</b>';
+  const capLine = `<span class="vpSlotCap">최대 4K 입력 ${cap(cp.maxIn4k)} · 출력 ${cap(cp.maxOut4k)} 구성 가능</span>`;
   // 한 유형(입력/출력)의 "필요 N장 / 전체 슬롯 M → 남음" 한 줄.
   const line = (label, need, reqCards, slots, rem) => {
     let cards;
@@ -964,7 +986,8 @@ function vpCardPlanHTML(item) {
     return `<span class="vpSlotRow"><i>${label}</i> ${cards} · ${slotTxt}${remTxt}</span>`;
   };
   const chan = phrase ? `<span class="vpSlotChan">${esc(phrase)}</span>` : '<span class="vpSlotChan muted-note">카드당 채널 미상</span>';
-  return `<div class="vpSlot"><span class="vpSlotHd">슬롯·카드</span><span class="vpSlotBody">${chan}
+  return `<div class="vpSlot"><span class="vpSlotHd">슬롯형</span><span class="vpSlotBody">${chan}
+    ${capLine}
     ${line('입력', cp.needIn, cp.reqInCards, cp.inSlots, cp.remInSlots)}
     ${line('출력', cp.needOut, cp.reqOutCards, cp.outSlots, cp.remOutSlots)}</span></div>`;
 }

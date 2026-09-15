@@ -174,10 +174,15 @@ export function cardPlan(proc, req) {
   const reqInCards = cards(needIn, inPer);
   const reqOutCards = cards(needOut, outPer);
   const rem = (slots, used) => (slots != null && used != null) ? slots - used : null;
+  // 최대 구성 가능한 4K 채널: 공식 독립4K 수 우선, 없으면 슬롯수×카드당채널로 유도(미상이면 null).
+  const io = proc?.inputs ?? {}, oo = proc?.outputs ?? {};
+  const maxIn4k = io.maxIndependent4k ?? ((inSlots != null && inPer != null) ? inSlots * inPer : null);
+  const maxOut4k = oo.maxIndependent4kOutputs ?? ((outSlots != null && outPer != null) ? outSlots * outPer : null);
   return {
     cardBased: true, inPerCard: inPer, outPerCard: outPer, needIn, needOut,
     reqInCards, reqOutCards, inSlots, outSlots,
     remInSlots: rem(inSlots, reqInCards), remOutSlots: rem(outSlots, reqOutCards),
+    maxIn4k, maxOut4k,
   };
 }
 
