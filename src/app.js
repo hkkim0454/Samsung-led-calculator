@@ -252,8 +252,8 @@ const PEOPLE = {
   m1: { label: '최산 · 정장',   kind: 'photo', hMM: 1770 },   // 아이돌 최산 177cm(이사 확인 2026-09-15)
   m2: { label: '변우석 · 무대', kind: 'photo', hMM: 1903 },
   f1: { label: '고윤정',        kind: 'photo', hMM: 1630 },   // 배우 고윤정 163cm(이사 확인 2026-09-15)
-  sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },
-  sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1650 },
+  sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },   // 20~50대 평균 173cm(이사 지정 2026-09-15)
+  sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1600 },   // 20~50대 평균 160cm(이사 지정 2026-09-15)
 };
 let pvPerson = 'm1';               // 현재 선택 인물 키(PEOPLE의 키)
 const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 사진/실루엣 대신 사용(세션 한정).
