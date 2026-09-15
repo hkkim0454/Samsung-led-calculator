@@ -999,9 +999,11 @@ function vpSlotCardHTML(item) {
   const remChip = (label, rem) => rem == null ? `<span class="vpChip unk">${label} 미상</span>`
     : (rem >= 0 ? `<span class="vpChip ok">${label} 여유 ${rem}</span>` : `<span class="vpChip no">${label} ${-rem} 부족</span>`);
   const statusChip = short ? '<span class="vpChip no">슬롯 부족</span>' : '<span class="vpChip ok">구성 가능</span>';
+  const note = p.slotNote ? `<div class="ioNote">${esc(p.slotNote)}</div>` : '';
   return `<div class="vpCards">
     <div class="vpCardGrid">${inS}${outS}</div>
     <div class="vpChips">${statusChip}${remChip('입력', inRem)}${remChip('출력', outRem)}</div>
+    ${note}
   </div>`;
 }
 // 고정형(preconfigured) 제품 카드 본문 — 입력 커넥터 구성 + 입출력 수량.

@@ -65,6 +65,7 @@ function proc(p) {
     slots: { ...emptySlots(), ...(p.slots ?? {}) },
     cards: { ...emptyCards(), ...(p.cards ?? {}) },   // 카드당 4K 채널(입력/출력) — 슬롯≠채널
     fieldSwappableCards: p.fieldSwappableCards ?? null,   // I/O 카드 현장 교체 가능(프리컨피규어드 기본구성 안내용)
+    slotNote: p.slotNote ?? null,                     // 슬롯 구성 관련 주석(예: Link/QSFP가 출력 슬롯 점유 가능)
     fieldFrame: p.fieldFrame ?? null,                 // {inputSlots,outputSlots} — 공식 max와 다를 때만
     inputs: { ...emptyInputs(), ...(p.inputs ?? {}) },
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
@@ -194,7 +195,8 @@ export const PROCESSORS = [
   proc({
     id: 'aw-aquilon-cmax',
     manufacturer: AW, family: 'Aquilon', model: 'Aquilon C MAX', lifecycle: 'active', configurationType: 'customizable',
-    slots: { maxInputBoards: 8, maxOutputBoards: null },   // 입력카드 2·4·6·8개(→8·16·24·32×4K). 출력카드 수는 공식 단일수치 미명시→null
+    slots: { maxInputBoards: 8, maxOutputBoards: 6 },   // 입력 8슬롯 / 출력 6슬롯(공식 Technical Datasheet: 24×4K = 6카드×4). 웹페이지의 '5 cards' 문구는 24출력과 불일치 → 데이터시트 6 적용
+    slotNote: '입력·출력 슬롯은 분리(공용 아님). LivePremier Link 사용 시 일부 출력 슬롯을 QSFP Link 카드가 점유할 수 있습니다.',
     inputs: { total: 32, maxIndependent4k: 32 },   // 최대 32×4K60(또는 16×5K60 / 64×Dual·2K60 — 대체 구성)
     outputs: { maxActiveOutputs: 24, maxIndependent4kOutputs: 24, maxIndependent4kPgm: 16 },   // Active 24×4K / PGM 16×4K. 전용 멀티뷰어 2 별도
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
@@ -278,6 +280,8 @@ export const PROCESSORS = [
   // 공식 사양(GPT Work 조사 2026-09-15). 최대 입력/Active 출력/PGM/레이어는 별개 항목. 카드 커넥터 수는 카드 1장 기준(고정 포트 아님).
   proc({
     id: 'aw-aquilon-c', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C', lifecycle: 'active', configurationType: 'customizable',
+    slots: { maxInputBoards: 4, maxOutputBoards: 4 },   // 8슬롯(입력 4 + 출력 4, 분리). 4카드×4채널 = 16 입력/16 Active(교차검증)
+    slotNote: '입력·출력 슬롯은 분리(공용 아님). LivePremier Link 사용 시 일부 출력 슬롯을 QSFP Link 카드가 점유할 수 있습니다.',
     inputs: { total: 16, maxIndependent4k: 16 },   // 최대 16×4K60 Seamless
     outputs: { maxActiveOutputs: 16, maxIndependent4kOutputs: 16, maxIndependent4kPgm: 8 },   // Active 16×4K / PGM 8×4K. 전용 멀티뷰어 2 별도
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
@@ -290,6 +294,8 @@ export const PROCESSORS = [
   }),
   proc({
     id: 'aw-aquilon-cplus', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C+', lifecycle: 'active', configurationType: 'customizable',
+    slots: { maxInputBoards: 6, maxOutputBoards: 5 },   // 11슬롯(입력 6 + 출력 5, 분리). 6카드×4=24 입력 / 5카드×4=20 Active(교차검증)
+    slotNote: '입력·출력 슬롯은 분리(공용 아님). LivePremier Link 사용 시 일부 출력 슬롯을 QSFP Link 카드가 점유할 수 있습니다.',
     inputs: { total: 24, maxIndependent4k: 24 },   // 최대 24×4K60 Seamless
     outputs: { maxActiveOutputs: 20, maxIndependent4kOutputs: 20, maxIndependent4kPgm: 12 },   // Active 20×4K / PGM 12×4K. 전용 멀티뷰어 별도
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널

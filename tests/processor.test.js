@@ -220,8 +220,8 @@ test('Aquilon C MAX present with official values (2026-09-14); 정격전력 미�
     { a: 24, p: 16, m: 16, s: 32 }
   );
   assert.equal(cmax.verification.status, 'official');
-  // 카드별 커넥터 수는 장비 고정 포트 아님 → 출력카드 최대수는 단일수치 미명시(null)
-  assert.strictEqual(cmax.slots.maxOutputBoards, null);
+  // 출력 슬롯 6(공식 Technical Datasheet: 24×4K = 6카드×4채널. 웹페이지 '5 cards' 문구는 24출력과 불일치 → 데이터시트 6 적용, 2026-09-15)
+  assert.strictEqual(cmax.slots.maxOutputBoards, 6);
   // 지침6: 정격전력 미상, 최대 1500W는 노트에 명시(추정으로 채우지 않음)
   assert.match(cmax.verification.notes, /정격전력=미상/);
   assert.match(cmax.verification.notes, /1,500W/);
@@ -572,13 +572,14 @@ test('cardPlan: 최대 구성 가능 4K 채널(maxIn4k/maxOut4k)', () => {
   assert.deepEqual([cp('ns-h5').maxIn4k, cp('ns-h5').maxOut4k], [10, 3]);   // 슬롯수×카드당채널(입력 empty→유도)
 });
 test('cardPlan: 슬롯 수 미상이면 남는 슬롯도 미상(null), 요구 0이면 카드 0', () => {
-  const c = PROCESSORS.find(p => p.id === 'aw-aquilon-c');   // 4/4, 슬롯 데이터 없음
-  const cp = cardPlan(c, { independent4kInputs: 6, required4kOutputs: 5 });
+  // 합성 모델: 카드당 채널은 알지만 슬롯 수 미상(현재 등록 모델은 모두 슬롯이 채워져 있어 합성으로 검증).
+  const synth = { cards: { in4kPerCard: 4, out4kPerCard: 4 }, slots: {} };
+  const cp = cardPlan(synth, { independent4kInputs: 6, required4kOutputs: 5 });
   assert.equal(cp.reqInCards, 2);      // ceil(6/4)
   assert.equal(cp.reqOutCards, 2);     // ceil(5/4)
   assert.equal(cp.inSlots, null);
   assert.equal(cp.remInSlots, null);   // 슬롯 미상 → 남는 슬롯 미상
-  const zero = cardPlan(c, { independent4kInputs: 0, required4kOutputs: 3 });
+  const zero = cardPlan(synth, { independent4kInputs: 0, required4kOutputs: 3 });
   assert.equal(zero.reqInCards, 0);    // 입력 요구 0 → 0장
   assert.equal(zero.reqOutCards, 1);
 });
@@ -635,6 +636,21 @@ test('X100 Pro 11U: 자동추천 대상(needs_verification 제외 아님)', () =
   const req = processorRequirements({ resW: 7680, resH: 2160 });   // 2×4K 출력
   const ranked = rankProcessors(PROCESSORS, req);
   assert.ok(ranked.some(r => r.proc.id === 'cl-x100pro-11u'), '11U가 추천 목록에 포함');
+});
+// ── Aquilon C 라인 슬롯 수(2026-09-15, 공식 확정) ─────────────────────────────
+test('Aquilon C 라인: 슬롯 수 + 카드×채널 교차 검증', () => {
+  const chk = (id, inSlot, outSlot, in4k, act) => {
+    const p = PROCESSORS.find(x => x.id === id);
+    assert.equal(p.slots.maxInputBoards, inSlot, `${p.model} 입력슬롯`);
+    assert.equal(p.slots.maxOutputBoards, outSlot, `${p.model} 출력슬롯`);
+    assert.equal(inSlot * p.cards.in4kPerCard, in4k, `${p.model} 입력 카드×채널=${in4k}`);
+    assert.equal(outSlot * p.cards.out4kPerCard, act, `${p.model} 출력 카드×채널=${act}`);
+    assert.equal(p.inputs.maxIndependent4k, in4k);
+    assert.equal(p.outputs.maxActiveOutputs, act);
+  };
+  chk('aw-aquilon-c', 4, 4, 16, 16);       // 4·4 슬롯 → 16 입력 / 16 Active
+  chk('aw-aquilon-cplus', 6, 5, 24, 20);   // 6·5 슬롯 → 24 입력 / 20 Active
+  chk('aw-aquilon-cmax', 8, 6, 32, 24);    // 8·6 슬롯 → 32 입력 / 24 Active
 });
 test('every processor has valid layer model / status / unique id', () => {
   const valid = new Set(['mixing_split', 'per_output_card', 'global_window', 'screen_group']);
