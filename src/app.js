@@ -1030,10 +1030,25 @@ function vpFixedCardHTML(item) {
     : '';
   return `<div class="vpFixed">${inGroup}${outGroup}${mvGroup}${note}</div>`;
 }
-// 상세 사양(접기) — 물리 입력/Active 출력/PGM·스크린/믹싱·분할 레이어/윈도우를 서로 구분. Active≠PGM≠레이어.
+// Edge-Blending(와이드 캔버스) 지원 표시값. 판단 불가(전부 null)면 null → 행 미표시.
+//   여러 출력을 이어 하나의 넓은 화면으로 결합하는 기능. 결합 가능 출력 수(maxCanvasOutputs)가 전체 출력보다 적을 수 있음.
+function edgeBlendingText(p) {
+  const c = p.canvas || {}, m = p.modes || {}, o = p.outputs || {};
+  const yes = m.edgeBlending === true || c.multiOutputCanvas === true;
+  const no = m.edgeBlending === false || c.multiOutputCanvas === false;
+  if (yes) {
+    const mc = c.maxCanvasOutputs, total = o.maxActiveOutputs;
+    if (mc != null) return (total != null && total !== mc) ? `지원 (최대 ${mc}출력 / 전체 ${total})` : `지원 (최대 ${mc}출력)`;
+    return '지원';
+  }
+  if (no) return '미지원';
+  return null;   // 미상 → 행 표시 안 함
+}
+// 상세 사양(접기) — 물리 입력/Active 출력/PGM·스크린/믹싱·분할 레이어/윈도우/Edge-Blending을 서로 구분. Active≠PGM≠레이어.
 function vpDetailHTML(item) {
   const p = item.proc, i = p.inputs || {}, o = p.outputs || {}, L = p.layers || {};
   const v = (x) => (x != null ? x : '<span class="muted-note">미상</span>');
+  const eb = edgeBlendingText(p);   // Edge-Blending(와이드 캔버스) 지원 여부
   // core=항상 표시(미상 포함), opt=값 있을 때만(N/A 개념 노이즈 방지). 개념 구분 유지(Active≠PGM, 윈도우≠레이어, 슬롯≠채널).
   const specs = [
     ['물리 4K 입력 채널', i.maxIndependent4k, true],
@@ -1047,8 +1062,13 @@ function vpDetailHTML(item) {
     ['2K 레이어(전역)', L.global2k, false],
     ['총 윈도우', L.maxWindows, true],
   ];
-  const specList = specs.filter(([, val, always]) => always || val != null)
+  let specList = specs.filter(([, val, always]) => always || val != null)
     .map(([n, val]) => `<li class="vSpec"><span class="cn">${n}</span><span class="cv">${v(val)}</span></li>`).join('');
+  // Edge-Blending(와이드 캔버스) — 판단 가능할 때만 행 추가. 지원=파랑, 미지원=회색.
+  if (eb) {
+    const cls = eb === '미지원' ? 'muted-note' : '';
+    specList += `<li class="vSpec"><span class="cn">Edge-Blending(와이드 캔버스)</span><span class="cv ${cls}">${esc(eb)}</span></li>`;
+  }
   const checks = item.checks?.length ? item.checks.map(vpCheckHTML).join('') : '';
   return `<details class="vpDetail"><summary>상세 사양 보기</summary>
     <ul class="vpSpecList">${specList}</ul>

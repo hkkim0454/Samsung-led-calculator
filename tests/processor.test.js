@@ -351,14 +351,15 @@ test('[AW] Eikos wide-canvas job ranks Eikos above Pulse (Operation Fit boost)',
   assert.ok(ei >= 0 && pu >= 0 && ei < pu, 'Eikos가 Pulse보다 상위');
 });
 
-test('[AW] Zenith 100/200 support Hard/Soft Edge (wide canvas); maxCanvasOutputs unconfirmed -> null', () => {
+test('[AW] Zenith 100/200 support Hard/Soft Edge (wide canvas); Z200=6중 4출력, Z100 출력수 미확인', () => {
   for (const id of ['aw-alta-zenith-100', 'aw-alta-zenith-200']) {
     const c = getProcessor(id).canvas;
     assert.equal(c.multiOutputCanvas, true);
     assert.equal(c.horizontalSpan, true);
     assert.equal(c.verticalSpan, true);
-    assert.equal(c.maxCanvasOutputs, null);   // 공식 미확인 → 추정 금지
   }
+  assert.equal(getProcessor('aw-alta-zenith-200').canvas.maxCanvasOutputs, 4);   // 6 Active 중 4출력만 edge-blend(이사 확인 2026-09-15)
+  assert.equal(getProcessor('aw-alta-zenith-100').canvas.maxCanvasOutputs, null); // Z100 결합 출력수 미확인 → 추정 금지
 });
 test('[AW] confirmed total input counts; Aquilon RS AUX not-main-resource, Zenith AUX main-resource unknown', () => {
   assert.equal(getProcessor('aw-alta-zenith-100').inputs.total, 13);
@@ -651,6 +652,17 @@ test('Aquilon C 라인: 슬롯 수 + 카드×채널 교차 검증', () => {
   chk('aw-aquilon-c', 4, 4, 16, 16);       // 4·4 슬롯 → 16 입력 / 16 Active
   chk('aw-aquilon-cplus', 6, 5, 24, 20);   // 6·5 슬롯 → 24 입력 / 20 Active
   chk('aw-aquilon-cmax', 8, 6, 32, 24);    // 8·6 슬롯 → 32 입력 / 24 Active
+});
+// ── Edge-Blending(와이드 캔버스) 데이터 ───────────────────────────────────────
+test('Edge-Blending: Pulse 미지원 / Eikos 2출력 / Zenith200 6중 4출력', () => {
+  const g = id => PROCESSORS.find(p => p.id === id);
+  assert.equal(g('aw-midra-pulse-4k').canvas.multiOutputCanvas, false);   // Pulse 미지원
+  assert.equal(g('aw-midra-pulse-4k').modes.edgeBlending, false);
+  assert.equal(g('aw-midra-eikos-4k').canvas.maxCanvasOutputs, 2);        // Eikos 2출력
+  const z2 = g('aw-alta-zenith-200');
+  assert.equal(z2.canvas.multiOutputCanvas, true);
+  assert.equal(z2.canvas.maxCanvasOutputs, 4);   // 6 Active 중 4출력만 edge-blend(이사 확인)
+  assert.equal(z2.outputs.maxActiveOutputs, 6);
 });
 test('every processor has valid layer model / status / unique id', () => {
   const valid = new Set(['mixing_split', 'per_output_card', 'global_window', 'screen_group']);

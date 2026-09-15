@@ -135,7 +135,7 @@ export const PROCESSORS = [
     inputs: { total: 16, maxIndependent4k: 14, maxIndependent2k: 16, dedicated2kInputs: 2, hdmi20: 8, dp12: 4, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 14×4K60 + 2×2K60(전용)
     outputs: { maxActiveOutputs: 6, maxIndependent4kOutputs: 6, maxIndependent4kPgm: 4, maxIndependent2k: null },   // Active 6 / PGM 4
     layers: { model: 'mixing_split', mixing4k: 4, split4k: 8 },
-    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: null },   // Hard/Soft Edge 지원(공식 비교표). 최대 캔버스 출력수 미확인→null
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 4 },   // Edge-Blending 지원 — 전체 6출력 중 최대 4출력만 wide 캔버스 결합(이사 확인 2026-09-15)
     aux: { maxResolution: '1080p60', maxAuxOutputs: 4, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 4. 메인자원 소모여부 미확인→null
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 }, features: { genlock: true, hdr: true, tenBit: true, multiview: true }, control: { tcp: true, crestronCompatible: true },
