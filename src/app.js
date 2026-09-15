@@ -275,7 +275,14 @@ let pvImgPanX = 0.5;    // 가로 넘침 시 크롭 위치(0=좌, 1=우) — 세
 let pvLedGeom = null;   // 최근 렌더 LED 로컬 px {mode, lw, lh, iw, ih, range} — 드래그 팬 계산용.
 let pvHeightDrag = null; // ↕ 손잡이 드래그용 {pxPerMm, maxBaseMM} — renderPreview가 매번 갱신.
 let svCode = null;      // 03 미리보기에 표시할 사이니지 modelCode(있으면 LED 대신 사이니지 방을 그림). null=LED.
+let svPortrait = false; // 단독형 사이니지 세로(90° 회전) 설치 여부(이사 요청 2026-09-15). 비디오월엔 미적용.
 let syncSignageCard = () => {};   // 10 사이니지 카드 재렌더(setupSignage에서 실제 함수로 대입).
+// 현재 03 미리보기에 비디오월이 선택돼 있는지(패널 격자 필수 판정 등에 사용).
+function vwSelected() {
+  if (!svCode) return false;
+  const m = SIGNAGE_MODELS.find(x => x.modelCode === svCode);
+  return !!m && m.category === 'video_wall';
+}
 
 // 배열을 공간 밖으로 넓혀 확장할 때 확보할 좌우 여백(각 변, mm). 이사 요청 2026-09-14: 좌우 500~600mm 고정.
 const EXPAND_SIDE_MARGIN_MM = 500;
@@ -289,7 +296,11 @@ function computeSvFit() {
   const m = svCode ? SIGNAGE_MODELS.find(x => x.modelCode === svCode) : null;
   if (!m) return null;
   const isVW = m.category === 'video_wall';
-  const pw = m.physical.widthMm, ph = m.physical.heightMm;
+  // 세로 설치(svPortrait): 패널 가로·세로를 맞바꿔 90° 회전 표시(이사 요청 2026-09-15).
+  //   단독형·비디오월 모두 적용(비디오월은 각 패널이 세로로 회전, 배열 N×M은 그대로).
+  const portrait = svPortrait;
+  const pw = portrait ? m.physical.heightMm : m.physical.widthMm;
+  const ph = portrait ? m.physical.widthMm : m.physical.heightMm;
   const bh = Math.max(0, num($('#baseHeight')?.value));
   const reqN = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svCols')?.value) || 1))) : 1;
   const reqM = isVW ? Math.max(1, Math.min(30, Math.floor(num($('#svRows')?.value) || 1))) : 1;
@@ -611,14 +622,16 @@ function renderPreview() {
   // 캐비닛 수 라벨은 LED만. 사이니지는 중앙 '장' 표기 대신 우상단 인치 라벨(아래 svSizeHTML)로 표시(이사 요청 2026-09-14).
   //   위치: 중앙 → '왼쪽 하단' 안쪽(넓은 벽에서 중앙이 화면을 가리지 않게, 이사 요청 2026-09-14). 좌하단 앵커.
   if (!svMode) {
-    const bx = clx(Lx + px(120)), by = cly(Ly + Lh - px(120));
-    dims.push(`<div class="rs3Dlbl count bl" style="left:${bx}px;top:${by}px">${r.cols} × ${r.rows} = ${r.total} 캐비닛</div>`);
+    const bx = clx(Lx + Lw - px(120)), by = cly(Ly + Lh - px(120));   // 우측 하단 안쪽(사람과 겹치지 않게, 이사 요청 2026-09-15)
+    dims.push(`<div class="rs3Dlbl count br" style="left:${bx}px;top:${by}px">${r.cols} × ${r.rows} = ${r.total} 캐비닛</div>`);
   }
 
   const faceStyle = `left:0;top:0;width:${SWp}px;height:${SHp}px`;
   const sceneT = `translate3d(${-SWp / 2}px, ${-vEye}px, ${-ZW}px)`;
   // 사이니지(단독형·비디오월)는 LED 캐비닛(픽셀 매트릭스)이 아니라 예전 LED 디자인의 '그라데이션 블록'으로 그린다(이사 요청 2026-09-14).
-  const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', pvShow.cellgrid ? '' : 'noCellGrid', svMode ? 'svPanel' : ''].filter(Boolean).join(' ');
+  // 비디오월은 패널 사이 베젤(격자)이 물리적 필수 → '패널 격자'를 꺼도 항상 표시(noCellGrid 미적용, 이사 요청 2026-09-15).
+  const vwActive = svMode && !!(svSizeInfo && svSizeInfo.isVW);
+  const cls = [pvShow.person ? '' : 'noPerson', pvShow.eye ? '' : 'noEye', pvShow.grid ? '' : 'noGrid', pvShow.dims ? '' : 'noDims', (pvShow.cellgrid || vwActive) ? '' : 'noCellGrid', svMode ? 'svPanel' : ''].filter(Boolean).join(' ');
   // 깊이 단서(mm 환산, v2 2-3): AO 1.5 m, 바닥 글로우 4 m, LED 글로우 0.6/0.1 m.
   // 검은 테두리(베젤) + 그 뒤로 퍼지는 파란 네온 글로우(유지). ※ 인라인이라 CSS보다 우선.
   const ledGlow = `box-shadow:0 0 0 2px #050608,0 0 ${px(600)}px ${px(100)}px rgba(47,127,246,.35),0 24px 40px -18px rgba(10,20,60,.5)`;
@@ -866,12 +879,7 @@ function renderReadout() {
   if (r.fits && !r.is169 && r.res169W > 0) nt.innerHTML += `<div class="notice info">16:9가 아닌 구성(슈퍼와이드 등)입니다. 16:9 콘텐츠 최대 해상도는 ${fmt(r.res169W)} × ${fmt(r.res169H)} px입니다.</div>`;
   if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
   if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(SBOX) 입력 용량 정보가 없어 SBOX 수량을 산출할 수 없습니다.</div>`;
-  // 배열 직접 지정에서 요청 배열이 공간을 넘으면: 최대치로 맞춰 표시하고, 공간을 넓혀 요청대로 확장하는 버튼을 제공.
-  const lf = ledManualFit();
-  if (lf && lf.over) {
-    nt.innerHTML += `<div class="notice warn fitExpand">요청 배열 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 현재 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
-      + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></div>`;
-  }
+  // 배열 직접 지정에서 요청 배열이 공간을 넘으면: 03 미리보기 위 바(#ledFitBar)에 비디오월과 같은 위치로 안내·확장 버튼 표시(이사 요청 2026-09-15).
   const d = cabinetResolution(m);
   if (Math.abs(m.cabW / m.pitch - d.resW) > 1 || Math.abs(m.cabH / m.pitch - d.resH) > 1)
     nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
@@ -1533,8 +1541,25 @@ function syncSignageMode() {
   const vp = $('#vpCard'), df = $('#dfpwCard');
   if (vp) { vp.classList.toggle('svDisabled', on); if (on) vp.open = false; }
   if (df) { df.classList.toggle('svDisabled', on); if (on) df.open = false; }
+  // 세로 돌리기 버튼: 사이니지(단독형·비디오월) 선택 시에만 표시. LED에선 숨김·세로 해제.
+  const rb = $('#pvRotateBtn');
+  if (rb) {
+    rb.hidden = !on;
+    if (!on) svPortrait = false;
+    rb.classList.toggle('on', on && svPortrait);
+    rb.textContent = svPortrait ? '⟲ 가로로' : '⟳ 세로로';
+  }
 }
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); saveLastSession(); }
+// LED '배열 직접 지정' 확장 안내 — 03 미리보기 위 바에 표시(비디오월 확장 버튼과 같은 위치).
+function renderLedFitBar() {
+  const bar = $('#ledFitBar'); if (!bar) return;
+  const lf = (!svCode && mode === 'manual') ? ledManualFit() : null;
+  if (!lf || !lf.over) { bar.hidden = true; bar.innerHTML = ''; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<span class="notice warn fitExpand">요청 배열 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 현재 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
+    + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></span>`;
+}
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); renderLedFitBar(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
@@ -1700,7 +1725,10 @@ function syncPvToggles() {
   set('person', pvShow.person);
   set('grid', pvShow.grid);
   set('dims', pvShow.dims);
-  set('cellgrid', pvShow.cellgrid);   // LED 셀 격자(끄면 이음새 없이 매끈)
+  // 비디오월이면 패널(베젤) 격자 필수 → 강제 on + 흐리게(끄기 불가). 그 외엔 pvShow.cellgrid 그대로.
+  const vwSel = vwSelected();
+  set('cellgrid', vwSel || pvShow.cellgrid, vwSel);
+  { const cg = document.querySelector('#pvToggles button[data-tog="cellgrid"]'); if (cg) cg.title = vwSel ? '비디오월은 패널(베젤) 격자를 끌 수 없습니다' : ''; }
   set('handle', pvShow.handle);       // ↕ 이동 손잡이(끄면 캡처 시 안 찍힘)
   set('eye', pvShow.eye && pvShow.person, !pvShow.person);   // 사람 꺼지면 눈높이선 버튼도 꺼짐 표시
   const ib = $('#pvImgBtn');
@@ -1719,6 +1747,7 @@ $('#pvToggles')?.addEventListener('click', e => {
   const b = e.target.closest('button[data-tog]'); if (!b) return;
   const key = b.dataset.tog;
   if (key === 'eye' && !pvShow.person) return;   // 사람 꺼진 상태에선 눈높이선 버튼 동작 안 함
+  if (key === 'cellgrid' && vwSelected()) return;   // 비디오월은 패널 격자 끄기 불가
   pvShow[key] = !pvShow[key];
   syncPvToggles();
   renderPreview();
@@ -1728,6 +1757,8 @@ $('#pvImgBtn')?.addEventListener('click', () => {
   if (pvImage) { pvImage = null; syncPvToggles(); renderPreview(); }
   else openImgModePopup();
 });
+// 세로 돌리기: 사이니지 패널을 90° 회전(세로 설치). 단독형·비디오월 공통. 다시 누르면 가로로.
+$('#pvRotateBtn')?.addEventListener('click', () => { svPortrait = !svPortrait; renderAll(); });
 // 사람 성별 선택(남 173 / 여 165). 선택 시 실루엣·키 라벨·실사 사진 성별이 바뀐다.
 $('#pvPersonSex')?.addEventListener('change', e => {
   pvPersonSex = e.target.value === 'female' ? 'female' : 'male';
@@ -1914,7 +1945,7 @@ $('#modelList').addEventListener('click', e => {
 });
 $('#cmpBody').addEventListener('click', e => {
   const svtr = e.target.closest('tr[data-svpick]');
-  if (svtr) { svCode = svtr.dataset.svpick; renderAll(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (svtr) { svCode = svtr.dataset.svpick; svPortrait = false; renderAll(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   const tr = e.target.closest('tr[data-id]'); if (!tr) return;
   selectedId = tr.dataset.id; renderAll();
 });
@@ -2666,7 +2697,7 @@ handleSharedLink();   // 공유 링크(#share=)로 들어온 경우 그 구성�
       el.addEventListener('click', e => {
         if (e.target === el || e.target.closest('[data-svclose]')) { el.hidden = true; return; }
         const it = e.target.closest('[data-svpick]');
-        if (it) { svCode = it.dataset.svpick; el.hidden = true; renderAll(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        if (it) { svCode = it.dataset.svpick; svPortrait = false; el.hidden = true; renderAll(); document.querySelector('.previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       });
     }
     const list = SIGNAGE_MODELS.filter(m => m.category === category);

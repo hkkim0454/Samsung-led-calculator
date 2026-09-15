@@ -333,20 +333,20 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 /* 치수 라벨 크기(이사 요청 2026-09-13: 작은 공간·Fullscreen에서 너무 작아 다시 키움). */
 .rs3Dlbl.key{background:#14161a;color:#fff;font-size:calc(11.5px / var(--fit,1));font-weight:600;padding:2px 6px;border-radius:6px}
 .rs3Dlbl.sub{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(10px / var(--fit,1));font-weight:600;padding:1px 5px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
-.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:calc(12.1px / var(--fit,1));font-weight:700;padding:2px 8px;border-radius:999px}   /* 캐비넷 수 표기 1.5배(이사 요청 2026-09-13) */
-.rs3Dlbl.count.bl{transform:translate(0,-100%)}   /* 왼쪽 하단 앵커(좌하단 모서리 기준, 이사 요청 2026-09-14) */
+.rs3Dlbl.count{background:#2f7ff6;color:#fff;font-size:calc(8.6px / var(--fit,1));font-weight:700;padding:1px 6px;border-radius:999px}   /* 캐비넷 수 표기(글자 축소, 이사 요청 2026-09-15) */
+.rs3Dlbl.count.br{transform:translate(-100%,-100%)}   /* 우측 하단 앵커(우하단 모서리 기준, 이사 요청 2026-09-15) */
 .rs3Dlbl.person{background:rgba(255,255,255,.94);color:#5b6069;font-size:calc(7px / var(--fit,1));font-weight:600;padding:1px 5px;border-radius:5px;border:1px solid rgba(16,18,22,.12)}
 .rs3Dlbl.vlbl{transform:translate(-50%,-50%) rotate(-90deg)}
 .rs3Frame.noGrid .rs3GridLayer{display:none}
 .rs3Frame.noEye .rs3Eye,.rs3Frame.noEye .rs3EyeLbl{display:none}
 .rs3Frame.noPerson .rs3Person,.rs3Frame.noPerson .rs3Dlbl.person,.rs3Frame.noPerson .rs3Eye,.rs3Frame.noPerson .rs3EyeLbl{display:none}
-/* 치수(dims) 토글: 치수선·치수 라벨·사람 라벨만 제어. 캐비닛 카운트·패널 번호는 '패널 격자'가 제어(이사 요청 2026-09-14). */
+/* 치수(dims) 토글: 치수선·치수 라벨·사람 라벨 + 캐비닛 카운트(N×M=합계) 제어(이사 요청 2026-09-15: 카운트는 치수 연동). */
 .rs3Frame.noDims .rs3Dln,
 .rs3Frame.noDims .rs3Dlbl.key,
 .rs3Frame.noDims .rs3Dlbl.sub,
+.rs3Frame.noDims .rs3Dlbl.count,
 .rs3Frame.noDims .rs3Dlbl.person{display:none}
-/* 패널 격자(cellgrid) 토글: 중앙 캐비닛 구성(N×M=합계)·좌측/상단 패널 번호 표시 제어. */
-.rs3Frame.noCellGrid .rs3Dlbl.count,
+/* 패널 격자(cellgrid) 토글: 좌측/상단 패널 번호 표시 제어. */
 .rs3Frame.noCellGrid .rs3Num{display:none}
 /* 인쇄·캡처 시 글로우 애니메이션으로 밝기가 달라지지 않게 정지(v2 3-2). */
 @media print{ .rs3Glow,.rs3FloorGlow{animation:none!important} }
