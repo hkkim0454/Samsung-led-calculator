@@ -301,10 +301,20 @@ export const PROCESSORS = [
     verification: { status: 'partial_official', sourceUrl: 'https://www.analogway.com/products/', sourceDocument: 'Analog Way Aquilon C+ 공식 사양(GPT Work 조사 2026-09-15)', sourceVersion: '2026-09-15', notes: 'customizable(LivePremier). IN 최대 24×4K60 Seamless. Active 20×4K60. PGM 최대 12×4K60(Dual/2K PGM 20). 믹싱 12×4K(True A/B) / 분할 24×4K(Dual/2K 믹싱24·분할48). 카드 커넥터 수는 카드 1장 기준. 출력카드 종류·HDCP·전원·크기·정확한 제품페이지 URL은 미수신(추후 보완).' },
   }),
 
-  // ── Colorlight X100 Pro 11U — 이미지만 등록, 사양 확인중(GPT Work) ─────────────
-  proc({ id: 'cl-x100pro-11u', manufacturer: CL, family: 'X100 Pro', model: 'X100 Pro 11U', lifecycle: 'active', configurationType: 'customizable',
-    layers: { model: 'global_window' },
-    verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),
+  // ── Colorlight X100 Pro 11U — 공식 사양 정식 등록(이사 확정, Spec V1.1/V1.2 2026-09-15) ──
+  //   슬롯(보드)≠채널, 독립출력≠PGM(PGM 미상), 윈도우≠레이어. Seamless·True A/B는 공식 미확인→null.
+  proc({
+    id: 'cl-x100pro-11u', manufacturer: CL, family: 'X100 Pro', model: 'X100 Pro 11U', lifecycle: 'active', configurationType: 'customizable',
+    slots: { maxInputBoards: 16, maxOutputBoards: 18 },   // 입력 보드 16 / 출력 보드 18
+    inputs: { maxIndependent4k: 16, maxIndependent2k: 64 },   // 16×4K 또는 64×2K
+    outputs: { maxActiveOutputs: 18, maxIndependent4kOutputs: 18, maxIndependent2k: 72, maxIndependent4kPgm: null },   // 18×4K / 72×2K. 독립출력≠PGM(PGM 미상)
+    cards: { in4kPerCard: 1, out4kPerCard: 1 },   // 4K 카드당 1채널(입력/출력)
+    layers: { model: 'global_window', maxWindows: null, maxLayers: null, global2k: 92, global4k: 23, perBoard2k: 4, perBoard4k: 1 },   // 최대 레이어 92×2K 또는 23×4K(보드당 4×2K/1×4K). 윈도우 수 미상
+    outputBoardMixing: { supportsMixed4k2kBoards: true },   // 4K·2K 출력보드 혼용 가능(단 동일 Screen Group 내 동일 유형)
+    features: { genlock: true, hdr: true, tenBit: true, redundancy: true },   // HDR10·HLG·10bit·Genlock·이중화
+    control: {},
+    verification: { status: 'official', sourceUrl: 'https://en.colorlightinside.com/product/special/111', sourceDocument: 'Colorlight X100 Pro 11U Specification V1.1/V1.2 (이사 확정, 공식 2026-09-15)', sourceVersion: '2026-09-15', notes: 'IN 16보드/16×4K/64×2K. OUT 18보드/18×4K/72×2K(카드당 1×4K 또는 4×2K). 최대 레이어 92×2K 또는 23×4K(보드당 4×2K/1×4K). 최대 윈도우 미상. 4K·2K 출력보드 혼용 가능(단 동일 Screen Group 내 동일 유형 출력보드). HDR10·HLG·10bit·Genlock·이중화(입력신호/출력포트/장치/전원, 보조전원 옵션). Seamless·True A/B 미확인(null). 독립출력≠PGM(PGM 미상). 슬롯(보드)≠채널, 윈도우≠레이어.' },
+  }),
 
 ];
 

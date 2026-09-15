@@ -613,6 +613,29 @@ test('Aquilon RS: 모델별 커넥터 확정값(HDMI2.0/DP1.2/12G-SDI)', () => {
   assert.deepEqual(c(g('aw-aquilon-rs5')), [16, 8, 8]);
   assert.deepEqual(c(g('aw-aquilon-rs6')), [16, 8, 8]);
 });
+// ── X100 Pro 11U 정식 등록(2026-09-15, 공식 Spec V1.1/V1.2) ────────────────────
+test('X100 Pro 11U: 보드×카드당채널 = 채널 수 교차 검증', () => {
+  const p = PROCESSORS.find(x => x.id === 'cl-x100pro-11u');
+  assert.equal(p.verification.status, 'official');   // 더 이상 needs_verification 아님
+  assert.equal(p.slots.maxInputBoards, 16);
+  assert.equal(p.slots.maxOutputBoards, 18);
+  assert.equal(p.inputs.maxIndependent4k, 16);   // 16보드 × 1
+  assert.equal(p.inputs.maxIndependent2k, 64);   // 16보드 × 4
+  assert.equal(p.outputs.maxIndependent4kOutputs, 18);   // 18보드 × 1
+  assert.equal(p.outputs.maxIndependent2k, 72);  // 18보드 × 4
+  assert.equal(p.outputs.maxIndependent4kPgm, null);   // PGM 미상(독립출력≠PGM)
+  assert.equal(p.layers.global2k, 92);   // 최대 레이어 2K
+  assert.equal(p.layers.global4k, 23);   // 최대 레이어 4K
+  assert.equal(p.layers.maxWindows, null);   // 윈도우 미상(≠레이어)
+  assert.equal(p.outputBoardMixing.supportsMixed4k2kBoards, true);
+  assert.equal(p.switching.seamless, null);   // 미확인
+  assert.equal(p.switching.trueABMixing, null);
+});
+test('X100 Pro 11U: 자동추천 대상(needs_verification 제외 아님)', () => {
+  const req = processorRequirements({ resW: 7680, resH: 2160 });   // 2×4K 출력
+  const ranked = rankProcessors(PROCESSORS, req);
+  assert.ok(ranked.some(r => r.proc.id === 'cl-x100pro-11u'), '11U가 추천 목록에 포함');
+});
 test('every processor has valid layer model / status / unique id', () => {
   const valid = new Set(['mixing_split', 'per_output_card', 'global_window', 'screen_group']);
   const ids = new Set();

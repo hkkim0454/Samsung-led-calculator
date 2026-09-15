@@ -1032,15 +1032,21 @@ function vpFixedCardHTML(item) {
 function vpDetailHTML(item) {
   const p = item.proc, i = p.inputs || {}, o = p.outputs || {}, L = p.layers || {};
   const v = (x) => (x != null ? x : '<span class="muted-note">미상</span>');
+  // core=항상 표시(미상 포함), opt=값 있을 때만(N/A 개념 노이즈 방지). 개념 구분 유지(Active≠PGM, 윈도우≠레이어, 슬롯≠채널).
   const specs = [
-    ['물리 4K 입력 채널', i.maxIndependent4k],
-    ['물리 4K Active 출력', o.maxActiveOutputs],
-    ['4K PGM / 스크린', o.maxIndependent4kPgm],
-    ['믹싱 레이어', L.mixing4k],
-    ['분할 레이어', L.split4k],
-    ['총 윈도우', L.maxWindows],
+    ['물리 4K 입력 채널', i.maxIndependent4k, true],
+    ['물리 2K 입력 채널', i.maxIndependent2k, false],
+    ['4K Active 출력', o.maxActiveOutputs, true],
+    ['2K 출력', o.maxIndependent2k, false],
+    ['4K PGM / 스크린', o.maxIndependent4kPgm, true],
+    ['믹싱 레이어', L.mixing4k, false],
+    ['분할 레이어', L.split4k, false],
+    ['4K 레이어(전역)', L.global4k, false],
+    ['2K 레이어(전역)', L.global2k, false],
+    ['총 윈도우', L.maxWindows, true],
   ];
-  const specList = specs.map(([n, val]) => `<li class="vSpec"><span class="cn">${n}</span><span class="cv">${v(val)}</span></li>`).join('');
+  const specList = specs.filter(([, val, always]) => always || val != null)
+    .map(([n, val]) => `<li class="vSpec"><span class="cn">${n}</span><span class="cv">${v(val)}</span></li>`).join('');
   const checks = item.checks?.length ? item.checks.map(vpCheckHTML).join('') : '';
   return `<details class="vpDetail"><summary>상세 사양 보기</summary>
     <ul class="vpSpecList">${specList}</ul>
@@ -1077,9 +1083,9 @@ const PROC_IMG_IDS = new Set([
   'aw-aquilon-rsalpha', 'aw-aquilon-rs1', 'aw-aquilon-rs2', 'aw-aquilon-rs3', 'aw-aquilon-rs4', 'aw-aquilon-rs5', 'aw-aquilon-rs6', 'aw-aquilon-cmini', 'aw-aquilon-cmax',
   'aw-aquilon-c', 'aw-aquilon-cplus', 'cl-x100pro-11u',   // 신규 3종(사양 확인중, 이미지만)
 ]);
-// 사양 확인중(GPT Work 의뢰) — 자동추천엔 안 나오고 05 하단에 '이미지만' 노출(2026-09-15).
-//   Aquilon C·C+는 사양 정식 등록 완료(2026-09-15) → 목록에서 제외. X100 Pro 11U만 대기.
-const SPEC_PENDING_IDS = new Set(['cl-x100pro-11u']);
+// 사양 확인중(GPT Work 의뢰) — 자동추천엔 안 나오고 05 하단에 '이미지만' 노출.
+//   Aquilon C·C+(2026-09-15)·X100 Pro 11U(2026-09-15) 사양 정식 등록 완료 → 목록에서 제외. 현재 대기 없음.
+const SPEC_PENDING_IDS = new Set();
 const procImgSrc = (id, side) => `img/processors/${id}-${side}.jpg`;
 
 // 프로세서 제품 이미지(앞/뒤) 뷰어 팝업. index.html을 건드리지 않게 동적 생성(포트 팝업과 동일 패턴).
