@@ -879,12 +879,7 @@ function renderReadout() {
   if (r.fits && !r.is169 && r.res169W > 0) nt.innerHTML += `<div class="notice info">16:9가 아닌 구성(슈퍼와이드 등)입니다. 16:9 콘텐츠 최대 해상도는 ${fmt(r.res169W)} × ${fmt(r.res169H)} px입니다.</div>`;
   if (r.maxW == null) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 중량·전력 데이터시트 값이 없어 해당 지표를 산출할 수 없습니다.</div>`;
   if (r.fits && r.sbox == null && !m.integratedController) nt.innerHTML += `<div class="notice warn">⚠ 이 모델은 컨트롤러(SBOX) 입력 용량 정보가 없어 SBOX 수량을 산출할 수 없습니다.</div>`;
-  // 배열 직접 지정에서 요청 배열이 공간을 넘으면: 최대치로 맞춰 표시하고, 공간을 넓혀 요청대로 확장하는 버튼을 제공.
-  const lf = ledManualFit();
-  if (lf && lf.over) {
-    nt.innerHTML += `<div class="notice warn fitExpand">요청 배열 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 현재 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
-      + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></div>`;
-  }
+  // 배열 직접 지정에서 요청 배열이 공간을 넘으면: 03 미리보기 위 바(#ledFitBar)에 비디오월과 같은 위치로 안내·확장 버튼 표시(이사 요청 2026-09-15).
   const d = cabinetResolution(m);
   if (Math.abs(m.cabW / m.pitch - d.resW) > 1 || Math.abs(m.cabH / m.pitch - d.resH) > 1)
     nt.innerHTML += `<div class="notice warn">⚠ 정합성: 크기÷피치와 입력 해상도가 다릅니다.</div>`;
@@ -1555,7 +1550,16 @@ function syncSignageMode() {
     rb.textContent = svPortrait ? '⟲ 가로로' : '⟳ 세로로';
   }
 }
-function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); saveLastSession(); }
+// LED '배열 직접 지정' 확장 안내 — 03 미리보기 위 바에 표시(비디오월 확장 버튼과 같은 위치).
+function renderLedFitBar() {
+  const bar = $('#ledFitBar'); if (!bar) return;
+  const lf = (!svCode && mode === 'manual') ? ledManualFit() : null;
+  if (!lf || !lf.over) { bar.hidden = true; bar.innerHTML = ''; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<span class="notice warn fitExpand">요청 배열 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 현재 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
+    + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></span>`;
+}
+function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); renderLedFitBar(); saveLastSession(); }
 
 /* events */
 // LED 설치 크기(②)는 벽면을 넘을 수 없다. 하단 높이를 지정하면 세로 = 벽면−하단높이까지만.
