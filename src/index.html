@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=342"/>
+<link rel="stylesheet" href="./styles.css?v=343"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -134,15 +134,23 @@
           </div>
           <div class="pvToggles" id="pvToggles">
             <button class="pvTog on" data-tog="person"><span class="dot"></span>사람</button>
-            <select class="pvSel" id="pvPersonSel" title="사람 선택 — 실사(연예인 실제 키) 또는 기본 실루엣">
-              <option value="go-youn-jung_01">고윤정 · 연두 가디건</option>
-              <option value="go-youn-jung_02">고윤정 · 반팔/치마</option>
-              <option value="park-bo-gum_01">박보검 · 베이지 재킷</option>
-              <option value="byeon-woo-seok_01">변우석 · 화이트 턱시도</option>
-              <option value="o-se-hun_01">오세훈 · 아이보리 니트</option>
-              <option value="o-se-hun_02">오세훈 · 회색 정장</option>
-              <option value="sm">실루엣 · 남자</option>
-              <option value="sf">실루엣 · 여자</option>
+            <select class="pvSel" id="pvPersonSel" title="사람 선택 — 실사(연예인 실제 키) 또는 의상형 실루엣(남 173/여 160)">
+              <optgroup label="실사 인물">
+                <option value="go-youn-jung_01">고윤정 · 연두 가디건</option>
+                <option value="go-youn-jung_02">고윤정 · 반팔/치마</option>
+                <option value="park-bo-gum_01">박보검 · 베이지 재킷</option>
+                <option value="byeon-woo-seok_01">변우석 · 화이트 턱시도</option>
+                <option value="o-se-hun_01">오세훈 · 아이보리 니트</option>
+                <option value="o-se-hun_02">오세훈 · 회색 정장</option>
+              </optgroup>
+              <optgroup label="실루엣 인물">
+                <option value="silhouette-male-01">남성 · 캐주얼 정장</option>
+                <option value="silhouette-male-02">남성 · 캐주얼</option>
+                <option value="silhouette-male-03">남성 · 비즈니스 정장</option>
+                <option value="silhouette-female-01">여성 · 가디건</option>
+                <option value="silhouette-female-02">여성 · 캐주얼</option>
+                <option value="silhouette-female-03">여성 · 비즈니스 정장</option>
+              </optgroup>
             </select>
             <button class="pvTog" id="pvPersonImgBtn" type="button" title="선택한 사람을 내 사진(투명 PNG 권장)으로 교체 — 남 173/여 160cm로 크기 자동 맞춤">사진 바꾸기</button>
             <button class="pvTog on" data-tog="eye"><span class="dot"></span>눈높이</button>
@@ -278,7 +286,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v342</span>
+        <span class="verTag">화면 버전 v343</span>
       </div>
     </div>
   </div>
@@ -373,6 +381,6 @@
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록).
      app.js가 import하는 모든 모듈의 v=, 그리고 모듈끼리의 내부 import(processor-validator.js → processor-limits.js)의 v=도 함께 올릴 것. -->
-<script type="module" src="./app.js?v=342"></script>
+<script type="module" src="./app.js?v=343"></script>
 </body>
 </html>

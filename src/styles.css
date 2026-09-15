@@ -314,8 +314,7 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3EyeLbl{position:absolute;transform:translateY(-50%);font-size:calc(6.3px / var(--fit,1));font-weight:600;color:#1d5fd0;background:rgba(255,255,255,.82);padding:0 3px;border-radius:3px;white-space:nowrap;pointer-events:none}
 .rs3EyeLbl.r{transform:translate(-100%,-50%)}   /* 우측벽 눈높이선: 라벨을 앞쪽 코너에서 안쪽으로(왼쪽) 정렬 */
 .rs3Person{position:absolute;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
-/* 내장 실루엣(SVG)·실사 이미지 모두 높이는 성별 키(인라인 height)로 고정, 폭은 비율 자동. */
-.rs3Person .rs3PersonSvg{height:100%;width:auto;display:block}
+/* 인물 이미지: 높이는 실제 키(인라인 height)로 고정, 폭은 비율 자동. 발끝=무대 바닥(align-items:flex-end). */
 .rs3Person .rs3PersonImg{height:100%;width:auto;display:block;object-fit:contain}
 .rs3Overlay{position:absolute;inset:0;pointer-events:none}
 /* 시안 치수선 스타일: 실선 + 양끝 짧은 눈금(캡). 캡 크기는 화면에서 고정(1/fit 역보정). */
@@ -344,8 +343,8 @@ input:focus{outline:none;background:var(--field-fill-focus);box-shadow:0 0 0 4px
 .rs3Frame.noDims .rs3Dln,
 .rs3Frame.noDims .rs3Dlbl.key,
 .rs3Frame.noDims .rs3Dlbl.sub,
-.rs3Frame.noDims .rs3Dlbl.count,
 .rs3Frame.noDims .rs3Dlbl.person{display:none}
+/* 전체 캐비닛 수(count)는 치수 토글과 무관하게 항상 우측하단에 표기(이사 요청 2026-09-15). */
 /* 패널 격자(cellgrid) 토글: 좌측/상단 패널 번호 표시 제어. */
 .rs3Frame.noCellGrid .rs3Num{display:none}
 /* 인쇄·캡처 시 글로우 애니메이션으로 밝기가 달라지지 않게 정지(v2 3-2). */

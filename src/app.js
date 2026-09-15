@@ -246,40 +246,31 @@ function moveModel(id, dir) {
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
 const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true, handle: true };
-// 사람(스케일 기준 인물): 실사 사진(연예인, 실제 키) + 기본 실루엣(남/여) 선택.
-//   hMM=키(mm, 실제 인물 키). photo=내장 실사(img/people/<file>) · svg=실루엣. 커스텀 업로드 시 그 항목만 대체(세션 한정).
+// 사람(스케일 기준 인물): 실사 사진(연예인, 실제 키) + 의상형 실루엣(남/여, 회색 PNG).
+//   hMM=키(mm, 실제 인물 키). 모두 photo=내장 이미지(img/people/<file>). 커스텀 업로드 시 그 항목만 대체(세션 한정).
 //   같은 인물의 다른 의상은 별도 항목이되 personId 공유, variantId로 구분(이사 지침 2026-09-15).
-//   이미지는 인물 실제 영역(머리~발끝)으로 크롭된 투명 PNG → 키 스케일링이 실제 신장과 일치.
+//   이미지는 인물 실제 영역(머리~발끝)으로 크롭된 투명 PNG → 키 스케일링이 실제 신장과 일치, 발끝=무대 바닥.
+//   실루엣도 회색/투명 원본 그대로 사용(재색칠·추가 opacity 금지). 남 173 / 여 160cm 기준.
 const PEOPLE = {
+  // ── 실사 인물 ──
   'go-youn-jung_01':   { label: '고윤정 · 연두 가디건',   kind: 'photo', hMM: 1630, personId: 'go-youn-jung',   variantId: '01', file: 'go-youn-jung_01.png' },
   'go-youn-jung_02':   { label: '고윤정 · 반팔/치마',     kind: 'photo', hMM: 1630, personId: 'go-youn-jung',   variantId: '02', file: 'go-youn-jung_02.png' },
   'park-bo-gum_01':    { label: '박보검 · 베이지 재킷',   kind: 'photo', hMM: 1820, personId: 'park-bo-gum',    variantId: '01', file: 'park-bo-gum_01.png' },
   'byeon-woo-seok_01': { label: '변우석 · 화이트 턱시도', kind: 'photo', hMM: 1890, personId: 'byeon-woo-seok', variantId: '01', file: 'byeon-woo-seok_01.png' },
   'o-se-hun_01':       { label: '오세훈 · 아이보리 니트', kind: 'photo', hMM: 1830, personId: 'o-se-hun',       variantId: '01', file: 'o-se-hun_01.png' },
   'o-se-hun_02':       { label: '오세훈 · 회색 정장',     kind: 'photo', hMM: 1830, personId: 'o-se-hun',       variantId: '02', file: 'o-se-hun_02.png' },
-  sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },   // 20~50대 평균 173cm(이사 지정 2026-09-15)
-  sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1600 },   // 20~50대 평균 160cm(이사 지정 2026-09-15)
+  // ── 의상형 실루엣(남 173 / 여 160cm) ──
+  'silhouette-male-01':   { label: '남성 · 캐주얼 정장',   kind: 'photo', hMM: 1730, personId: 'silhouette-male',   variantId: '01', file: 'silhouette-male-01.png' },
+  'silhouette-male-02':   { label: '남성 · 캐주얼',        kind: 'photo', hMM: 1730, personId: 'silhouette-male',   variantId: '02', file: 'silhouette-male-02.png' },
+  'silhouette-male-03':   { label: '남성 · 비즈니스 정장', kind: 'photo', hMM: 1730, personId: 'silhouette-male',   variantId: '03', file: 'silhouette-male-03.png' },
+  'silhouette-female-01': { label: '여성 · 가디건',        kind: 'photo', hMM: 1600, personId: 'silhouette-female', variantId: '01', file: 'silhouette-female-01.png' },
+  'silhouette-female-02': { label: '여성 · 캐주얼',        kind: 'photo', hMM: 1600, personId: 'silhouette-female', variantId: '02', file: 'silhouette-female-02.png' },
+  'silhouette-female-03': { label: '여성 · 비즈니스 정장', kind: 'photo', hMM: 1600, personId: 'silhouette-female', variantId: '03', file: 'silhouette-female-03.png' },
 };
 let pvPerson = 'go-youn-jung_01';  // 현재 선택 인물 키(PEOPLE의 키). 기본값은 목록 첫 항목.
-const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 사진/실루엣 대신 사용(세션 한정).
-// 내장 실사 경로. photo 항목은 file 필드 사용. 이미지 로드 실패는 콘솔에 파일명 명시(조용한 대체 금지).
+const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 이미지 대신 사용(세션 한정).
+// 내장 이미지 경로. photo 항목은 file 필드 사용. 이미지 로드 실패는 콘솔에 파일명 명시(조용한 대체 금지).
 const personBuiltinSrc = p => `img/people/${(PEOPLE[p] && PEOPLE[p].file) || p + '.png'}`;
-// 기본 비즈니스 실루엣(내장, 밝은 회색). 높이 100%·폭은 뷰박스 비율 자동. 팔 포함.
-function personSilhouetteSVG(sex) {
-  const head = '#a9a9b7', body = '#b4b4c1';
-  if (sex === 'female') {
-    return `<svg class="rs3PersonSvg" viewBox="0 0 56 168" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
-      + `<ellipse cx="28" cy="13.5" rx="9.5" ry="11" fill="${head}"/><rect x="25" y="22" width="6" height="7" fill="${head}"/>`
-      + `<rect x="12" y="33" width="6" height="49" rx="3" fill="${body}"/><rect x="38" y="33" width="6" height="49" rx="3" fill="${body}"/>`
-      + `<path d="M16 33 Q28 25 40 33 L37 72 L19 72 Z" fill="${body}"/><path d="M19 70 L37 70 L45 119 L11 119 Z" fill="${body}"/>`
-      + `<rect x="22" y="116" width="6" height="52" rx="3" fill="${body}"/><rect x="28" y="116" width="6" height="52" rx="3" fill="${body}"/></svg>`;
-  }
-  return `<svg class="rs3PersonSvg" viewBox="0 0 60 176" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
-    + `<ellipse cx="30" cy="15" rx="10.5" ry="12" fill="${head}"/><rect x="26.5" y="24" width="7" height="8" fill="${head}"/>`
-    + `<rect x="9" y="39" width="7" height="57" rx="3.5" fill="${body}"/><rect x="44" y="39" width="7" height="57" rx="3.5" fill="${body}"/>`
-    + `<path d="M13 40 Q30 30 47 40 L43 96 L17 96 Z" fill="${body}"/>`
-    + `<rect x="17" y="92" width="11" height="84" rx="3" fill="${body}"/><rect x="32" y="92" width="11" height="84" rx="3" fill="${body}"/></svg>`;
-}
 let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
 let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산).
 let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / 'height'=세로 고정(세로 꽉·좌우 이동).
@@ -715,7 +706,7 @@ function renderPreview() {
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person ${pvPerson}" style="left:${personX}px;top:${SHp - px(personHMM)}px;height:${px(personHMM)}px;transform:translate(-50%,0) translateZ(${personDeff}px)">${pvPersonImg[pvPerson] ? `<img class="rs3PersonImg" src="${pvPersonImg[pvPerson]}" alt="사람" draggable="false"/>` : (person.kind === 'svg' ? personSilhouetteSVG(person.sex) : `<img class="rs3PersonImg" src="${personBuiltinSrc(pvPerson)}" alt="${esc(person.label || '사람')}" draggable="false" onerror="console.error('[사람 이미지 누락] '+this.src+' — 파일이 없어 표시 실패');this.style.outline='2px dashed #E5484D'"/>`)}</div>
+          <div class="rs3Person ${pvPerson}" style="left:${personX}px;top:${SHp - px(personHMM)}px;height:${px(personHMM)}px;transform:translate(-50%,0) translateZ(${personDeff}px)">${pvPersonImg[pvPerson] ? `<img class="rs3PersonImg" src="${pvPersonImg[pvPerson]}" alt="사람" draggable="false"/>` : `<img class="rs3PersonImg" src="${personBuiltinSrc(pvPerson)}" alt="${esc(person.label || '사람')}" draggable="false" onerror="console.error('[사람 이미지 누락] '+this.src+' — 파일이 없어 표시 실패');this.style.outline='2px dashed #E5484D'"/>`}</div>
         </div>
       </div>
       <div class="rs3GridLayer">${floorGrid}</div>
