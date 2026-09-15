@@ -246,17 +246,34 @@ function moveModel(id, dir) {
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
 const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true, handle: true };
-// 사람(스케일 기준 인물): 실사 사진 3종 내장(투명 PNG) + 성별 키에 맞춰 스케일(이사 제공 2026-09-15).
-//   각 항목 sex로 키 결정(남 173 / 여 165). 커스텀 사진 업로드 시 그 항목만 대체(세션 한정).
+// 사람(스케일 기준 인물): 실사 사진(배우, 실제 키) + 기본 실루엣(남/여) 선택(이사 요청 2026-09-15).
+//   hMM=키(mm). photo=내장 실사(img/people/<key>.png) · svg=실루엣. 커스텀 사진 업로드 시 그 항목만 대체(세션 한정).
 const PEOPLE = {
-  m1: { label: '남자 · 정장', sex: 'male' },
-  m2: { label: '남자 · 무대', sex: 'male' },
-  f1: { label: '여자', sex: 'female' },
+  m1: { label: '고우석 · 정장', kind: 'photo', hMM: 1780 },   // 배우 고우석(키 확인 필요)
+  m2: { label: '고우석 · 무대', kind: 'photo', hMM: 1780 },
+  f1: { label: '고윤정',        kind: 'photo', hMM: 1720 },   // 배우 고윤정(공개 프로필 172cm)
+  sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },
+  sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1650 },
 };
 let pvPerson = 'm1';               // 현재 선택 인물 키(PEOPLE의 키)
-const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 사진 대신 사용(세션 한정).
-const PERSON_H_MM = { male: 1730, female: 1650 };   // 키(mm). 남 173 / 여 165.
+const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 사진/실루엣 대신 사용(세션 한정).
 const personBuiltinSrc = key => `img/people/${key}.png`;   // 내장 실사(투명 PNG)
+// 기본 비즈니스 실루엣(내장, 밝은 회색). 높이 100%·폭은 뷰박스 비율 자동. 팔 포함.
+function personSilhouetteSVG(sex) {
+  const head = '#a9a9b7', body = '#b4b4c1';
+  if (sex === 'female') {
+    return `<svg class="rs3PersonSvg" viewBox="0 0 56 168" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
+      + `<ellipse cx="28" cy="13.5" rx="9.5" ry="11" fill="${head}"/><rect x="25" y="22" width="6" height="7" fill="${head}"/>`
+      + `<rect x="12" y="33" width="6" height="49" rx="3" fill="${body}"/><rect x="38" y="33" width="6" height="49" rx="3" fill="${body}"/>`
+      + `<path d="M16 33 Q28 25 40 33 L37 72 L19 72 Z" fill="${body}"/><path d="M19 70 L37 70 L45 119 L11 119 Z" fill="${body}"/>`
+      + `<rect x="22" y="116" width="6" height="52" rx="3" fill="${body}"/><rect x="28" y="116" width="6" height="52" rx="3" fill="${body}"/></svg>`;
+  }
+  return `<svg class="rs3PersonSvg" viewBox="0 0 60 176" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
+    + `<ellipse cx="30" cy="15" rx="10.5" ry="12" fill="${head}"/><rect x="26.5" y="24" width="7" height="8" fill="${head}"/>`
+    + `<rect x="9" y="39" width="7" height="57" rx="3.5" fill="${body}"/><rect x="44" y="39" width="7" height="57" rx="3.5" fill="${body}"/>`
+    + `<path d="M13 40 Q30 30 47 40 L43 96 L17 96 Z" fill="${body}"/>`
+    + `<rect x="17" y="92" width="11" height="84" rx="3" fill="${body}"/><rect x="32" y="92" width="11" height="84" rx="3" fill="${body}"/></svg>`;
+}
 let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
 let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산).
 let pvImgMode = 'width'; // 'width'=가로 고정(가로 꽉·상하 이동) / 'height'=세로 고정(세로 꽉·좌우 이동).
@@ -404,7 +421,8 @@ function renderPreview() {
 
   const mmL = v => fmt(Math.round(v)) + 'mm';
   const mL = v => fmt(Math.round(v) / 1000, v % 1000 === 0 ? 0 : 3) + ' m';   // m 표기(3.500 m)
-  const personHMM = PERSON_H_MM[(PEOPLE[pvPerson] || PEOPLE.m1).sex];   // 선택 인물 키(남173/여165)
+  const person = PEOPLE[pvPerson] || PEOPLE.m1;
+  const personHMM = person.hMM;   // 선택 인물 키(mm)
   const baseH = num($('#baseHeight').value);
   const mount = Math.min(Math.max(0, baseH), Math.max(0, sH - r.actualH));   // 바닥에서 LED 아래까지(mm)
   const topGapMM = Math.max(0, Math.round(sH - mount - r.actualH));          // LED 위 남는 높이(mm)
@@ -691,7 +709,7 @@ function renderPreview() {
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person ${pvPerson}" style="left:${personX}px;top:${SHp - px(personHMM)}px;height:${px(personHMM)}px;transform:translate(-50%,0) translateZ(${personDeff}px)"><img class="rs3PersonImg" src="${pvPersonImg[pvPerson] || personBuiltinSrc(pvPerson)}" alt="사람" draggable="false"/></div>
+          <div class="rs3Person ${pvPerson}" style="left:${personX}px;top:${SHp - px(personHMM)}px;height:${px(personHMM)}px;transform:translate(-50%,0) translateZ(${personDeff}px)">${pvPersonImg[pvPerson] ? `<img class="rs3PersonImg" src="${pvPersonImg[pvPerson]}" alt="사람" draggable="false"/>` : (person.kind === 'svg' ? personSilhouetteSVG(person.sex) : `<img class="rs3PersonImg" src="${personBuiltinSrc(pvPerson)}" alt="사람" draggable="false"/>`)}</div>
         </div>
       </div>
       <div class="rs3GridLayer">${floorGrid}</div>
