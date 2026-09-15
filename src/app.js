@@ -984,7 +984,7 @@ function openProcImgPopup(id, side = 'front') {
       }
     });
     // 원형 돋보기(확대 렌즈) — 이미지 위에서 커서를 따라 해당 부분을 확대해 보여준다(이사 요청 2026-09-15).
-    const LOUPE = 190, ZOOM = 5.2;   // 확대 배율 2배로 키움(2.6→5.2, 이사 요청 2026-09-15)
+    const LOUPE = 133, ZOOM = 5.2;   // 돋보기 원 크기 30% 축소(190→133) · 배율 5.2(이사 요청 2026-09-15)
     const moveLoupe = e => {
       const img = el.querySelector('#procImgImg'), loupe = el.querySelector('#procLoupe');
       if (!img || !loupe || !img.complete || !img.naturalWidth) return;
