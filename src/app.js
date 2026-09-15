@@ -254,18 +254,26 @@ const PERSON_H_MM = { male: 1730, female: 1650 };  // 실루엣·실사 공통 �
 function personSilhouetteSVG(sex) {
   const head = '#a9a9b7', body = '#b4b4c1';
   if (sex === 'female') {
-    return `<svg class="rs3PersonSvg" viewBox="0 0 42 168" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
-      + `<circle cx="21" cy="13" r="10" fill="${head}"/>`
-      + `<path d="M9 36 Q21 27 33 36 L31 70 L11 70 Z" fill="${body}"/>`          /* 상의(어깨~허리) */
-      + `<path d="M11 68 L31 68 L38 118 L4 118 Z" fill="${body}"/>`              /* A라인 스커트 */
-      + `<rect x="15" y="116" width="5.5" height="52" rx="2.5" fill="${body}"/>`  /* 다리 */
-      + `<rect x="21.5" y="116" width="5.5" height="52" rx="2.5" fill="${body}"/></svg>`;
+    // 여성 비즈니스: 머리·목·어깨·팔(양옆)·상의·A라인 스커트·다리. (viewBox 56×168)
+    return `<svg class="rs3PersonSvg" viewBox="0 0 56 168" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
+      + `<ellipse cx="28" cy="13.5" rx="9.5" ry="11" fill="${head}"/>`                 /* 머리 */
+      + `<rect x="25" y="22" width="6" height="7" fill="${head}"/>`                     /* 목 */
+      + `<rect x="12" y="33" width="6" height="49" rx="3" fill="${body}"/>`             /* 팔(좌) */
+      + `<rect x="38" y="33" width="6" height="49" rx="3" fill="${body}"/>`             /* 팔(우) */
+      + `<path d="M16 33 Q28 25 40 33 L37 72 L19 72 Z" fill="${body}"/>`               /* 어깨~상의 */
+      + `<path d="M19 70 L37 70 L45 119 L11 119 Z" fill="${body}"/>`                    /* A라인 스커트 */
+      + `<rect x="22" y="116" width="6" height="52" rx="3" fill="${body}"/>`            /* 다리(좌) */
+      + `<rect x="28" y="116" width="6" height="52" rx="3" fill="${body}"/></svg>`;     /* 다리(우) */
   }
-  return `<svg class="rs3PersonSvg" viewBox="0 0 46 176" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
-    + `<circle cx="23" cy="15" r="11" fill="${head}"/>`
-    + `<path d="M9 42 Q23 31 37 42 L38 62 L35 104 L11 104 L8 62 Z" fill="${body}"/>`  /* 정장 상의 */
-    + `<rect x="12" y="100" width="9.5" height="76" rx="3" fill="${body}"/>`          /* 바지(좌) */
-    + `<rect x="24.5" y="100" width="9.5" height="76" rx="3" fill="${body}"/></svg>`; /* 바지(우) */
+  // 남성 비즈니스: 머리·목·어깨(정장)·팔(양옆)·상의·바지 다리. (viewBox 60×176)
+  return `<svg class="rs3PersonSvg" viewBox="0 0 60 176" preserveAspectRatio="xMidYMax meet" aria-hidden="true">`
+    + `<ellipse cx="30" cy="15" rx="10.5" ry="12" fill="${head}"/>`                     /* 머리 */
+    + `<rect x="26.5" y="24" width="7" height="8" fill="${head}"/>`                      /* 목 */
+    + `<rect x="9" y="39" width="7" height="57" rx="3.5" fill="${body}"/>`               /* 팔(좌) */
+    + `<rect x="44" y="39" width="7" height="57" rx="3.5" fill="${body}"/>`              /* 팔(우) */
+    + `<path d="M13 40 Q30 30 47 40 L43 96 L17 96 Z" fill="${body}"/>`                   /* 어깨~정장 상의 */
+    + `<rect x="17" y="92" width="11" height="84" rx="3" fill="${body}"/>`               /* 바지(좌) */
+    + `<rect x="32" y="92" width="11" height="84" rx="3" fill="${body}"/></svg>`;        /* 바지(우) */
 }
 let pvImage = null;    // LED 화면에 넣을 이미지(data URL). 세션 한정(구성 저장엔 미포함).
 let pvImgAspect = null; // 이미지 가로/세로 비(로드 시 계산).
