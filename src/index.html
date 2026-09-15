@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <title>Seoul AV LED Configurator</title>
-<link rel="stylesheet" href="./styles.css?v=328"/>
+<link rel="stylesheet" href="./styles.css?v=329"/>
 </head>
 <body>
 <div class="bg-orbs" aria-hidden="true"></div>
@@ -135,7 +135,7 @@
           <div class="pvToggles" id="pvToggles">
             <button class="pvTog on" data-tog="person"><span class="dot"></span>사람</button>
             <select class="pvSel" id="pvPersonSel" title="사람 선택 — 실사(배우 실제 키) 또는 기본 실루엣">
-              <option value="m1">변우석 · 정장</option>
+              <option value="m1">최산 · 정장</option>
               <option value="m2">변우석 · 무대</option>
               <option value="f1">고윤정</option>
               <option value="sm">실루엣 · 남자</option>
@@ -275,7 +275,7 @@
         Gbic(광 컨버터, QSFP-LR4) — CS4B 계열 컨트롤러(MMF 기본 CS4BPGS는 자동, 그 외 라인은 'CS4B(광전송)' 선택) 시 1920×2160 영역마다 1 SET(SBOX측 1 + LED측 1 = 2 EA) = ⌈가로/1920⌉ × ⌈세로/2160⌉ SET. 표기 수량은 총 EA(=SET×2), 포워드/백워드 이중화 시 ×2.
         중량·전력이 <code>—</code>인 모델은 데이터시트 실측값 입력이 필요합니다.<br>
         <strong>⚠ 사내 견적 보조용</strong> — 공식 견적은 삼성/설치 파트너 확인이 필요합니다.
-        <span class="verTag">화면 버전 v328</span>
+        <span class="verTag">화면 버전 v329</span>
       </div>
     </div>
   </div>
@@ -370,6 +370,6 @@
 
 <!-- 자산 변경 시 v= 숫자를 올려 캐시 무효화(브라우저가 옛 파일을 쓰지 않도록).
      app.js가 import하는 모든 모듈의 v=, 그리고 모듈끼리의 내부 import(processor-validator.js → processor-limits.js)의 v=도 함께 올릴 것. -->
-<script type="module" src="./app.js?v=328"></script>
+<script type="module" src="./app.js?v=329"></script>
 </body>
 </html>
