@@ -959,7 +959,10 @@ const PROC_IMG_IDS = new Set([
   'cl-universe-u6max', 'cl-universe-u9max', 'cl-x100pro-2u', 'cl-x100pro-4u', 'cl-x100pro-7u',
   'aw-midra-pulse-4k', 'aw-midra-eikos-4k', 'aw-alta-zenith-100', 'aw-alta-zenith-200',
   'aw-aquilon-rsalpha', 'aw-aquilon-rs1', 'aw-aquilon-rs2', 'aw-aquilon-rs3', 'aw-aquilon-rs4', 'aw-aquilon-rs5', 'aw-aquilon-rs6', 'aw-aquilon-cmini', 'aw-aquilon-cmax',
+  'aw-aquilon-c', 'aw-aquilon-cplus', 'cl-x100pro-11u',   // 신규 3종(사양 확인중, 이미지만)
 ]);
+// 사양 확인중(GPT Work 의뢰) — 자동추천엔 안 나오고 05 하단에 '이미지만' 노출(2026-09-15).
+const SPEC_PENDING_IDS = new Set(['aw-aquilon-c', 'aw-aquilon-cplus', 'cl-x100pro-11u']);
 const procImgSrc = (id, side) => `img/processors/${id}-${side}.jpg`;
 
 // 프로세서 제품 이미지(앞/뒤) 뷰어 팝업. index.html을 건드리지 않게 동적 생성(포트 팝업과 동일 패턴).
@@ -1157,10 +1160,17 @@ function renderProcessors() {
   const ranked = rankProcessors(PROCESSORS, req);
   const good = ranked.filter(x => x.label !== '부적합');
   const bad = ranked.filter(x => x.label === '부적합');
+  // 사양 확인중 신규 모델 — 자동추천엔 안 들어가지만 이미지만 볼 수 있게 하단에 별도 표시.
+  const pend = PROCESSORS.filter(p => SPEC_PENDING_IDS.has(p.id));
+  const pendHTML = pend.length ? `<details class="vpPending"><summary>신규 · 사양 확인중 ${pend.length}종 (이미지만 보기)</summary>`
+    + pend.map(p => `<div class="vpPendItem"><span class="vpPendName">${esc(p.manufacturer)} · ${esc(p.model)}</span>`
+      + `${PROC_IMG_IDS.has(p.id) ? `<button type="button" class="vpImgBtn" data-procimg="${esc(p.id)}" title="제품 앞/뒤 이미지 보기">이미지</button>` : ''}`
+      + `<span class="vpVer" title="사양은 확인 후 반영됩니다">사양 확인중</span></div>`).join('') + `</details>` : '';
   out.innerHTML =
     (good.length ? vpGroupsHTML(good)
       : '<div class="notice warn">지금 요구 조건을 만족하는 프로세서가 없습니다. 입력 수·레이어 수·운용 방식을 조정해 보세요.</div>')
-    + (bad.length ? `<details class="vpFail"><summary>부적합 ${bad.length}개 보기</summary>${bad.map(vpItemHTML).join('')}</details>` : '');
+    + (bad.length ? `<details class="vpFail"><summary>부적합 ${bad.length}개 보기</summary>${bad.map(vpItemHTML).join('')}</details>` : '')
+    + pendHTML;
   renderBuild(req, ranked);
 }
 

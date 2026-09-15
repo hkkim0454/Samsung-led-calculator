@@ -257,6 +257,19 @@ export const PROCESSORS = [
     verification: { status: m.status, sourceUrl: 'https://en.colorlightinside.com/', sourceDocument: m.ver, sourceVersion: m.ver, notes: 'I/O·출력·전역/보드 레이어 반영. True A/B·Seamless·Genlock 미확인(null).' + (m.slug === 'u15max' ? ' 40슬롯 I/O 공용.' : '') + (m.slug === 'u3max' ? ' 2K I/O수는 SoT 표 미기재→null.' : '') },
   })),
 
+  // ── 신규 3종 — 이미지만 우선 등록, 사양은 GPT Work 의뢰중(2026-09-15) ──────────
+  // 사양 미확정 → 전 항목 null, status='needs_verification'(자동추천 제외). 사양 확인 후 정식 반영.
+  //   layers.model은 제품군 고유 아키텍처(숫자 사양 아님)라 채움 — 세부 레이어 수 등은 null 유지.
+  proc({ id: 'aw-aquilon-c', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C', lifecycle: 'active', configurationType: 'customizable',
+    layers: { model: 'mixing_split' },
+    verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),
+  proc({ id: 'aw-aquilon-cplus', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C+', lifecycle: 'active', configurationType: 'customizable',
+    layers: { model: 'mixing_split' },
+    verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),
+  proc({ id: 'cl-x100pro-11u', manufacturer: CL, family: 'X100 Pro', model: 'X100 Pro 11U', lifecycle: 'active', configurationType: 'customizable',
+    layers: { model: 'global_window' },
+    verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),
+
 ];
 
 /** id로 프로세서 1개 조회. */
