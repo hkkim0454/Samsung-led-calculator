@@ -1558,14 +1558,26 @@ function syncSignageMode() {
     rb.textContent = svPortrait ? '⟲ 가로로' : '⟳ 세로로';
   }
 }
-// LED '배열 직접 지정' 확장 안내 — 03 미리보기 위 바에 표시(비디오월 확장 버튼과 같은 위치).
+// LED '배열 직접 지정' 요약 + 확장 안내 — 03 미리보기 위 바(비디오월과 동일 형태·위치, 이사 요청 2026-09-15).
 function renderLedFitBar() {
   const bar = $('#ledFitBar'); if (!bar) return;
-  const lf = (!svCode && mode === 'manual') ? ledManualFit() : null;
-  if (!lf || !lf.over) { bar.hidden = true; bar.innerHTML = ''; return; }
+  const m = (!svCode && mode === 'manual') ? models.find(x => x.id === selectedId) : null;
+  if (!m) { bar.hidden = true; bar.innerHTML = ''; return; }
+  const r = computeConfig(m, spaceWmm(), spaceHmm(), opts());   // 배치(초과분 제한) 결과
+  const lf = ledManualFit();
   bar.hidden = false;
-  bar.innerHTML = `<span class="notice warn fitExpand">요청 배열 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 현재 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
-    + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></span>`;
+  const head = `<span class="svField">배열 직접 지정</span>`;
+  const summary = `<span class="svSummary">`
+    + `<span>배열 <b>${r.cols}×${r.rows}</b> = ${r.total}캐비닛</span>`
+    + `<span>전체 <b>${fmt(r.actualW)}×${fmt(r.actualH)}</b>mm</span>`
+    + `<span>해상도 <b>${r.resW > 0 ? fmt(r.resW) + '×' + fmt(r.resH) : '—'}</b></span>`
+    + `<span>무게 <b>${r.weightKg != null ? fmt(r.weightKg, 1) + 'kg' : '—'}</b></span>`
+    + `</span>`;
+  const expand = (lf && lf.over)
+    ? `<span class="notice warn fitExpand">요청 <b>${lf.reqC}×${lf.reqR}</b> 은(는) 공간을 넘어 <b>${lf.cols}×${lf.rows}</b> 로 맞췄습니다. `
+      + `<button type="button" class="tiny primary" data-expand="led">공간 넓혀 ${lf.reqC}×${lf.reqR} 로 확장</button></span>`
+    : '';
+  bar.innerHTML = head + summary + expand;
 }
 function renderAll() { ensureSelectionVisible(); clampManualArray(); clampBaseHeight(); syncCS4B(); syncSpareRate(); renderFilters(); renderModelList(); renderPreview(); renderReadout(); renderProcessors(); renderCompare(); renderQuote(); renderDataFlow(); renderPower(); syncSignageMode(); syncSignageCard(); renderLedFitBar(); saveLastSession(); }
 
