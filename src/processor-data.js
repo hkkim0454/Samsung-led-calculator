@@ -33,7 +33,8 @@ const emptyInputs = () => ({ total: null, maxIndependent2k: null, maxIndependent
 // 출력: Active / 독립4K출력 / 4K PGM / 독립2K를 각각 분리(지침 1). max4k/max2k 단일값 사용 금지.
 //   maxWallSbox4k: 하나의 통합 LED 벽을 구동할 때 지원 가능한 S-Box 4K 패널(3840×2160) 최대 수.
 //     Pulse 4K는 4K 1판(S-Box 1개)만 가능 → 1. null이면 별도 제한 없음(4K PGM 용량까지 허용).
-const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null, maxWallSbox4k: null });
+//   dedicatedMultiviewer: 전용 멀티뷰어 출력 수(Active 출력에 합산 금지). activeConnector: Active 출력 커넥터 종류(예 'HDMI 2.0').
+const emptyOutputs = () => ({ maxActiveOutputs: null, maxIndependent4kOutputs: null, maxIndependent4kPgm: null, maxIndependent2k: null, maxWallSbox4k: null, dedicatedMultiviewer: null, activeConnector: null });
 const emptyLayers = () => ({ model: null, maxWindows: null, maxLayers: null, global2k: null, global4k: null, mixing4k: null, split4k: null, perOutputCard2k: null, perOutputCardDL: null, perOutputCard4k: null, perBoard2k: null, perBoard4k: null, chassisMaxLayers2k: null });
 const emptyCanvas = () => ({ multiOutputCanvas: null, horizontalSpan: null, verticalSpan: null, maxCanvasOutputs: null });
 // AUX(보조 출력)는 제조사/제품군별로 성격이 다르므로 generic 규칙으로 합치지 않는다(지침 7).
@@ -63,6 +64,7 @@ function proc(p) {
     configurationType: p.configurationType ?? null,   // 'preconfigured' | 'customizable' | null
     slots: { ...emptySlots(), ...(p.slots ?? {}) },
     cards: { ...emptyCards(), ...(p.cards ?? {}) },   // 카드당 4K 채널(입력/출력) — 슬롯≠채널
+    fieldSwappableCards: p.fieldSwappableCards ?? null,   // I/O 카드 현장 교체 가능(프리컨피규어드 기본구성 안내용)
     fieldFrame: p.fieldFrame ?? null,                 // {inputSlots,outputSlots} — 공식 max와 다를 때만
     inputs: { ...emptyInputs(), ...(p.inputs ?? {}) },
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
@@ -143,26 +145,30 @@ export const PROCESSORS = [
   // 공식 재검증(2026-09-13, 지침 6): 모델별 PGM/믹싱/분할 확정 → PGM null 규칙 폐기.
   //   Active ≠ PGM ≠ Mixing(지침 8). non-PGM 출력은 scaled 4K60 AUX로 사용 가능하고 그 AUX 레이어는
   //   메인 처리자원을 쓰지 않음(usesMainLayerResources=false, 지침 7) — Zenith(1080p60 AUX)와 다름.
+  //   프리컨피규어드 기본 커넥터 구성(입력 HDMI2.0/DP1.2/12G-SDI, 출력 HDMI2.0, 전용 멀티뷰어 2) — 이사 확정 데이터(GPT 조사 2026-09-15).
+  //   커넥터 합 = 4K 입력 채널 수와 일치(교차 검증). HDMI1.4/겸용은 기본구성 아님(미표시). I/O 카드 현장 교체 가능.
   ...[
-    { model: 'Aquilon RS alpha', in4k: 8,  act: 4,  pgm: 4,  mix: 4,  split: 8,  slug: 'rsalpha' },
-    { model: 'Aquilon RS1',      in4k: 16, act: 8,  pgm: 4,  mix: 4,  split: 8,  slug: 'rs1' },
-    { model: 'Aquilon RS2',      in4k: 16, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs2' },
-    { model: 'Aquilon RS3',      in4k: 24, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs3' },
-    { model: 'Aquilon RS4',      in4k: 24, act: 16, pgm: 8,  mix: 12, split: 24, slug: 'rs4' },
-    { model: 'Aquilon RS5',      in4k: 32, act: 16, pgm: 12, mix: 12, split: 24, slug: 'rs5' },
-    { model: 'Aquilon RS6',      in4k: 32, act: 20, pgm: 16, mix: 16, split: 32, slug: 'rs6' },
+    { model: 'Aquilon RS alpha', in4k: 8,  act: 4,  pgm: 4,  mix: 4,  split: 8,  slug: 'rsalpha', h20: 8,  dp: 0, sdi: 0 },
+    { model: 'Aquilon RS1',      in4k: 16, act: 8,  pgm: 4,  mix: 4,  split: 8,  slug: 'rs1',     h20: 8,  dp: 4, sdi: 4 },
+    { model: 'Aquilon RS2',      in4k: 16, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs2',     h20: 8,  dp: 4, sdi: 4 },
+    { model: 'Aquilon RS3',      in4k: 24, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs3',     h20: 12, dp: 8, sdi: 4 },
+    { model: 'Aquilon RS4',      in4k: 24, act: 16, pgm: 8,  mix: 12, split: 24, slug: 'rs4',     h20: 12, dp: 8, sdi: 4 },
+    { model: 'Aquilon RS5',      in4k: 32, act: 16, pgm: 12, mix: 12, split: 24, slug: 'rs5',     h20: 16, dp: 8, sdi: 8 },
+    { model: 'Aquilon RS6',      in4k: 32, act: 20, pgm: 16, mix: 16, split: 32, slug: 'rs6',     h20: 16, dp: 8, sdi: 8 },
   ].map(m => proc({
     id: 'aw-aquilon-' + m.slug,
     manufacturer: AW, family: 'Aquilon', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
-    inputs: { total: m.in4k, maxIndependent4k: m.in4k },   // 총 입력 수 = 확인된 4K 입력 수(2K 전용수는 미확인→null)
-    outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: m.pgm },   // Active ≠ PGM(공식값)
-    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널(입력/출력)
+    fieldSwappableCards: true,   // LivePremier I/O 카드 현장 교체 가능(기본구성 기준 표시)
+    // 입력 커넥터: HDMI2.0/DP1.2/12G-SDI(합=4K 입력). 0은 기본구성에 없음(미표시).
+    inputs: { total: m.in4k, maxIndependent4k: m.in4k, hdmi20: m.h20 || null, dp12: m.dp || null, sdi12g: m.sdi || null },
+    outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: m.pgm, dedicatedMultiviewer: 2, activeConnector: 'HDMI 2.0' },   // Active ≠ PGM ≠ 멀티뷰어(별도)
+    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // 4포트 카드(카드당 4K 4채널)
     layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },   // non-PGM 출력 = scaled 4K60 AUX, 메인자원 미소모
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
     control: { tcp: true, restApi: true, amxCompatible: true, crestronCompatible: true },
-    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/', sourceDocument: 'Analog Way LivePremier RS 공식 재검증(이사 제공, 2026-09-13)', sourceVersion: '2026-09-13', notes: `IN ${m.in4k}×4K / Active ${m.act} / PGM ${m.pgm} / 믹싱 ${m.mix} / 분할 ${m.split}. non-PGM 출력=scaled 4K60 AUX(메인자원 미소모). Active·PGM·Mixing 별도.` },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/' + m.slug.replace('rsalpha', 'aquilon-rs-alpha').replace(/^rs(\d)/, 'aquilon-rs$1'), sourceDocument: 'Analog Way LivePremier RS 공식 제품페이지·Technical Datasheet (기본 커넥터: 이사 확정 GPT 조사 2026-09-15 / 채널: 2026-09-13 재검증)', sourceVersion: '2026-09-15', notes: `IN ${m.in4k}×4K(HDMI2.0 ${m.h20}${m.dp ? ` · DP1.2 ${m.dp}` : ''}${m.sdi ? ` · 12G-SDI ${m.sdi}` : ''}) / Active ${m.act}×HDMI2.0 / 전용 멀티뷰어 2(별도) / PGM ${m.pgm} / 믹싱 ${m.mix} / 분할 ${m.split}. 커넥터 합=4K 입력 채널(검증). non-PGM 출력=scaled 4K60 AUX. Active·PGM·Mixing·멀티뷰어 별개. I/O 카드 현장 교체 가능.` },
   })),
 
   // ── Analog Way · Aquilon C mini (customizable / LivePremier) ──────────────

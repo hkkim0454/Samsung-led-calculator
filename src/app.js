@@ -952,25 +952,10 @@ const CONNECTOR_LABELS = [
   ['hdmi20', 'HDMI 2.0'], ['dp12', 'DP 1.2'], ['hdmi14', 'HDMI 1.4'],
   ['sdi12g', '12G-SDI'], ['sdi3g', '3G-SDI'], ['comboHdmi14Sdi3g', 'HDMI1.4/3G-SDI 겸용'],
 ];
-function inputConnectorPhrase(p) {
-  const i = p.inputs || {};
-  const parts = CONNECTOR_LABELS.filter(([k]) => i[k] != null && i[k] > 0).map(([k, label]) => `${label} ×${i[k]}`);
-  return parts.length ? parts.join(' · ') : null;
-}
-// 고정형(슬롯 아님) 입출력 수량 문구. 실제 입력/출력 수만 간단히 보여준다.
-function fixedIoPhrase(p) {
-  const i = p.inputs || {}, o = p.outputs || {};
-  const inCount = i.total ?? i.maxIndependent4k ?? null;
-  const in4k = i.maxIndependent4k ?? null;
-  const outCount = o.maxActiveOutputs ?? o.maxIndependent4kOutputs ?? null;
-  const outPgm = o.maxIndependent4kPgm ?? null;
-  const inTxt = inCount != null
-    ? `입력 총 <b>${inCount}</b>개${(in4k != null && in4k !== inCount) ? ` <span class="muted-note">(독립 4K ${in4k})</span>` : ''}`
-    : '입력 <b>미상</b>';
-  const outTxt = outCount != null
-    ? `출력 <b>${outCount}</b>개${(outPgm != null) ? ` <span class="muted-note">(4K PGM ${outPgm})</span>` : ''}`
-    : '출력 <b>미상</b>';
-  return `${inTxt} · ${outTxt}`;
+// 커넥터 칩 목록(종류 라벨은 작게 · 개수는 크게). 0/null 커넥터는 렌더 안 함.
+function connChipsHTML(pairs, cls = '') {
+  return pairs.filter(([, n]) => n != null && n > 0)
+    .map(([label, n]) => `<span class="connChip ${cls}"><span class="cLbl">${esc(label)}</span><span class="cCnt">×${n}</span></span>`).join('');
 }
 // 슬롯 사용 상태 시각화. reqCards(사용 카드)·slots(전체 슬롯). 넘치면 부족(빨강). 색+텍스트 함께 제공.
 function slotVizHTML(reqCards, slots) {
@@ -1021,13 +1006,27 @@ function vpSlotCardHTML(item) {
 }
 // 고정형(preconfigured) 제품 카드 본문 — 입력 커넥터 구성 + 입출력 수량.
 function vpFixedCardHTML(item) {
-  const conn = inputConnectorPhrase(item.proc);
-  const connLine = conn
-    ? `<span class="vpSlotChan">입력 커넥터: ${esc(conn)}</span>`
-    : '<span class="vpSlotChan muted-note">입력 커넥터: 미상 (데이터시트 값 필요)</span>';
-  return `<div class="vpSlot fixed"><span class="vpSlotHd">고정형</span><span class="vpSlotBody">
-    ${connLine}
-    <span class="vpSlotRow">${fixedIoPhrase(item.proc)}</span></span></div>`;
+  const p = item.proc, i = p.inputs || {}, o = p.outputs || {};
+  // [입력] 커넥터 종류·수(합=4K 입력 채널). HDMI1.4/겸용은 데이터에 있으면 표시(Midra 등), RS는 없음.
+  const inChips = connChipsHTML(CONNECTOR_LABELS.map(([k, label]) => [label, i[k]]));
+  const inGroup = `<div class="ioGroup"><div class="ioHd">입력</div>${inChips
+    ? `<div class="connRow">${inChips}</div>`
+    : '<div class="muted-note">커넥터 구성 미상 (데이터시트 값 필요)</div>'}</div>`;
+  // [출력] Active Output(≠PGM). activeConnector 있으면 종류 표시(RS=HDMI 2.0), 없으면 'Active 출력'.
+  const act = o.maxActiveOutputs, pgm = o.maxIndependent4kPgm;
+  const outGroup = act != null ? `<div class="ioGroup"><div class="ioHd">출력 <span class="ioSub">Active Output</span></div>
+    <div class="connRow"><span class="connChip"><span class="cLbl">${esc(o.activeConnector || 'Active 출력')}</span><span class="cCnt">×${act}</span></span></div>
+    ${pgm != null ? `<div class="ioExtra">4K PGM <b>${pgm}</b> <span class="muted-note">(Active와 별개)</span></div>` : ''}</div>` : '';
+  // [멀티뷰어] 전용 출력(Active에 합산 금지). 있을 때만.
+  const mv = o.dedicatedMultiviewer;
+  const mvGroup = (mv != null && mv > 0)
+    ? `<div class="ioGroup"><div class="ioHd">멀티뷰어 <span class="ioSub">Dedicated</span></div>
+      <div class="connRow"><span class="connChip mv"><span class="cLbl">${esc(o.activeConnector || 'HDMI 2.0')}</span><span class="cCnt">×${mv}</span></span></div></div>`
+    : '';
+  const note = p.fieldSwappableCards
+    ? '<div class="ioNote">프리컨피규어드 기본 장착 카드 기준이며, 실제 구성은 I/O 카드 교체에 따라 달라질 수 있습니다.</div>'
+    : '';
+  return `<div class="vpFixed">${inGroup}${outGroup}${mvGroup}${note}</div>`;
 }
 // 상세 사양(접기) — 물리 입력/Active 출력/PGM·스크린/믹싱·분할 레이어/윈도우를 서로 구분. Active≠PGM≠레이어.
 function vpDetailHTML(item) {

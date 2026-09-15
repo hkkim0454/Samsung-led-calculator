@@ -588,6 +588,31 @@ test('cardPlan: 고정형(Midra·Zenith)은 cardBased=false(카드 개념 없음
   assert.equal(cardPlan(eikos, { required4kOutputs: 2 }).cardBased, false);
   assert.equal(cardPlan(zen, { required4kOutputs: 2 }).cardBased, false);
 });
+// ── Aquilon RS 커넥터 구성(2026-09-15, 이사 확정 데이터) ──────────────────────
+test('Aquilon RS: 입력 커넥터 합 = 4K 입력 채널 수(교차 검증)', () => {
+  const rs = PROCESSORS.filter(p => /aw-aquilon-rs/.test(p.id));
+  assert.equal(rs.length, 7);
+  for (const p of rs) {
+    const i = p.inputs;
+    const sum = (i.hdmi20 || 0) + (i.dp12 || 0) + (i.sdi12g || 0);
+    assert.equal(sum, i.maxIndependent4k, `${p.model}: 커넥터 합 ${sum} ≠ 4K 입력 ${i.maxIndependent4k}`);
+    assert.equal(p.outputs.maxActiveOutputs, p.outputs.maxIndependent4kOutputs, `${p.model}: Active`);
+    assert.equal(p.outputs.dedicatedMultiviewer, 2, `${p.model}: 전용 멀티뷰어 2(별도)`);
+    assert.equal(p.configurationType, 'preconfigured');   // 고정형(슬롯 아님)
+    assert.equal(p.fieldSwappableCards, true);
+  }
+});
+test('Aquilon RS: 모델별 커넥터 확정값(HDMI2.0/DP1.2/12G-SDI)', () => {
+  const g = id => PROCESSORS.find(p => p.id === id).inputs;
+  const c = i => [i.hdmi20 || 0, i.dp12 || 0, i.sdi12g || 0];
+  assert.deepEqual(c(g('aw-aquilon-rsalpha')), [8, 0, 0]);
+  assert.deepEqual(c(g('aw-aquilon-rs1')), [8, 4, 4]);
+  assert.deepEqual(c(g('aw-aquilon-rs2')), [8, 4, 4]);
+  assert.deepEqual(c(g('aw-aquilon-rs3')), [12, 8, 4]);
+  assert.deepEqual(c(g('aw-aquilon-rs4')), [12, 8, 4]);
+  assert.deepEqual(c(g('aw-aquilon-rs5')), [16, 8, 8]);
+  assert.deepEqual(c(g('aw-aquilon-rs6')), [16, 8, 8]);
+});
 test('every processor has valid layer model / status / unique id', () => {
   const valid = new Set(['mixing_split', 'per_output_card', 'global_window', 'screen_group']);
   const ids = new Set();
