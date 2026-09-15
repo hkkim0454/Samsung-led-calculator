@@ -936,6 +936,38 @@ function procHasFixedPorts(p) {
     // 카드(슬롯)형 제품(NovaStar H 등): 입출력 커넥터 값이 없어도 슬롯 수로 용량을 유도해 팝업을 띄운다.
     || s.maxInputBoards != null || s.maxOutputBoards != null;
 }
+// 제품군별 '카드당 4K 채널' 표시 문구(이사 지정 2026-09-15). 수치는 데이터(proc.cards)에서 오고, 문구만 여기서 고른다.
+function cardChannelPhrase(p, cp) {
+  const fam = p.family, mfr = p.manufacturer;
+  if (mfr === 'Analog Way' && fam === 'Aquilon') return '카드당 독립 4K 최대 4채널';
+  if (mfr === 'Colorlight' && fam === 'Universe') return 'HDMI 카드당 4K 최대 2채널';
+  if (mfr === 'Colorlight' && fam === 'X100 Pro') return '4K 카드당 1채널';
+  if (mfr === 'NovaStar' && fam === 'H') return '4K 카드당 1채널';
+  // 표에 없는 제품군: 데이터가 있으면 일반 문구, 없으면 미상.
+  if (cp.inPerCard != null || cp.outPerCard != null)
+    return `카드당 4K — 입력 ${cp.inPerCard ?? '미상'} · 출력 ${cp.outPerCard ?? '미상'}채널`;
+  return null;
+}
+// 슬롯·카드 구성 블록(요청 2026-09-15). 계산은 engine/limits(cardPlan)에서만 하고 여기선 표시만 한다.
+function vpCardPlanHTML(item) {
+  const cp = item.cardPlan;
+  if (!cp) return '';
+  if (!cp.cardBased) return `<div class="vpSlot fixed"><span class="vpSlotHd">슬롯·카드</span><span class="vpSlotBody">고정 입출력 (카드 없음)</span></div>`;
+  const phrase = cardChannelPhrase(item.proc, cp);
+  // 한 유형(입력/출력)의 "필요 N장 / 전체 슬롯 M → 남음" 한 줄.
+  const line = (label, need, reqCards, slots, rem) => {
+    let cards;
+    if (!(need > 0)) cards = '요구 없음';
+    else cards = (reqCards != null) ? `필요 <b>${reqCards}</b>장` : '필요 <b>미상</b>';
+    const slotTxt = (slots != null) ? `전체 슬롯 ${slots}` : '전체 슬롯 미상';
+    const remTxt = (rem == null) ? '' : (rem >= 0 ? ` → 남음 <b>${rem}</b>` : ` → <b class="vpShort">부족 ${-rem}</b>`);
+    return `<span class="vpSlotRow"><i>${label}</i> ${cards} · ${slotTxt}${remTxt}</span>`;
+  };
+  const chan = phrase ? `<span class="vpSlotChan">${esc(phrase)}</span>` : '<span class="vpSlotChan muted-note">카드당 채널 미상</span>';
+  return `<div class="vpSlot"><span class="vpSlotHd">슬롯·카드</span><span class="vpSlotBody">${chan}
+    ${line('입력', cp.needIn, cp.reqInCards, cp.inSlots, cp.remInSlots)}
+    ${line('출력', cp.needOut, cp.reqOutCards, cp.outSlots, cp.remOutSlots)}</span></div>`;
+}
 function vpItemHTML(item) {
   const p = item.proc;
   const needsVer = p.verification?.status !== 'official';
@@ -950,6 +982,7 @@ function vpItemHTML(item) {
       ${PROC_IMG_IDS.has(p.id) ? `<button type="button" class="vpImgBtn" data-procimg="${esc(p.id)}" title="제품 앞/뒤 이미지 보기">이미지</button>` : ''}
       ${needsVer ? '<span class="vpVer" title="일부 사양이 공식 확인 전입니다">확인 필요 사양 포함</span>' : ''}
     </div>
+    ${vpCardPlanHTML(item)}
     <ul class="vpChecksList">${checks}</ul>
   </div>`;
 }

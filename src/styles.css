@@ -571,6 +571,17 @@ body.printing .previewStage{width:640px!important;height:auto!important}
 .vpItem.edge .vpBadge{background:var(--warn-tint);color:var(--warn)}
 .vpItem.no .vpBadge{background:#E5484D;color:#fff}
 .vpVer{font-size:10.5px;color:var(--warn);background:var(--warn-tint);padding:2px 8px;border-radius:999px}
+/* 슬롯·카드 구성 블록(제품 카드 기본 정보). 요청 2026-09-15 */
+.vpSlot{display:flex;gap:10px;margin-top:9px;padding:8px 11px;border-radius:10px;
+  background:var(--accent-tint,rgba(58,90,240,.06));border:1px solid var(--line)}
+.vpSlot.fixed{color:var(--muted)}
+.vpSlotHd{flex:none;font-size:11px;font-weight:800;color:var(--accent,#3A5AF0);letter-spacing:.02em;padding-top:1px}
+.vpSlotBody{display:flex;flex-direction:column;gap:2px;min-width:0}
+.vpSlotChan{font-size:12px;font-weight:700;color:var(--ink-1,var(--ink-2))}
+.vpSlotRow{font-size:12px;color:var(--ink-2);line-height:1.5}
+.vpSlotRow i{display:inline-block;min-width:2.4em;font-style:normal;font-weight:700;color:var(--muted)}
+.vpSlotRow b{font-family:var(--mono);font-weight:700;color:var(--ink-1,var(--ink-2))}
+.vpSlotRow b.vpShort{color:#E5484D}
 .vpChecksList{list-style:none;margin:10px 0 0;padding:0;display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 16px}
 .vc{display:flex;align-items:baseline;gap:7px;font-size:12px;color:var(--ink-2);line-height:1.5}

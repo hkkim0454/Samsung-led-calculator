@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   processorRequirements, validateOutputCardLayers, regionTiles,
-  outputCardUsage2kEq, outputCapacity, inputsCapacity, buildSboxTopologies,
+  outputCardUsage2kEq, outputCapacity, inputsCapacity, buildSboxTopologies, cardPlan,
 } from '../src/processor-limits.js';
 import {
   validateProcessor, rankProcessors, validateBuild, operationFit, verificationPending,
@@ -540,6 +540,45 @@ test('validateBuild: X100 7U 5760x1080 출력2장 PASS, 1장 FAIL, 9장 섀시�
 test('discontinued Midra removed; Pulse/Eikos remain (family = Midra 4K)', () => {
   const midra = PROCESSORS.filter(p => p.family === 'Midra 4K').map(p => p.model).sort();
   assert.deepEqual(midra, ['Eikos 4K', 'Pulse 4K']);
+});
+// ── 슬롯·카드 구성(cardPlan) — 요청 2026-09-15 ────────────────────────────────
+test('cardPlan: 제품군별 카드당 4K 채널이 데이터에 명시되어 있다', () => {
+  const per = (id) => PROCESSORS.find(p => p.id === id).cards;
+  assert.deepEqual(per('aw-aquilon-c'),    { in4kPerCard: 4, out4kPerCard: 4 });   // Aquilon 4/4
+  assert.deepEqual(per('aw-aquilon-cplus'),{ in4kPerCard: 4, out4kPerCard: 4 });
+  assert.deepEqual(per('cl-universe-u6max'),{ in4kPerCard: 2, out4kPerCard: 2 });  // Universe U 2/2(HDMI)
+  assert.deepEqual(per('cl-x100pro-7u'),   { in4kPerCard: 1, out4kPerCard: 1 });   // X100 Pro 1/1
+  assert.deepEqual(per('ns-h5'),           { in4kPerCard: 1, out4kPerCard: 1 });   // NovaStar H 1/1
+});
+test('cardPlan: 필요 카드 수 = ceil(요구 / 카드당 채널)', () => {
+  const x = PROCESSORS.find(p => p.id === 'cl-x100pro-7u');   // 1/1, 슬롯 8/8
+  const cp = cardPlan(x, { independent4kInputs: 6, required4kOutputs: 5 });
+  assert.equal(cp.reqInCards, 6);   // 6/1
+  assert.equal(cp.reqOutCards, 5);  // 5/1
+  assert.equal(cp.remInSlots, 2);   // 8-6
+  assert.equal(cp.remOutSlots, 3);  // 8-5
+  const u = PROCESSORS.find(p => p.id === 'cl-universe-u6max');   // 2/2, 슬롯 10/5
+  const cu = cardPlan(u, { independent4kInputs: 5, required4kOutputs: 6 });
+  assert.equal(cu.reqInCards, 3);   // ceil(5/2)
+  assert.equal(cu.reqOutCards, 3);  // ceil(6/2)
+  assert.equal(cu.remOutSlots, 2);  // 5-3
+});
+test('cardPlan: 슬롯 수 미상이면 남는 슬롯도 미상(null), 요구 0이면 카드 0', () => {
+  const c = PROCESSORS.find(p => p.id === 'aw-aquilon-c');   // 4/4, 슬롯 데이터 없음
+  const cp = cardPlan(c, { independent4kInputs: 6, required4kOutputs: 5 });
+  assert.equal(cp.reqInCards, 2);      // ceil(6/4)
+  assert.equal(cp.reqOutCards, 2);     // ceil(5/4)
+  assert.equal(cp.inSlots, null);
+  assert.equal(cp.remInSlots, null);   // 슬롯 미상 → 남는 슬롯 미상
+  const zero = cardPlan(c, { independent4kInputs: 0, required4kOutputs: 3 });
+  assert.equal(zero.reqInCards, 0);    // 입력 요구 0 → 0장
+  assert.equal(zero.reqOutCards, 1);
+});
+test('cardPlan: 고정형(Midra·Zenith)은 cardBased=false(카드 개념 없음)', () => {
+  const eikos = PROCESSORS.find(p => p.id === 'aw-midra-eikos-4k');
+  const zen = PROCESSORS.find(p => p.id === 'aw-alta-zenith-100');
+  assert.equal(cardPlan(eikos, { required4kOutputs: 2 }).cardBased, false);
+  assert.equal(cardPlan(zen, { required4kOutputs: 2 }).cardBased, false);
 });
 test('every processor has valid layer model / status / unique id', () => {
   const valid = new Set(['mixing_split', 'per_output_card', 'global_window', 'screen_group']);

@@ -41,6 +41,10 @@ const emptyCanvas = () => ({ multiOutputCanvas: null, horizontalSpan: null, vert
 //   usesMainLayerResources: AUX 레이어가 메인 처리자원을 소모하는가(Aquilon RS는 false — 별도 자원).
 const emptyAux = () => ({ maxResolution: null, maxAuxOutputs: null, usesMainLayerResources: null });
 const emptyMixing = () => ({ supportsMixed4k2kBoards: null });
+// 카드 1장이 처리하는 독립 4K 채널 수(입력/출력 별도). 슬롯 수(maxInputBoards 등)와 다른 개념이며,
+//   실제 장착 카드 종류에 따라 달라질 수 있어 "대표 카드 기준"이다. 확인 안 되면 null(=미상, 추정 금지).
+//   고정형(카드 없는 Midra·Zenith)은 값을 넣지 않는다(null → 카드 개념 없음).
+const emptyCards = () => ({ in4kPerCard: null, out4kPerCard: null });
 // 운영 모드 지원(Analog Way 등). matrix: 다중 독립 PGM, mixer: 1 PGM + AUX, edgeBlending: 2출력→1 wide PGM.
 //   확인 안 되면 null(추정 금지). edgeBlending 여부는 canvas.multiOutputCanvas와 일관 유지.
 const emptyModes = () => ({ matrix: null, mixer: null, edgeBlending: null });
@@ -58,6 +62,7 @@ function proc(p) {
     lifecycle: p.lifecycle ?? null,                   // 'active' | 'legacy' | null
     configurationType: p.configurationType ?? null,   // 'preconfigured' | 'customizable' | null
     slots: { ...emptySlots(), ...(p.slots ?? {}) },
+    cards: { ...emptyCards(), ...(p.cards ?? {}) },   // 카드당 4K 채널(입력/출력) — 슬롯≠채널
     fieldFrame: p.fieldFrame ?? null,                 // {inputSlots,outputSlots} — 공식 max와 다를 때만
     inputs: { ...emptyInputs(), ...(p.inputs ?? {}) },
     outputs: { ...emptyOutputs(), ...(p.outputs ?? {}) },
@@ -151,6 +156,7 @@ export const PROCESSORS = [
     manufacturer: AW, family: 'Aquilon', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
     inputs: { total: m.in4k, maxIndependent4k: m.in4k },   // 총 입력 수 = 확인된 4K 입력 수(2K 전용수는 미확인→null)
     outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: m.pgm },   // Active ≠ PGM(공식값)
+    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널(입력/출력)
     layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },   // non-PGM 출력 = scaled 4K60 AUX, 메인자원 미소모
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
@@ -167,6 +173,7 @@ export const PROCESSORS = [
     slots: { maxInputBoards: 2, maxOutputBoards: 3 },
     inputs: { total: 8, maxIndependent4k: 8 },
     outputs: { maxActiveOutputs: 12, maxIndependent4kOutputs: 12, maxIndependent4kPgm: 4 },
+    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
     layers: { model: 'mixing_split', mixing4k: 4, split4k: null },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
@@ -184,6 +191,7 @@ export const PROCESSORS = [
     slots: { maxInputBoards: 8, maxOutputBoards: null },   // 입력카드 2·4·6·8개(→8·16·24·32×4K). 출력카드 수는 공식 단일수치 미명시→null
     inputs: { total: 32, maxIndependent4k: 32 },   // 최대 32×4K60(또는 16×5K60 / 64×Dual·2K60 — 대체 구성)
     outputs: { maxActiveOutputs: 24, maxIndependent4kOutputs: 24, maxIndependent4kPgm: 16 },   // Active 24×4K / PGM 16×4K. 전용 멀티뷰어 2 별도
+    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
     layers: { model: 'mixing_split', mixing4k: 16, split4k: 32 },   // 믹싱 16×4K(True A/B) / 분할 32×4K
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
@@ -209,6 +217,7 @@ export const PROCESSORS = [
     slots: { maxInputBoards: m.inCards, maxOutputBoards: m.outCards, physicalInputSlots: null, physicalOutputSlots: null, sharedIoSlots: null },
     inputs: {},   // 독립 4K/2K 입력 수는 장착 카드 종류 의존 → null(카드=4K1/2K4 가정은 limits에서 유도)
     outputs: {},  // 독립 4K 출력 = 출력카드 수(카드=1×4K, LOOP 제외) → limits.outputCapacity에서 유도
+    cards: { in4kPerCard: 1, out4kPerCard: 1 },   // NovaStar H: 4K 카드당 1채널(입력/출력)
     layers: { model: 'per_output_card', perOutputCard2k: 16, perOutputCardDL: 8, perOutputCard4k: 4, chassisMaxLayers2k: m.maxLayers },
     switching: { seamless: true, fade: true },
     features: { genlock: true, hdr: true, tenBit: true, redundancy: true },
@@ -229,6 +238,7 @@ export const PROCESSORS = [
     slots: { maxInputBoards: m.boards, maxOutputBoards: m.out4kB },
     inputs: { maxIndependent2k: m.in2k, maxIndependent4k: m.in4k },
     outputs: { maxActiveOutputs: m.out4kB, maxIndependent4kOutputs: m.out4kB, maxIndependent2k: m.out2k, maxIndependent4kPgm: null },
+    cards: { in4kPerCard: 1, out4kPerCard: 1 },   // X100 Pro: 4K 카드당 1채널(입력/출력)
     layers: { model: 'global_window', maxWindows: m.win, maxLayers: m.lay, global4k: null, global2k: null, perOutputCard4k: null },
     outputBoardMixing: { supportsMixed4k2kBoards: false },   // 2U/4U/7U 혼용 불가(11U+ 모델만 true)
     switching: { monitoringPreview: true },
@@ -248,6 +258,7 @@ export const PROCESSORS = [
     id: 'cl-universe-' + m.slug,
     manufacturer: CL, family: 'Universe', model: m.model, lifecycle: 'active', configurationType: 'customizable',
     slots: { maxInputBoards: m.inB, maxOutputBoards: m.oB, sharedIoSlots: m.slug === 'u15max' ? 40 : null },   // U15: 40 물리슬롯 I/O 공용(입출력 단순합≠40)
+    cards: { in4kPerCard: 2, out4kPerCard: 2 },   // Universe U: HDMI 카드당 4K 최대 2채널(입력/출력)
     inputs: { maxIndependent4k: m.in4k, maxIndependent2k: m.in2k },
     outputs: { maxActiveOutputs: m.o4k, maxIndependent4kOutputs: m.o4k, maxIndependent2k: m.o2k, maxIndependent4kPgm: null },
     layers: { model: 'screen_group', global2k: m.g2k, global4k: m.g4k, perBoard2k: 16, perBoard4k: m.pb4 },
@@ -263,6 +274,7 @@ export const PROCESSORS = [
     id: 'aw-aquilon-c', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C', lifecycle: 'active', configurationType: 'customizable',
     inputs: { total: 16, maxIndependent4k: 16 },   // 최대 16×4K60 Seamless
     outputs: { maxActiveOutputs: 16, maxIndependent4kOutputs: 16, maxIndependent4kPgm: 8 },   // Active 16×4K / PGM 8×4K. 전용 멀티뷰어 2 별도
+    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
     layers: { model: 'mixing_split', mixing4k: 8, split4k: 16 },   // 믹싱 8×4K(True A/B) / 분할 16×4K
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
@@ -274,6 +286,7 @@ export const PROCESSORS = [
     id: 'aw-aquilon-cplus', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C+', lifecycle: 'active', configurationType: 'customizable',
     inputs: { total: 24, maxIndependent4k: 24 },   // 최대 24×4K60 Seamless
     outputs: { maxActiveOutputs: 20, maxIndependent4kOutputs: 20, maxIndependent4kPgm: 12 },   // Active 20×4K / PGM 12×4K. 전용 멀티뷰어 별도
+    cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
     layers: { model: 'mixing_split', mixing4k: 12, split4k: 24 },   // 믹싱 12×4K(True A/B) / 분할 24×4K
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },

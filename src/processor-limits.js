@@ -142,6 +142,45 @@ export function outputCapacity(proc) {
   }
 }
 
+/**
+ * 슬롯·카드 구성 계산(SoT: 슬롯≠채널, 미상=null). 순수 함수 — 표시는 app.js.
+ *   입력/출력 카드당 4K 채널(proc.cards)과 사용자 요구(req)로 필요 카드 수·남는 슬롯을 산출한다.
+ *   - reqInCards = ceil(필요 독립4K입력 / 입력카드당채널), reqOutCards = ceil(필요 4K출력 / 출력카드당채널).
+ *   - 카드당 채널이 미상(null)이면 해당 필요 카드 수 = null(추정 금지).
+ *   - 요구량이 0이면 필요 카드 = 0.
+ *   - 남는 슬롯 = 전체 슬롯 − 필요 카드 (전체 슬롯을 아는 제품만; 아니면 null).
+ *   - cardBased=false(고정형: Midra·Zenith 등 카드/슬롯 개념 없음)면 카드 계산을 하지 않는다.
+ * 반환: { cardBased, inPerCard, outPerCard, needIn, needOut, reqInCards, reqOutCards,
+ *         inSlots, outSlots, remInSlots, remOutSlots }.
+ */
+export function cardPlan(proc, req) {
+  const c = proc?.cards ?? {}, s = proc?.slots ?? {};
+  const inPer = c.in4kPerCard ?? null;
+  const outPer = c.out4kPerCard ?? null;
+  const inSlots = s.maxInputBoards ?? null;
+  const outSlots = s.maxOutputBoards ?? null;
+  const cardBased = inPer != null || outPer != null || inSlots != null || outSlots != null;
+  if (!cardBased) {
+    return { cardBased: false, inPerCard: null, outPerCard: null, needIn: null, needOut: null,
+      reqInCards: null, reqOutCards: null, inSlots: null, outSlots: null, remInSlots: null, remOutSlots: null };
+  }
+  const needIn = Math.max(0, Math.floor(req?.independent4kInputs ?? 0));
+  const needOut = Math.max(0, Math.floor(req?.required4kOutputs ?? 0));
+  const cards = (need, per) => {
+    if (need <= 0) return 0;              // 요구 없음 → 0장
+    if (per == null || per <= 0) return null;  // 카드당 채널 미상 → 미상
+    return Math.ceil(need / per);
+  };
+  const reqInCards = cards(needIn, inPer);
+  const reqOutCards = cards(needOut, outPer);
+  const rem = (slots, used) => (slots != null && used != null) ? slots - used : null;
+  return {
+    cardBased: true, inPerCard: inPer, outPerCard: outPer, needIn, needOut,
+    reqInCards, reqOutCards, inSlots, outSlots,
+    remInSlots: rem(inSlots, reqInCards), remOutSlots: rem(outSlots, reqOutCards),
+  };
+}
+
 /** 독립 2K 출력 용량(FHD 중심 S-Box topology 판정용). 데이터 없으면 null(→확인 필요). */
 export function outputCapacity2k(proc) {
   const o = proc?.outputs ?? {};

@@ -10,6 +10,7 @@
 
 import {
   INPUT_2K_PER_CARD,
+  cardPlan,
   inputsCapacity,
   outputCapacity,
   outputCapacity2k,
@@ -263,7 +264,7 @@ export function rankProcessors(procs, req) {
       const label = statusLabel(v.verdict, op, tight);
       const out4k = v.checks.find(c => c.name.startsWith('4K 출력') || c.name === '4K PGM 출력');
       const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
-      return { proc, ...v, label, opRank: op.rank, preferred: op.preferred, _headroom: headroom };
+      return { proc, ...v, label, opRank: op.rank, preferred: op.preferred, _headroom: headroom, cardPlan: cardPlan(proc, req) };
     })
     .sort((a, b) =>
       (a.opRank - b.opRank) ||
