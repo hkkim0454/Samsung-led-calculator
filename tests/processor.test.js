@@ -359,7 +359,17 @@ test('[AW] Zenith 100/200 support Hard/Soft Edge (wide canvas); Z200=6중 4출�
     assert.equal(c.verticalSpan, true);
   }
   assert.equal(getProcessor('aw-alta-zenith-200').canvas.maxCanvasOutputs, 4);   // 6 Active 중 4출력만 edge-blend(이사 확인 2026-09-15)
-  assert.equal(getProcessor('aw-alta-zenith-100').canvas.maxCanvasOutputs, null); // Z100 결합 출력수 미확인 → 추정 금지
+  assert.equal(getProcessor('aw-alta-zenith-100').canvas.maxCanvasOutputs, 3);   // 4 Active 중 3출력(이사 확인 2026-09-15)
+});
+test('Edge-Blending: Aquilon RS·C 라인 전 모델 지원 + 최대 결합 출력수', () => {
+  const wc = { 'aw-aquilon-rsalpha': 4, 'aw-aquilon-rs1': 4, 'aw-aquilon-rs2': 8, 'aw-aquilon-rs3': 8, 'aw-aquilon-rs4': 8, 'aw-aquilon-rs5': 12, 'aw-aquilon-rs6': 16, 'aw-aquilon-cmini': 4, 'aw-aquilon-c': 8, 'aw-aquilon-cplus': 12, 'aw-aquilon-cmax': 16 };
+  for (const [id, n] of Object.entries(wc)) {
+    const p = getProcessor(id);
+    assert.equal(p.canvas.multiOutputCanvas, true, `${id} multiOutputCanvas`);
+    assert.equal(p.modes.edgeBlending, true, `${id} edgeBlending`);
+    assert.equal(p.canvas.maxCanvasOutputs, n, `${id} 최대 결합 ${n}`);
+    assert.ok(p.canvas.maxCanvasOutputs <= p.outputs.maxActiveOutputs, `${id} 결합≤전체출력`);
+  }
 });
 test('[AW] confirmed total input counts; Aquilon RS AUX not-main-resource, Zenith AUX main-resource unknown', () => {
   assert.equal(getProcessor('aw-alta-zenith-100').inputs.total, 13);

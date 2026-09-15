@@ -123,7 +123,7 @@ export const PROCESSORS = [
     inputs: { total: 13, maxIndependent4k: 11, maxIndependent2k: 13, dedicated2kInputs: 2, hdmi20: 6, dp12: 3, sdi12g: 2, comboHdmi14Sdi3g: 2 },   // 11×4K60 + 2×2K60(전용)
     outputs: { maxActiveOutputs: 4, maxIndependent4kOutputs: 4, maxIndependent4kPgm: 3, maxIndependent2k: null },   // Active 4 / PGM 3
     layers: { model: 'mixing_split', mixing4k: 3, split4k: 6 },   // 공식 재검증(2026-09-13): 믹싱3 / 분할6
-    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: null },   // Hard/Soft Edge 지원(공식 비교표). 최대 캔버스 출력수 미확인→null
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 3 },   // Edge-Blending 최대 3출력 결합(이사 확정 2026-09-15). span 방향은 데이터시트 미확인이나 지원 확인됨
     aux: { maxResolution: '1080p60', maxAuxOutputs: 2, usesMainLayerResources: null },   // 미사용 물리출력 → scaled AUX(1080p60), max 2. 메인자원 소모여부 미확인→null
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'live_production' },
     latency: { frames: 1 }, features: { genlock: true, hdr: true, tenBit: true, multiview: true }, control: { tcp: true, crestronCompatible: true },
@@ -149,13 +149,13 @@ export const PROCESSORS = [
   //   프리컨피규어드 기본 커넥터 구성(입력 HDMI2.0/DP1.2/12G-SDI, 출력 HDMI2.0, 전용 멀티뷰어 2) — 이사 확정 데이터(GPT 조사 2026-09-15).
   //   커넥터 합 = 4K 입력 채널 수와 일치(교차 검증). HDMI1.4/겸용은 기본구성 아님(미표시). I/O 카드 현장 교체 가능.
   ...[
-    { model: 'Aquilon RS alpha', in4k: 8,  act: 4,  pgm: 4,  mix: 4,  split: 8,  slug: 'rsalpha', h20: 8,  dp: 0, sdi: 0 },
-    { model: 'Aquilon RS1',      in4k: 16, act: 8,  pgm: 4,  mix: 4,  split: 8,  slug: 'rs1',     h20: 8,  dp: 4, sdi: 4 },
-    { model: 'Aquilon RS2',      in4k: 16, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs2',     h20: 8,  dp: 4, sdi: 4 },
-    { model: 'Aquilon RS3',      in4k: 24, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs3',     h20: 12, dp: 8, sdi: 4 },
-    { model: 'Aquilon RS4',      in4k: 24, act: 16, pgm: 8,  mix: 12, split: 24, slug: 'rs4',     h20: 12, dp: 8, sdi: 4 },
-    { model: 'Aquilon RS5',      in4k: 32, act: 16, pgm: 12, mix: 12, split: 24, slug: 'rs5',     h20: 16, dp: 8, sdi: 8 },
-    { model: 'Aquilon RS6',      in4k: 32, act: 20, pgm: 16, mix: 16, split: 32, slug: 'rs6',     h20: 16, dp: 8, sdi: 8 },
+    { model: 'Aquilon RS alpha', in4k: 8,  act: 4,  pgm: 4,  mix: 4,  split: 8,  slug: 'rsalpha', h20: 8,  dp: 0, sdi: 0, wc: 4 },
+    { model: 'Aquilon RS1',      in4k: 16, act: 8,  pgm: 4,  mix: 4,  split: 8,  slug: 'rs1',     h20: 8,  dp: 4, sdi: 4, wc: 4 },
+    { model: 'Aquilon RS2',      in4k: 16, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs2',     h20: 8,  dp: 4, sdi: 4, wc: 8 },
+    { model: 'Aquilon RS3',      in4k: 24, act: 12, pgm: 8,  mix: 8,  split: 16, slug: 'rs3',     h20: 12, dp: 8, sdi: 4, wc: 8 },
+    { model: 'Aquilon RS4',      in4k: 24, act: 16, pgm: 8,  mix: 12, split: 24, slug: 'rs4',     h20: 12, dp: 8, sdi: 4, wc: 8 },
+    { model: 'Aquilon RS5',      in4k: 32, act: 16, pgm: 12, mix: 12, split: 24, slug: 'rs5',     h20: 16, dp: 8, sdi: 8, wc: 12 },
+    { model: 'Aquilon RS6',      in4k: 32, act: 20, pgm: 16, mix: 16, split: 32, slug: 'rs6',     h20: 16, dp: 8, sdi: 8, wc: 16 },
   ].map(m => proc({
     id: 'aw-aquilon-' + m.slug,
     manufacturer: AW, family: 'Aquilon', model: m.model, lifecycle: 'active', configurationType: 'preconfigured',
@@ -164,6 +164,8 @@ export const PROCESSORS = [
     inputs: { total: m.in4k, maxIndependent4k: m.in4k, hdmi20: m.h20 || null, dp12: m.dp || null, sdi12g: m.sdi || null },
     outputs: { maxActiveOutputs: m.act, maxIndependent4kOutputs: m.act, maxIndependent4kPgm: m.pgm, dedicatedMultiviewer: 2, activeConnector: 'HDMI 2.0' },   // Active ≠ PGM ≠ 멀티뷰어(별도)
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // 4포트 카드(카드당 4K 4채널)
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: m.wc },   // Edge-Blending: 최대 m.wc출력 결합(이사 확정 2026-09-15)
+    modes: { edgeBlending: true },
     layers: { model: 'mixing_split', mixing4k: m.mix, split4k: m.split },
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },   // non-PGM 출력 = scaled 4K60 AUX, 메인자원 미소모
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
@@ -181,6 +183,8 @@ export const PROCESSORS = [
     inputs: { total: 8, maxIndependent4k: 8 },
     outputs: { maxActiveOutputs: 12, maxIndependent4kOutputs: 12, maxIndependent4kPgm: 4 },
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 4 },   // Edge-Blending 최대 4출력 결합(이사 확정 2026-09-15)
+    modes: { edgeBlending: true },
     layers: { model: 'mixing_split', mixing4k: 4, split4k: null },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
     features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
@@ -200,6 +204,8 @@ export const PROCESSORS = [
     inputs: { total: 32, maxIndependent4k: 32 },   // 최대 32×4K60(또는 16×5K60 / 64×Dual·2K60 — 대체 구성)
     outputs: { maxActiveOutputs: 24, maxIndependent4kOutputs: 24, maxIndependent4kPgm: 16 },   // Active 24×4K / PGM 16×4K. 전용 멀티뷰어 2 별도
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 16 },   // Edge-Blending 최대 16출력 결합(이사 확정 2026-09-15)
+    modes: { edgeBlending: true },
     layers: { model: 'mixing_split', mixing4k: 16, split4k: 32 },   // 믹싱 16×4K(True A/B) / 분할 32×4K
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
@@ -285,6 +291,8 @@ export const PROCESSORS = [
     inputs: { total: 16, maxIndependent4k: 16 },   // 최대 16×4K60 Seamless
     outputs: { maxActiveOutputs: 16, maxIndependent4kOutputs: 16, maxIndependent4kPgm: 8 },   // Active 16×4K / PGM 8×4K. 전용 멀티뷰어 2 별도
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 8 },   // Edge-Blending 최대 8출력 결합(이사 확정 2026-09-15)
+    modes: { edgeBlending: true },
     layers: { model: 'mixing_split', mixing4k: 8, split4k: 16 },   // 믹싱 8×4K(True A/B) / 분할 16×4K
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
@@ -299,6 +307,8 @@ export const PROCESSORS = [
     inputs: { total: 24, maxIndependent4k: 24 },   // 최대 24×4K60 Seamless
     outputs: { maxActiveOutputs: 20, maxIndependent4kOutputs: 20, maxIndependent4kPgm: 12 },   // Active 20×4K / PGM 12×4K. 전용 멀티뷰어 별도
     cards: { in4kPerCard: 4, out4kPerCard: 4 },   // Aquilon: 카드당 독립 4K 최대 4채널
+    canvas: { multiOutputCanvas: true, horizontalSpan: true, verticalSpan: true, maxCanvasOutputs: 12 },   // Edge-Blending 최대 12출력 결합(이사 확정 2026-09-15)
+    modes: { edgeBlending: true },
     layers: { model: 'mixing_split', mixing4k: 12, split4k: 24 },   // 믹싱 12×4K(True A/B) / 분할 24×4K
     aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
     switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
