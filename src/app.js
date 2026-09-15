@@ -246,17 +246,24 @@ function moveModel(id, dir) {
 
 // 03 미리보기 표시 토글(사람/눈높이선/바닥 그리드/치수). 기본 전부 켜짐.
 const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true, handle: true };
-// 사람(스케일 기준 인물): 실사 사진(배우, 실제 키) + 기본 실루엣(남/여) 선택(이사 요청 2026-09-15).
-//   hMM=키(mm). photo=내장 실사(img/people/<key>.png) · svg=실루엣. 커스텀 사진 업로드 시 그 항목만 대체(세션 한정).
+// 사람(스케일 기준 인물): 실사 사진(연예인, 실제 키) + 기본 실루엣(남/여) 선택.
+//   hMM=키(mm, 실제 인물 키). photo=내장 실사(img/people/<file>) · svg=실루엣. 커스텀 업로드 시 그 항목만 대체(세션 한정).
+//   같은 인물의 다른 의상은 별도 항목이되 personId 공유, variantId로 구분(이사 지침 2026-09-15).
+//   이미지는 인물 실제 영역(머리~발끝)으로 크롭된 투명 PNG → 키 스케일링이 실제 신장과 일치.
 const PEOPLE = {
-  m2: { label: '변우석 · 무대', kind: 'photo', hMM: 1903 },
-  f1: { label: '고윤정',        kind: 'photo', hMM: 1630 },   // 배우 고윤정 163cm(이사 확인 2026-09-15)
+  'go-youn-jung_01':   { label: '고윤정 · 연두 가디건',   kind: 'photo', hMM: 1630, personId: 'go-youn-jung',   variantId: '01', file: 'go-youn-jung_01.png' },
+  'go-youn-jung_02':   { label: '고윤정 · 반팔/치마',     kind: 'photo', hMM: 1630, personId: 'go-youn-jung',   variantId: '02', file: 'go-youn-jung_02.png' },
+  'park-bo-gum_01':    { label: '박보검 · 베이지 재킷',   kind: 'photo', hMM: 1820, personId: 'park-bo-gum',    variantId: '01', file: 'park-bo-gum_01.png' },
+  'byeon-woo-seok_01': { label: '변우석 · 화이트 턱시도', kind: 'photo', hMM: 1890, personId: 'byeon-woo-seok', variantId: '01', file: 'byeon-woo-seok_01.png' },
+  'o-se-hun_01':       { label: '오세훈 · 아이보리 니트', kind: 'photo', hMM: 1830, personId: 'o-se-hun',       variantId: '01', file: 'o-se-hun_01.png' },
+  'o-se-hun_02':       { label: '오세훈 · 회색 정장',     kind: 'photo', hMM: 1830, personId: 'o-se-hun',       variantId: '02', file: 'o-se-hun_02.png' },
   sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },   // 20~50대 평균 173cm(이사 지정 2026-09-15)
   sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1600 },   // 20~50대 평균 160cm(이사 지정 2026-09-15)
 };
-let pvPerson = 'm2';               // 현재 선택 인물 키(PEOPLE의 키)
+let pvPerson = 'go-youn-jung_01';  // 현재 선택 인물 키(PEOPLE의 키). 기본값은 목록 첫 항목.
 const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 사진/실루엣 대신 사용(세션 한정).
-const personBuiltinSrc = key => `img/people/${key}.png`;   // 내장 실사(투명 PNG)
+// 내장 실사 경로. photo 항목은 file 필드 사용. 이미지 로드 실패는 콘솔에 파일명 명시(조용한 대체 금지).
+const personBuiltinSrc = p => `img/people/${(PEOPLE[p] && PEOPLE[p].file) || p + '.png'}`;
 // 기본 비즈니스 실루엣(내장, 밝은 회색). 높이 100%·폭은 뷰박스 비율 자동. 팔 포함.
 function personSilhouetteSVG(sex) {
   const head = '#a9a9b7', body = '#b4b4c1';
@@ -420,7 +427,7 @@ function renderPreview() {
 
   const mmL = v => fmt(Math.round(v)) + 'mm';
   const mL = v => fmt(Math.round(v) / 1000, v % 1000 === 0 ? 0 : 3) + ' m';   // m 표기(3.500 m)
-  const person = PEOPLE[pvPerson] || PEOPLE.m2;
+  const person = PEOPLE[pvPerson] || PEOPLE['go-youn-jung_01'];
   const personHMM = person.hMM;   // 선택 인물 키(mm)
   const baseH = num($('#baseHeight').value);
   const mount = Math.min(Math.max(0, baseH), Math.max(0, sH - r.actualH));   // 바닥에서 LED 아래까지(mm)
@@ -708,7 +715,7 @@ function renderPreview() {
             </div>
             ${sigHTML}
           </div>
-          <div class="rs3Person ${pvPerson}" style="left:${personX}px;top:${SHp - px(personHMM)}px;height:${px(personHMM)}px;transform:translate(-50%,0) translateZ(${personDeff}px)">${pvPersonImg[pvPerson] ? `<img class="rs3PersonImg" src="${pvPersonImg[pvPerson]}" alt="사람" draggable="false"/>` : (person.kind === 'svg' ? personSilhouetteSVG(person.sex) : `<img class="rs3PersonImg" src="${personBuiltinSrc(pvPerson)}" alt="사람" draggable="false"/>`)}</div>
+          <div class="rs3Person ${pvPerson}" style="left:${personX}px;top:${SHp - px(personHMM)}px;height:${px(personHMM)}px;transform:translate(-50%,0) translateZ(${personDeff}px)">${pvPersonImg[pvPerson] ? `<img class="rs3PersonImg" src="${pvPersonImg[pvPerson]}" alt="사람" draggable="false"/>` : (person.kind === 'svg' ? personSilhouetteSVG(person.sex) : `<img class="rs3PersonImg" src="${personBuiltinSrc(pvPerson)}" alt="${esc(person.label || '사람')}" draggable="false" onerror="console.error('[사람 이미지 누락] '+this.src+' — 파일이 없어 표시 실패');this.style.outline='2px dashed #E5484D'"/>`)}</div>
         </div>
       </div>
       <div class="rs3GridLayer">${floorGrid}</div>
@@ -1952,7 +1959,7 @@ $('#pvImgBtn')?.addEventListener('click', () => {
 $('#pvRotateBtn')?.addEventListener('click', () => { svPortrait = !svPortrait; renderAll(); });
 // 사람 선택(실사 3종: 남 정장·남 무대·여). 선택 시 사진·키 라벨(남173/여165)이 바뀐다.
 $('#pvPersonSel')?.addEventListener('change', e => {
-  pvPerson = PEOPLE[e.target.value] ? e.target.value : 'm2';
+  pvPerson = PEOPLE[e.target.value] ? e.target.value : 'go-youn-jung_01';
   syncPvToggles(); renderPreview();
 });
 // 커스텀 사진 바꾸기/되돌리기(선택 인물별). 있으면 내장 사진으로 되돌리고, 없으면 파일 선택 → 선택 인물 키에 맞춰 표시.
