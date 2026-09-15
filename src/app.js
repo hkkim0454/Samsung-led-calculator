@@ -249,13 +249,12 @@ const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true
 // 사람(스케일 기준 인물): 실사 사진(배우, 실제 키) + 기본 실루엣(남/여) 선택(이사 요청 2026-09-15).
 //   hMM=키(mm). photo=내장 실사(img/people/<key>.png) · svg=실루엣. 커스텀 사진 업로드 시 그 항목만 대체(세션 한정).
 const PEOPLE = {
-  m1: { label: '최산 · 정장',   kind: 'photo', hMM: 1770 },   // 아이돌 최산 177cm(이사 확인 2026-09-15)
   m2: { label: '변우석 · 무대', kind: 'photo', hMM: 1903 },
   f1: { label: '고윤정',        kind: 'photo', hMM: 1630 },   // 배우 고윤정 163cm(이사 확인 2026-09-15)
   sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },   // 20~50대 평균 173cm(이사 지정 2026-09-15)
   sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1600 },   // 20~50대 평균 160cm(이사 지정 2026-09-15)
 };
-let pvPerson = 'm1';               // 현재 선택 인물 키(PEOPLE의 키)
+let pvPerson = 'm2';               // 현재 선택 인물 키(PEOPLE의 키)
 const pvPersonImg = {};            // 커스텀 업로드(키=인물키) dataURL. 있으면 내장 사진/실루엣 대신 사용(세션 한정).
 const personBuiltinSrc = key => `img/people/${key}.png`;   // 내장 실사(투명 PNG)
 // 기본 비즈니스 실루엣(내장, 밝은 회색). 높이 100%·폭은 뷰박스 비율 자동. 팔 포함.
@@ -421,7 +420,7 @@ function renderPreview() {
 
   const mmL = v => fmt(Math.round(v)) + 'mm';
   const mL = v => fmt(Math.round(v) / 1000, v % 1000 === 0 ? 0 : 3) + ' m';   // m 표기(3.500 m)
-  const person = PEOPLE[pvPerson] || PEOPLE.m1;
+  const person = PEOPLE[pvPerson] || PEOPLE.m2;
   const personHMM = person.hMM;   // 선택 인물 키(mm)
   const baseH = num($('#baseHeight').value);
   const mount = Math.min(Math.max(0, baseH), Math.max(0, sH - r.actualH));   // 바닥에서 LED 아래까지(mm)
@@ -1953,7 +1952,7 @@ $('#pvImgBtn')?.addEventListener('click', () => {
 $('#pvRotateBtn')?.addEventListener('click', () => { svPortrait = !svPortrait; renderAll(); });
 // 사람 선택(실사 3종: 남 정장·남 무대·여). 선택 시 사진·키 라벨(남173/여165)이 바뀐다.
 $('#pvPersonSel')?.addEventListener('change', e => {
-  pvPerson = PEOPLE[e.target.value] ? e.target.value : 'm1';
+  pvPerson = PEOPLE[e.target.value] ? e.target.value : 'm2';
   syncPvToggles(); renderPreview();
 });
 // 커스텀 사진 바꾸기/되돌리기(선택 인물별). 있으면 내장 사진으로 되돌리고, 없으면 파일 선택 → 선택 인물 키에 맞춰 표시.

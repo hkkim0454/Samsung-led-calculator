@@ -192,6 +192,8 @@ const AQUILON_SMALL_JOB_PENALTY = 100;   // 소형·단순에서 Aquilon을 뒤�
  */
 function productAdjust(proc, req) {
   let adj = 0;
+  // 4K 출력 1개 구성 → Pulse 4K 최우선(단일 4K 패널 전용·최적, 이사 지침 2026-09-15). 큰 가점으로 목록 맨 위.
+  if (req.required4kOutputs === 1 && proc.model === 'Pulse 4K') adj -= 200;
   const smallJob = req.required4kOutputs != null && req.required4kOutputs <= AQUILON_SMALL_JOB_MAX_4K;
   const wantsHighEnd = !!(req.expansionRequired || req.redundancyRequired || req.customizableRequired || req.livePremierPreferred);
   if (proc.family === 'Aquilon') {
@@ -261,7 +263,9 @@ export function rankProcessors(procs, req) {
       const op = operationFit(proc, req);
       const nums = v.checks.filter(c => typeof c.need === 'number' && typeof c.have === 'number');
       const tight = nums.some(c => c.have === c.need);
-      const label = statusLabel(v.verdict, op, tight);
+      let label = statusLabel(v.verdict, op, tight);
+      // 4K 1개 구성 + Pulse 4K가 통과면 '권장'으로 표시(이사 지침 2026-09-15). 최우선 정렬은 productAdjust가 담당.
+      if (req.required4kOutputs === 1 && proc.model === 'Pulse 4K' && v.verdict === 'PASS') label = '권장';
       const out4k = v.checks.find(c => c.name.startsWith('4K 출력') || c.name === '4K PGM 출력');
       const headroom = (out4k && typeof out4k.have === 'number' && typeof out4k.need === 'number') ? out4k.have - out4k.need : 0;
       return { proc, ...v, label, opRank: op.rank, preferred: op.preferred, _headroom: headroom, cardPlan: cardPlan(proc, req) };
