@@ -249,8 +249,8 @@ const pvShow = { person: true, eye: true, grid: true, dims: true, cellgrid: true
 // 사람(스케일 기준 인물): 실사 사진(배우, 실제 키) + 기본 실루엣(남/여) 선택(이사 요청 2026-09-15).
 //   hMM=키(mm). photo=내장 실사(img/people/<key>.png) · svg=실루엣. 커스텀 사진 업로드 시 그 항목만 대체(세션 한정).
 const PEOPLE = {
-  m1: { label: '고우석 · 정장', kind: 'photo', hMM: 1780 },   // 배우 고우석(키 확인 필요)
-  m2: { label: '고우석 · 무대', kind: 'photo', hMM: 1780 },
+  m1: { label: '고우석 · 정장', kind: 'photo', hMM: 1840 },   // 배우 고우석 184cm(이사 확인 2026-09-15)
+  m2: { label: '고우석 · 무대', kind: 'photo', hMM: 1840 },
   f1: { label: '고윤정',        kind: 'photo', hMM: 1720 },   // 배우 고윤정(공개 프로필 172cm)
   sm: { label: '실루엣 · 남자',  kind: 'svg', sex: 'male',   hMM: 1730 },
   sf: { label: '실루엣 · 여자',  kind: 'svg', sex: 'female', hMM: 1650 },
