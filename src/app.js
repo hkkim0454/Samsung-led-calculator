@@ -294,7 +294,7 @@ function vwSelected() {
 
 // 배열을 공간 밖으로 넓혀 확장할 때 확보할 좌우 여백(각 변, mm). 이사 요청 2026-09-14: 좌우 500~600mm 고정.
 const EXPAND_SIDE_MARGIN_MM = 500;
-const LED_EXPAND_BOTTOM_MM = 500;   // LED 배열 직접 지정 확장 시 하단(바닥~디스플레이) 여백 = 하단 높이(이사 요청 2026-09-14)
+const LED_EXPAND_BOTTOM_MM = 800;   // LED 배열 직접 지정 확장 시 하단(바닥~디스플레이) 높이 = 800mm 고정(이사 요청 2026-09-15, 기존 500)
 const LED_EXPAND_TOP_MM = 100;      // 상단(디스플레이 위~공간 위) 여백
 
 // 사이니지 배치 계산(공용): 요청 장수(reqN×reqM)를 공간 안에 들어가는 최대치(N×M)로 자동 제한하고,
