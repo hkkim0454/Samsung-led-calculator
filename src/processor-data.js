@@ -257,15 +257,32 @@ export const PROCESSORS = [
     verification: { status: m.status, sourceUrl: 'https://en.colorlightinside.com/', sourceDocument: m.ver, sourceVersion: m.ver, notes: 'I/O·출력·전역/보드 레이어 반영. True A/B·Seamless·Genlock 미확인(null).' + (m.slug === 'u15max' ? ' 40슬롯 I/O 공용.' : '') + (m.slug === 'u3max' ? ' 2K I/O수는 SoT 표 미기재→null.' : '') },
   })),
 
-  // ── 신규 3종 — 이미지만 우선 등록, 사양은 GPT Work 의뢰중(2026-09-15) ──────────
-  // 사양 미확정 → 전 항목 null, status='needs_verification'(자동추천 제외). 사양 확인 후 정식 반영.
-  //   layers.model은 제품군 고유 아키텍처(숫자 사양 아님)라 채움 — 세부 레이어 수 등은 null 유지.
-  proc({ id: 'aw-aquilon-c', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C', lifecycle: 'active', configurationType: 'customizable',
-    layers: { model: 'mixing_split' },
-    verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),
-  proc({ id: 'aw-aquilon-cplus', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C+', lifecycle: 'active', configurationType: 'customizable',
-    layers: { model: 'mixing_split' },
-    verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),
+  // ── Analog Way · Aquilon C / C+ (customizable / LivePremier) ──────────────
+  // 공식 사양(GPT Work 조사 2026-09-15). 최대 입력/Active 출력/PGM/레이어는 별개 항목. 카드 커넥터 수는 카드 1장 기준(고정 포트 아님).
+  proc({
+    id: 'aw-aquilon-c', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C', lifecycle: 'active', configurationType: 'customizable',
+    inputs: { total: 16, maxIndependent4k: 16 },   // 최대 16×4K60 Seamless
+    outputs: { maxActiveOutputs: 16, maxIndependent4kOutputs: 16, maxIndependent4kPgm: 8 },   // Active 16×4K / PGM 8×4K. 전용 멀티뷰어 2 별도
+    layers: { model: 'mixing_split', mixing4k: 8, split4k: 16 },   // 믹싱 8×4K(True A/B) / 분할 16×4K
+    aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
+    control: { tcp: true, restApi: true, amxCompatible: true, crestronCompatible: true },
+    verification: { status: 'official', sourceUrl: 'https://www.analogway.com/products/aquilon-c', sourceDocument: 'Analog Way Aquilon C 공식 제품페이지 + Technical Datasheet (GPT Work 조사 2026-09-15)', sourceVersion: '2026-09-15', notes: 'customizable(4RU). IN 최대 16×4K60 Seamless. Active 16×4K60 + 전용 멀티뷰어 2(2×HDMI2.0 또는 2×DP1.2, Active와 별도). PGM 최대 8×4K60(Dual/2K PGM 16). 믹싱 8×4K / 분할 16×4K(Dual/2K 믹싱16·분할32). HDCP 1.4·2.2. 정격전력=미상(null), 최대 740W. AC100~240V, 이중화 PSU 1+1. 크기 439.8×177×700mm(랙이어 제외)/482.4×177×701mm(핸들 포함), 무게 31.5kg. 카드별 커넥터 수는 카드 1장 기준. 데이터시트: https://dwn01.analogway.com/Site+Internet/Series/LivePremier/Products/Aquilon+C/Technical+Datasheet/Aquilon-C-datasheet-en-20260703.pdf' },
+  }),
+  proc({
+    id: 'aw-aquilon-cplus', manufacturer: AW, family: 'Aquilon', model: 'Aquilon C+', lifecycle: 'active', configurationType: 'customizable',
+    inputs: { total: 24, maxIndependent4k: 24 },   // 최대 24×4K60 Seamless
+    outputs: { maxActiveOutputs: 20, maxIndependent4kOutputs: 20, maxIndependent4kPgm: 12 },   // Active 20×4K / PGM 12×4K. 전용 멀티뷰어 별도
+    layers: { model: 'mixing_split', mixing4k: 12, split4k: 24 },   // 믹싱 12×4K(True A/B) / 분할 24×4K
+    aux: { maxResolution: '4K60', maxAuxOutputs: null, usesMainLayerResources: false },
+    switching: { cut: true, fade: true, seamless: true, trueABMixing: true, previewProgram: true, transitionGrade: 'broadcast_grade' },
+    features: { genlock: true, hdr: true, tenBit: true, multiview: true, redundancy: true },
+    control: { tcp: true, restApi: true, amxCompatible: true, crestronCompatible: true },
+    verification: { status: 'partial_official', sourceUrl: 'https://www.analogway.com/products/', sourceDocument: 'Analog Way Aquilon C+ 공식 사양(GPT Work 조사 2026-09-15)', sourceVersion: '2026-09-15', notes: 'customizable(LivePremier). IN 최대 24×4K60 Seamless. Active 20×4K60. PGM 최대 12×4K60(Dual/2K PGM 20). 믹싱 12×4K(True A/B) / 분할 24×4K(Dual/2K 믹싱24·분할48). 카드 커넥터 수는 카드 1장 기준. 출력카드 종류·HDCP·전원·크기·정확한 제품페이지 URL은 미수신(추후 보완).' },
+  }),
+
+  // ── Colorlight X100 Pro 11U — 이미지만 등록, 사양 확인중(GPT Work) ─────────────
   proc({ id: 'cl-x100pro-11u', manufacturer: CL, family: 'X100 Pro', model: 'X100 Pro 11U', lifecycle: 'active', configurationType: 'customizable',
     layers: { model: 'global_window' },
     verification: { status: 'needs_verification', sourceDocument: '사양 확인중(GPT Work 의뢰 2026-09-15)', notes: '이미지만 우선 등록. 입출력·레이어 수 등 사양 미확정 → 자동추천 제외.' } }),

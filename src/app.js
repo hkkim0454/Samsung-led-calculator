@@ -945,7 +945,8 @@ const PROC_IMG_IDS = new Set([
   'aw-aquilon-c', 'aw-aquilon-cplus', 'cl-x100pro-11u',   // 신규 3종(사양 확인중, 이미지만)
 ]);
 // 사양 확인중(GPT Work 의뢰) — 자동추천엔 안 나오고 05 하단에 '이미지만' 노출(2026-09-15).
-const SPEC_PENDING_IDS = new Set(['aw-aquilon-c', 'aw-aquilon-cplus', 'cl-x100pro-11u']);
+//   Aquilon C·C+는 사양 정식 등록 완료(2026-09-15) → 목록에서 제외. X100 Pro 11U만 대기.
+const SPEC_PENDING_IDS = new Set(['cl-x100pro-11u']);
 const procImgSrc = (id, side) => `img/processors/${id}-${side}.jpg`;
 
 // 프로세서 제품 이미지(앞/뒤) 뷰어 팝업. index.html을 건드리지 않게 동적 생성(포트 팝업과 동일 패턴).

@@ -228,6 +228,24 @@ test('Aquilon C MAX present with official values (2026-09-14); 정격전력 미�
   assert.match(cmax.verification.notes, /HDCP 1\.4·2\.2/);
 });
 
+test('Aquilon C / C+ 정식 등록(2026-09-15) — 입력/Active/PGM/레이어 구분값', () => {
+  const c = getProcessor('aw-aquilon-c');
+  assert.ok(c && c.model === 'Aquilon C');
+  assert.equal(c.verification.status, 'official');
+  assert.deepEqual(
+    { i: c.inputs.maxIndependent4k, a: c.outputs.maxActiveOutputs, p: c.outputs.maxIndependent4kPgm, m: c.layers.mixing4k, s: c.layers.split4k },
+    { i: 16, a: 16, p: 8, m: 8, s: 16 }
+  );
+  assert.match(c.verification.notes, /정격전력=미상/);   // 미상은 null·노트, 추정 금지
+  assert.match(c.verification.notes, /최대 740W/);
+  const cp = getProcessor('aw-aquilon-cplus');
+  assert.ok(cp && cp.model === 'Aquilon C+');
+  assert.deepEqual(
+    { i: cp.inputs.maxIndependent4k, a: cp.outputs.maxActiveOutputs, p: cp.outputs.maxIndependent4kPgm, m: cp.layers.mixing4k, s: cp.layers.split4k },
+    { i: 24, a: 20, p: 12, m: 12, s: 24 }
+  );
+});
+
 // ── Wide Canvas (SoT §15, 지침 5): Eikos Edge-Blending 지원 / Pulse 미지원 ────────
 test('Wide Canvas single_wide 2-output: Eikos PASS, Pulse unsupported (Edge-Blending 없음 -> false)', () => {
   const req = processorRequirements({ resW: 7680, resH: 2160 }, { canvasMode: 'single_wide', requiredCanvasOutputs: 2, application: 'exec' });
